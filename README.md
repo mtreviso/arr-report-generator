@@ -32,7 +32,7 @@ This tool generates beautiful, interactive HTML reports for reviewing ARR submis
 Run the script with your OpenReview credentials:
 
 ```bash
-python run_arr_report.py --username "your_username" --password "your_password" --me "~Your_Name1" --venue_id "aclweb.org/ACL/ARR/2025/February"
+python main.py --username "your_username" --password "your_password" --me "~Your_Name1" --venue_id "aclweb.org/ACL/ARR/2025/February"
 ```
 
 The script will generate an HTML report in the `./reports` directory.
@@ -58,7 +58,7 @@ export OPENREVIEW_ID="~Your_Name1"
 Then run the script without specifying these parameters:
 
 ```bash
-python run_arr_report.py --venue_id "aclweb.org/ACL/ARR/2025/February"
+python main.py --venue_id "aclweb.org/ACL/ARR/2025/February"
 ```
 
 ## Report Structure
