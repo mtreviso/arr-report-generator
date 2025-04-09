@@ -8,6 +8,7 @@ from datetime import datetime
 import os
 import jinja2
 from pathlib import Path
+import re
 
 class ARRReportGenerator:
     def __init__(self, username, password, venue_id, me):
@@ -676,6 +677,9 @@ class ARRReportGenerator:
         # Render the main template
         template = env.get_template("report.html")
         html_content = template.render(**template_data)
+
+        # Fix the pre/code issue in comments with a post-processing step
+        html_content = self._fix_comment_formatting(html_content)
         
         # Write the HTML file
         output_path = Path(output_dir) / "arr_report.html"
@@ -684,6 +688,19 @@ class ARRReportGenerator:
             
         print(f"Report generated at: {output_path}")
         return output_path
+
+    def _fix_comment_formatting(self, html_content):
+        """Fix markdown formatting issues in comment content post-processing."""
+        # Pattern to find the first pre/code block in each comment-content div
+        pattern = r'(<div class="mt-2 (?:markdown-content|prose|) comment-content">)\s*<pre><code>(.*?)</code></pre>'
+        
+        # Replace with properly formatted paragraph
+        replacement = r'\1<p>\2</p>'
+        
+        # Apply the fix (with re.DOTALL to match across newlines)
+        fixed_html = re.sub(pattern, replacement, html_content, flags=re.DOTALL)
+        
+        return fixed_html
         
     def _create_template_files(self, template_dir):
         """Create the template files if they don't exist."""
@@ -1492,8 +1509,71 @@ class ARRReportGenerator:
     </div>
 </div>'''
 
+    def extract_comment_text(self, reply):
+        """Extract and process comment text from a reply."""
+        content = reply.get("content", {})
+        # Try common keys in order of likely importance
+        for key in ["comment", "justification", "text", "response", "value"]:
+            if key in content:
+                val = content[key]
+                raw_text = val.get("value") if isinstance(val, dict) else val
+                
+                # Process the text to fix markdown formatting issues
+                if raw_text:
+                    return self.process_comment_text(raw_text)
+                    
+        # If no known key, flatten all text fields into a fallback string
+        fallback = []
+        for k, v in content.items():
+            if isinstance(v, dict) and "value" in v:
+                fallback.append(f"{k}: {v['value']}")
+        return self.process_comment_text("\n".join(fallback)) if fallback else "(No comment text found)"
+
+    def process_comment_text(self, text):
+        """Process comment text to fix markdown rendering issues."""
+        if not text:
+            return text
+            
+        # Trim whitespace
+        text = text.strip()
+        
+        # Fix the issue with first paragraph becoming code block
+        # by normalizing indentation
+        lines = text.split('\n')
+        
+        # Determine minimum indentation (ignoring empty lines)
+        min_indent = float('inf')
+        for line in lines:
+            if line.strip():  # Non-empty line
+                current_indent = len(line) - len(line.lstrip())
+                min_indent = min(min_indent, current_indent)
+        
+        if min_indent == float('inf'):
+            min_indent = 0
+        
+        # Remove common indentation from all lines
+        processed_lines = [line[min_indent:] if line.strip() else line for line in lines]
+        
+        # Join lines back together
+        processed_text = '\n'.join(processed_lines)
+        
+        # Pre-process for better markdown rendering
+        
+        # Ensure code blocks have proper formatting
+        processed_text = re.sub(r'```([\s\S]+?)```', 
+                              lambda m: '\n```\n' + m.group(1).strip() + '\n```\n', 
+                              processed_text)
+        
+        # Convert consecutive line breaks to paragraph markers
+        processed_text = re.sub(r'\n\n+', '\n\n', processed_text)
+        
+        # Ensure lists are properly formatted
+        processed_text = re.sub(r'^(\s*[-*+])\s+', r'\1 ', processed_text, flags=re.MULTILINE)
+        
+        return processed_text
+
     def _get_comments_template(self):
-        """Get the comments template."""
+        """Get the comments template with fixed content rendering."""
         return '''
 <!-- Template function for rendering comment threads -->
 {% macro render_comment_thread(thread, level) %}
@@ -1521,8 +1601,8 @@ class ARRReportGenerator:
                 </div>
                 <a href="{{ comment.Link }}" target="_blank" class="text-indigo-600 hover:text-indigo-900 text-sm">View on OpenReview</a>
             </div>
-            <div class="mt-2 prose max-w-none comment-content">
-                {{ comment.Content }}
+            <div class="mt-2 markdown-content comment-content" id="comment-{{ comment.NoteId }}">
+                <!-- Content will be rendered here -->
             </div>
         </div>
     </div>
@@ -1535,6 +1615,121 @@ class ARRReportGenerator:
 {% endmacro %}
 
 <div class="px-4 py-5 sm:p-6">
+    <!-- Additional styles for markdown content -->
+    <style>
+        .markdown-content {
+            line-height: 1.6;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        .markdown-content p {
+            margin-top: 0.5em;
+            margin-bottom: 0.5em;
+        }
+        
+        .markdown-content h1,
+        .markdown-content h2,
+        .markdown-content h3,
+        .markdown-content h4,
+        .markdown-content h5,
+        .markdown-content h6 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            font-weight: 600;
+            line-height: 1.25;
+        }
+        
+        .markdown-content h1 { font-size: 1.5em; }
+        .markdown-content h2 { font-size: 1.25em; }
+        .markdown-content h3 { font-size: 1.125em; }
+        
+        .markdown-content ul, 
+        .markdown-content ol {
+            margin-top: 0.5em;
+            margin-bottom: 0.5em;
+            padding-left: 1.5em;
+        }
+        
+        .markdown-content ul { list-style-type: disc; }
+        .markdown-content ol { list-style-type: decimal; }
+        
+        .markdown-content li {
+            margin-top: 0.25em;
+            margin-bottom: 0.25em;
+        }
+        
+        .markdown-content code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            padding: 0.2em 0.4em;
+            background-color: rgba(175, 184, 193, 0.2);
+            border-radius: 0.25em;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+        }
+        
+        .markdown-content pre {
+            padding: 1em;
+            margin: 0.5em 0;
+            background-color: #f6f8fa;
+            border-radius: 0.375em;
+            overflow-x: auto;
+            white-space: pre;
+        }
+        
+        .markdown-content pre code {
+            background-color: transparent;
+            padding: 0;
+            font-size: 0.9em;
+            white-space: pre;
+        }
+        
+        .markdown-content blockquote {
+            padding-left: 1em;
+            border-left: 0.25em solid #d1d5db;
+            color: #6b7280;
+            margin: 0.5em 0;
+        }
+        
+        .markdown-content a {
+            color: #3b82f6;
+            text-decoration: underline;
+        }
+        
+        .markdown-content a:hover {
+            color: #2563eb;
+        }
+        
+        .markdown-content img {
+            max-width: 100%;
+            height: auto;
+        }
+        
+        .markdown-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+        }
+        
+        .markdown-content table th,
+        .markdown-content table td {
+            border: 1px solid #d1d5db;
+            padding: 0.5em;
+        }
+        
+        .markdown-content table th {
+            background-color: #f3f4f6;
+        }
+        
+        .markdown-content hr {
+            height: 0.25em;
+            padding: 0;
+            margin: 1.5em 0;
+            background-color: #e5e7eb;
+            border: 0;
+        }
+    </style>
+
     <!-- Filters for comments -->
     <div class="mb-6 bg-gray-50 p-4 rounded-lg">
         <h3 class="text-lg font-medium text-gray-900 mb-3">Filter Comments</h3>
@@ -1630,6 +1825,35 @@ class ARRReportGenerator:
                 }
             });
         }
+
+        // Function to select the first paper when comments tab is opened
+        function selectFirstPaper() {
+            const paperFilter = document.getElementById('paper-filter');
+            
+            // If there are paper options (excluding the "All Papers" option)
+            if (paperFilter && paperFilter.options.length > 1) {
+                // Select the first paper (index 1, since index 0 is "All Papers")
+                paperFilter.selectedIndex = 1;
+                
+                // Trigger the change event to apply the filter
+                const event = new Event('change');
+                paperFilter.dispatchEvent(event);
+            }
+        }
+        
+        // Add event listener for comments tab button
+        const commentsTabButton = document.querySelector('[data-tab="comments-tab"]');
+        if (commentsTabButton) {
+            commentsTabButton.addEventListener('click', function() {
+                // Add a small delay to ensure dropdown is fully populated
+                setTimeout(selectFirstPaper, 100);
+            });
+        }
+        
+        // Also run on initial load if comments tab is active
+        if (document.getElementById('comments-tab').classList.contains('active')) {
+            setTimeout(selectFirstPaper, 100);
+        }
         
         // Filter function
         function filterComments() {
@@ -1678,9 +1902,26 @@ class ARRReportGenerator:
         document.getElementById('type-filter').addEventListener('change', filterComments);
         roleFilter.addEventListener('change', filterComments);
         
-        // Initialize Markdown rendering for comments
-        document.querySelectorAll('.comment-content').forEach(function(element) {
-            element.innerHTML = marked.parse(element.textContent);
+        // Render comment content - we'll use a simple approach to avoid markdown issues
+        const commentData = {{ comments | tojson }};
+        
+        // For each comment, find its container element and render paragraphs
+        commentData.forEach(comment => {
+            const container = document.getElementById(`comment-${comment.NoteId}`);
+            if (container) {
+                // Split by double newlines to get paragraphs
+                const paragraphs = comment.Content.split('/\\n\\s*\\n/').filter(p => p.trim());
+                
+                // Create HTML content
+                let html = '';
+                paragraphs.forEach(paragraph => {
+                    // Replace single newlines with <br>
+                    const formattedParagraph = paragraph.trim().replace('/\\n/g', '<br>');
+                    html += `<p>${formattedParagraph}</p>`;
+                });
+                
+                container.innerHTML = html;
+            }
         });
     });
 </script>'''

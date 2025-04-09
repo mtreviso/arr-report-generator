@@ -25,8 +25,8 @@
                 </div>
                 <a href="{{ comment.Link }}" target="_blank" class="text-indigo-600 hover:text-indigo-900 text-sm">View on OpenReview</a>
             </div>
-            <div class="mt-2 prose max-w-none comment-content">
-                {{ comment.Content }}
+            <div class="mt-2 markdown-content comment-content" id="comment-{{ comment.NoteId }}">
+                <!-- Content will be rendered here -->
             </div>
         </div>
     </div>
@@ -39,6 +39,121 @@
 {% endmacro %}
 
 <div class="px-4 py-5 sm:p-6">
+    <!-- Additional styles for markdown content -->
+    <style>
+        .markdown-content {
+            line-height: 1.6;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        .markdown-content p {
+            margin-top: 0.5em;
+            margin-bottom: 0.5em;
+        }
+        
+        .markdown-content h1,
+        .markdown-content h2,
+        .markdown-content h3,
+        .markdown-content h4,
+        .markdown-content h5,
+        .markdown-content h6 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            font-weight: 600;
+            line-height: 1.25;
+        }
+        
+        .markdown-content h1 { font-size: 1.5em; }
+        .markdown-content h2 { font-size: 1.25em; }
+        .markdown-content h3 { font-size: 1.125em; }
+        
+        .markdown-content ul, 
+        .markdown-content ol {
+            margin-top: 0.5em;
+            margin-bottom: 0.5em;
+            padding-left: 1.5em;
+        }
+        
+        .markdown-content ul { list-style-type: disc; }
+        .markdown-content ol { list-style-type: decimal; }
+        
+        .markdown-content li {
+            margin-top: 0.25em;
+            margin-bottom: 0.25em;
+        }
+        
+        .markdown-content code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            padding: 0.2em 0.4em;
+            background-color: rgba(175, 184, 193, 0.2);
+            border-radius: 0.25em;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+        }
+        
+        .markdown-content pre {
+            padding: 1em;
+            margin: 0.5em 0;
+            background-color: #f6f8fa;
+            border-radius: 0.375em;
+            overflow-x: auto;
+            white-space: pre;
+        }
+        
+        .markdown-content pre code {
+            background-color: transparent;
+            padding: 0;
+            font-size: 0.9em;
+            white-space: pre;
+        }
+        
+        .markdown-content blockquote {
+            padding-left: 1em;
+            border-left: 0.25em solid #d1d5db;
+            color: #6b7280;
+            margin: 0.5em 0;
+        }
+        
+        .markdown-content a {
+            color: #3b82f6;
+            text-decoration: underline;
+        }
+        
+        .markdown-content a:hover {
+            color: #2563eb;
+        }
+        
+        .markdown-content img {
+            max-width: 100%;
+            height: auto;
+        }
+        
+        .markdown-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+        }
+        
+        .markdown-content table th,
+        .markdown-content table td {
+            border: 1px solid #d1d5db;
+            padding: 0.5em;
+        }
+        
+        .markdown-content table th {
+            background-color: #f3f4f6;
+        }
+        
+        .markdown-content hr {
+            height: 0.25em;
+            padding: 0;
+            margin: 1.5em 0;
+            background-color: #e5e7eb;
+            border: 0;
+        }
+    </style>
+
     <!-- Filters for comments -->
     <div class="mb-6 bg-gray-50 p-4 rounded-lg">
         <h3 class="text-lg font-medium text-gray-900 mb-3">Filter Comments</h3>
@@ -182,9 +297,26 @@
         document.getElementById('type-filter').addEventListener('change', filterComments);
         roleFilter.addEventListener('change', filterComments);
         
-        // Initialize Markdown rendering for comments
-        document.querySelectorAll('.comment-content').forEach(function(element) {
-            element.innerHTML = marked.parse(element.textContent);
+        // Render comment content - we'll use a simple approach to avoid markdown issues
+        const commentData = {{ comments | tojson }};
+        
+        // For each comment, find its container element and render paragraphs
+        commentData.forEach(comment => {
+            const container = document.getElementById(`comment-${comment.NoteId}`);
+            if (container) {
+                // Split by double newlines to get paragraphs
+                const paragraphs = comment.Content.split('/\n\s*\n/').filter(p => p.trim());
+                
+                // Create HTML content
+                let html = '';
+                paragraphs.forEach(paragraph => {
+                    // Replace single newlines with <br>
+                    const formattedParagraph = paragraph.trim().replace('/\n/g', '<br>');
+                    html += `<p>${formattedParagraph}</p>`;
+                });
+                
+                container.innerHTML = html;
+            }
         });
     });
 </script>
