@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load jQuery first -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <!-- Then load DataTables -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/js/jquery.dataTables.min.js"></script>
+    <!-- Then load Chart.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.2/marked.min.js"></script>
+    <style>
+        /* Tab Content */
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        /* Content cell */
+        .content-cell {
+            max-width: 300px;
+            min-width: 200px;
+            max-height: 150px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            word-wrap: break-word;
+            white-space: normal;
+        }
+        
+        /* DataTables styling */
+        table.dataTable {
+            width: 100% !important;
+            margin: 0 !important;
+        }
+
+        table.dataTable thead th {
+            position: relative;
+            background-image: none !important;
+            padding-right: 25px !important;
+        }
+        
+        table.dataTable thead th.sorting:after,
+        table.dataTable thead th.sorting_asc:after,
+        table.dataTable thead th.sorting_desc:after {
+            position: absolute;
+            top: 12px;
+            right: 8px;
+            display: block;
+            font-family: Arial, sans-serif;
+            cursor: pointer;
+        }
+        
+        table.dataTable thead th.sorting:after {
+            content: "↕";
+            color: #CCC;
+            font-size: 0.8em;
+        }
+
+        
+        table.dataTable thead th.sorting_asc:after {
+            content: "↑";
+            opacity: 1;
+        }
+        
+        table.dataTable thead th.sorting_desc:after {
+            content: "↓";
+            opacity: 1;
+        }
+
+        
+        table.dataTable th.overall-assessment {
+            min-width: 200px;
+        }
+        
+        table.dataTable th.meta-review {
+            min-width: 100px;
+        }
+        
+        .dataTables_wrapper .dataTables_length, 
+        .dataTables_wrapper .dataTables_filter {
+            margin-bottom: 10px;
+        }
+        
+        .dataTables_wrapper .dataTables_length select {
+            border: 1px solid #e5e7eb;
+            padding: 0.375rem 2.25rem 0.375rem 0.75rem;
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+            border-radius: 0.375rem;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            background-color: #fff;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            appearance: none;
+        }
+        
+        .dataTables_wrapper .dataTables_filter input {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.375rem;
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            margin-left: 0.5rem;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            padding: 0.25rem 0.5rem;
+            margin: 0 0.25rem;
+            border-radius: 0.375rem;
+            color: #4f46e5 !important;
+            border: 1px solid #e5e7eb;
+            background: white;
+            line-height: 1.25;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+            background: #4f46e5 !important;
+            color: white !important;
+            border: 1px solid #4f46e5;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.current) {
+            background: #f3f4f6 !important;
+            color: #4f46e5 !important;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .dataTables_wrapper .dataTables_info {
+            padding-top: 0.5rem;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        .dataTables_wrapper {
+            width: 100% !important;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        .dataTables_wrapper .dataTables_scroll {
+            width: 100% !important;
+        }
+
+        .dataTables_wrapper .dataTables_scrollBody {
+            width: 100% !important;
+        }
+        
+        .dataTables_scrollBody {
+            min-height: 300px; /* Minimum table body height */
+        }
+        
+        /* Comment content */
+        .comment-content {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        /* Filter dropdown */
+        #ac-filter select {
+            border: 1px solid #e5e7eb;
+            padding: 0.375rem 2.25rem 0.375rem 0.75rem;
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+            border-radius: 0.375rem;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            background-color: #fff;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            appearance: none;
+        }
+
+        #papers-table_paginate{
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="relative">
+        <!-- Header -->
+        <header class="bg-indigo-600 shadow-md">
+            <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+                <h1 class="text-3xl font-bold text-white">ARR Review Dashboard</h1>
+                <div class="text-right">
+                    <p class="text-white text-sm">{{ venue_id }}</p>
+                    <p class="text-white text-sm opacity-80">Generated at {{ generated_date }}</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="bg-white shadow-md">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-center">
+                    <ul class="flex space-x-8">
+                        <li>
+                            <button class="tab-button py-4 px-1 text-center border-b-2 border-transparent hover:border-indigo-500 font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none active" data-tab="papers-tab">
+                                Papers Overview
+                            </button>
+                        </li>
+                        <li>
+                            <button class="tab-button py-4 px-1 text-center border-b-2 border-transparent hover:border-indigo-500 font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none" data-tab="ac-dashboard-tab">
+                                AC Dashboard
+                            </button>
+                        </li>
+                        <li>
+                            <button class="tab-button py-4 px-1 text-center border-b-2 border-transparent hover:border-indigo-500 font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none" data-tab="comments-tab">
+                                Comments ({{ comments_count }})
+                            </button>
+                        </li>
+                        <li>
+                            <button class="tab-button py-4 px-1 text-center border-b-2 border-transparent hover:border-indigo-500 font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none" data-tab="analytics-tab">
+                                Analytics
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <!-- Papers Tab -->
+            <div id="papers-tab" class="tab-content active">
+                <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                    <div class="px-4 py-5 sm:px-6">
+                        <h2 class="text-xl font-semibold text-gray-800">Papers Overview</h2>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Complete status of all papers in your batch, including review scores and meta-review status.
+                        </p>
+                    </div>
+                    {% include 'components/papers_table.html' %}
+                </div>
+            </div>
+
+            <!-- AC Dashboard Tab -->
+            <div id="ac-dashboard-tab" class="tab-content">
+                <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                    <div class="px-4 py-5 sm:px-6">
+                        <h2 class="text-xl font-semibold text-gray-800">Area Chair Dashboard</h2>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Performance overview of all Area Chairs in your batch.
+                        </p>
+                    </div>
+                    {% include 'components/ac_dashboard.html' %}
+                </div>
+            </div>
+
+            <!-- Comments Tab -->
+            <div id="comments-tab" class="tab-content">
+                <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                    <div class="px-4 py-5 sm:px-6">
+                        <h2 class="text-xl font-semibold text-gray-800">Comments & Review Issues</h2>
+                        <p class="mt-1 text-sm text-gray-500">
+                            All confidential comments and review issue reports.
+                        </p>
+                    </div>
+                    {% include 'components/comments.html' %}
+                </div>
+            </div>
+
+            <!-- Analytics Tab -->
+            <div id="analytics-tab" class="tab-content">
+                <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                    <div class="px-4 py-5 sm:px-6">
+                        <h2 class="text-xl font-semibold text-gray-800">Score Distribution</h2>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Distribution of overall assessment and meta-review scores.
+                        </p>
+                    </div>
+                    {% include 'components/score_distribution.html' %}
+                </div>
+                
+                <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                    <div class="px-4 py-5 sm:px-6">
+                        <h2 class="text-xl font-semibold text-gray-800">Paper Type Distribution</h2>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Distribution of papers by type.
+                        </p>
+                    </div>
+                    {% include 'components/paper_type_distribution.html' %}
+                </div>
+                
+                <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                    <div class="px-4 py-5 sm:px-6">
+                        <h2 class="text-xl font-semibold text-gray-800">Review Completion Status</h2>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Percentage of reviews completed per Area Chair.
+                        </p>
+                    </div>
+                    {% include 'components/review_completion.html' %}
+                </div>
+                
+                <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                    <div class="px-4 py-5 sm:px-6">
+                        <h2 class="text-xl font-semibold text-gray-800">Score Comparison: Overall vs Meta</h2>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Comparison between average overall assessment scores and meta-review scores.
+                        </p>
+                    </div>
+                    {% include 'components/score_scatter.html' %}
+                </div>
+
+                <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                    <div class="px-4 py-5 sm:px-6">
+                        <h2 class="text-xl font-semibold text-gray-800">Area Chair Scoring Analysis</h2>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Comparison of average review scores and meta-review scores by Area Chair.
+                        </p>
+                    </div>
+                    {% include 'components/ac_scoring.html' %}
+                </div>
+
+
+                <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                    <div class="px-4 py-5 sm:px-6">
+                        <h2 class="text-xl font-semibold text-gray-800">Score Correlation Matrix</h2>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Correlation matrix between different types of scores.
+                        </p>
+                    </div>
+                    {% include 'components/correlation_matrix.html' %}
+                </div>
+
+            </div>
+
+        </main>
+    </div>
+
+    <!-- JavaScript for Functionality -->
+    <script>
+        // Tab functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    // Remove active class from all buttons and contents
+                    tabButtons.forEach(btn => btn.classList.remove('active', 'border-indigo-500', 'text-indigo-600'));
+                    tabButtons.forEach(btn => btn.classList.add('border-transparent', 'text-gray-500'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+
+                    // Add active class to the clicked button and corresponding content
+                    button.classList.add('active', 'border-indigo-500', 'text-indigo-600');
+                    button.classList.remove('border-transparent', 'text-gray-500');
+                    const tabId = button.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+                    
+                    // If analytics tab is selected, make sure charts are properly rendered
+                    if (tabId === 'analytics-tab') {
+                        setTimeout(() => {
+                            if (window.scoreChart) {
+                                window.scoreChart.resize();
+                            }
+                        }, 10);
+                    }
+                });
+            });
+
+            // Initialize DataTables for papers table
+            $(document).ready(function() {
+                // Papers table
+                $('#papers-table').DataTable({
+                    pageLength: 100,
+                    autoWidth: false,
+                    scrollX: false,
+                    order: [[0, 'asc']],
+                    columnDefs: [
+                        { type: 'num', targets: [0, 4, 5] },
+                        { className: 'overall-assessment', targets: 6 },
+                        { className: 'meta-review', targets: 7 }
+                    ],
+                    language: {
+                        search: "_INPUT_",
+                        searchPlaceholder: "Search papers...",
+                        lengthMenu: "Show _MENU_ papers"
+                    },
+                    initComplete: function() {
+                        // Add custom filtering for Area Chair column
+                        this.api().columns(3).every(function() {
+                            const column = this;
+                            const select = $('<select class="ml-2"><option value="">All ACs</option></select>')
+                                .appendTo('#ac-filter')
+                                .on('change', function() {
+                                    const val = $.fn.dataTable.util.escapeRegex($(this).val());
+                                    column.search(val ? '^' + val + '$' : '', true, false).draw();
+                                });
+
+                            column.data().unique().sort().each(function(d, j) {
+                                select.append('<option value="' + d + '">' + d + '</option>');
+                            });
+                        });
+                    }
+                });
+
+                // AC Dashboard table
+                $('#ac-dashboard-table').DataTable({
+                    paging: false,
+                    searching: false,
+                    info: false,
+                    autoWidth: false,
+                    scrollX: false,
+                    order: [[5, 'desc']]
+                });
+
+                // Comments table
+                $('#comments-table').DataTable({
+                    pageLength: 100,
+                    autoWidth: false,
+                    scrollX: false,
+                    order: [[0, 'asc'], [2, 'asc']],
+                    columnDefs: [
+                        { type: 'num', targets: [0] },
+                        { 
+                            targets: 4, 
+                            className: 'content-cell custom-scrollbar',
+                            width: '300px'
+                        }
+                    ],
+                    language: {
+                        search: "_INPUT_",
+                        searchPlaceholder: "Search comments...",
+                        lengthMenu: "Show _MENU_ comments"
+                    }
+                });
+
+            });
+
+            // Initialize Markdown rendering for comments
+            document.querySelectorAll('.comment-content').forEach(function(element) {
+                element.innerHTML = marked.parse(element.textContent);
+            });
+
+            // Initialize and render charts
+            initAllAnalyticsCharts();
+        });
+
+        // Initialize all analytics charts when tab is clicked
+        function initAllAnalyticsCharts() {
+            // Score distribution chart
+            renderScoreDistributionChart();
+            
+            // Paper type chart
+            if (typeof initPaperTypeChart === 'function') {
+                initPaperTypeChart();
+            }
+            
+            // Review completion chart
+            if (typeof initReviewCompletionChart === 'function') {
+                initReviewCompletionChart();
+            }
+            
+            // Score comparison charts
+            if (typeof initScoreCharts === 'function') {
+                initScoreCharts();
+            }
+        }
+
+        // Chart rendering function
+        function renderScoreDistributionChart() {
+            const ctx = document.getElementById('score-distribution-chart').getContext('2d');
+
+            // Data from Jinja template
+            const overallCounts = {{ histogram_data.overall_assessment.counts | tojson }};
+            const metaCounts = {{ histogram_data.meta_review.counts | tojson }};
+            const binLabels = {{ histogram_data.overall_assessment.labels | tojson }};
+
+            window.scoreChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: binLabels,
+                    datasets: [
+                        {
+                            label: 'Overall Assessment',
+                            data: overallCounts,
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgba(59, 130, 246, 1)',
+                            tension: 0.1,
+                            fill: true
+                        },
+                        {
+                            label: 'Meta Review Score',
+                            data: metaCounts,
+                            borderColor: 'rgba(220, 38, 38, 1)',
+                            backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                            pointBackgroundColor: 'rgba(220, 38, 38, 1)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgba(220, 38, 38, 1)',
+                            tension: 0.1,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2.5, // Make chart wider than tall
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    return `Score: ${context[0].label}`;
+                                },
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.raw} papers`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Papers'
+                            },
+                            ticks: {
+                                stepSize: 1
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Score'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<div class="px-4 py-5 sm:p-6">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Score Type
+                    </th>
+                    {% for label in correlation_data.labels %}
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        {{ label }}
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for row in correlation_data.matrix %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {{ row.label }}
+                    </td>
+                    {% for cell in row.cells %}
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 {{ cell.color if cell else '' }}">
+                        {{ cell.value if cell else '' }}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

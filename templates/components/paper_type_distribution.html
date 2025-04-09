@@ -1,0 +1,119 @@
+<div class="px-4 py-5 sm:p-6">
+        <div class="flex flex-col md:flex-row">
+            <div class="w-full md:w-1/2">
+                <canvas id="paper-type-chart" style="max-height: 300px;"></canvas>
+            </div>
+            <div class="w-full md:w-1/2 mt-4 md:mt-0">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paper Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Count</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentage</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% set total = paper_type_distribution.counts | sum %}
+                        {% for i in range(paper_type_distribution.labels | length) %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {{ paper_type_distribution.labels[i] }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ paper_type_distribution.counts[i] }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ "%.1f"|format(paper_type_distribution.counts[i] / total * 100) }}%
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const initPaperTypeChart = function() {
+            const ctx = document.getElementById('paper-type-chart');
+            if (!ctx) return;
+            
+            const labels = {{ paper_type_distribution.labels | tojson }};
+            const counts = {{ paper_type_distribution.counts | tojson }};
+            
+            if (!labels.length || !counts.length) {
+                ctx.parentNode.innerHTML = '<div class="text-center py-8 text-gray-500">No paper type data available.</div>';
+                return;
+            }
+            
+            const colors = [
+                'rgba(54, 162, 235, 0.7)',
+                'rgba(255, 99, 132, 0.7)',
+                'rgba(75, 192, 192, 0.7)',
+                'rgba(255, 206, 86, 0.7)',
+                'rgba(153, 102, 255, 0.7)',
+                'rgba(255, 159, 64, 0.7)'
+            ];
+            
+            const borderColors = [
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 99, 132, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 159, 64, 1)'
+            ];
+            
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: counts,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderColor: borderColors.slice(0, labels.length),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                boxWidth: 15,
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.formattedValue;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((context.raw / total) * 100);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        };
+        
+        // Call function when analytics tab is shown
+        const analyticsTab = document.querySelector('[data-tab="analytics-tab"]');
+        if (analyticsTab) {
+            analyticsTab.addEventListener('click', function() {
+                setTimeout(initPaperTypeChart, 100);
+            });
+        }
+        
+        // Also initialize if analytics tab is active initially
+        if (document.getElementById('analytics-tab').classList.contains('active')) {
+            setTimeout(initPaperTypeChart, 100);
+        }
+    });
+    </script>

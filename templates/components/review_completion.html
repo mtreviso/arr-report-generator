@@ -1,0 +1,106 @@
+<div class="px-4 py-5 sm:p-6">
+        <div id="review-completion-chart-container">
+            <canvas id="review-completion-chart" style="max-height: 400px; height: 400px;"></canvas>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const initReviewCompletionChart = function() {
+            const ctx = document.getElementById('review-completion-chart');
+            if (!ctx) return;
+            
+            const reviewData = {{ review_completion_data | tojson }};
+            
+            if (!reviewData.length) {
+                document.getElementById('review-completion-chart-container').innerHTML = 
+                    '<div class="text-center py-8 text-gray-500">No review completion data available.</div>';
+                return;
+            }
+            
+            // Prepare data for horizontal bar chart
+            const labels = reviewData.map(item => item.name);
+            const data = reviewData.map(item => item.percentage);
+            
+            // Generate background colors based on completion percentage
+            const backgroundColors = data.map(percentage => {
+                if (percentage >= 100) return 'rgba(34, 197, 94, 0.7)';  // Green for 100%
+                if (percentage >= 75) return 'rgba(59, 130, 246, 0.7)';  // Blue for 75%+
+                if (percentage >= 50) return 'rgba(234, 179, 8, 0.7)';   // Yellow for 50%+
+                return 'rgba(239, 68, 68, 0.7)';                         // Red for <50%
+            });
+            
+            const borderColors = data.map(percentage => {
+                if (percentage >= 100) return 'rgba(34, 197, 94, 1)';
+                if (percentage >= 75) return 'rgba(59, 130, 246, 1)';
+                if (percentage >= 50) return 'rgba(234, 179, 8, 1)';
+                return 'rgba(239, 68, 68, 1)';
+            });
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Review Completion (%)',
+                        data: data,
+                        backgroundColor: backgroundColors,
+                        borderColor: borderColors,
+                        borderWidth: 1,
+                        barThickness: 'flex',
+                        barPercentage: 0.8,
+                        maxBarThickness: 30
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Completion Percentage'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Area Chair'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Completion: ${context.formattedValue}%`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        };
+        
+        // Call function when analytics tab is shown
+        const analyticsTab = document.querySelector('[data-tab="analytics-tab"]');
+        if (analyticsTab) {
+            analyticsTab.addEventListener('click', function() {
+                setTimeout(initReviewCompletionChart, 100);
+            });
+        }
+        
+        // Also initialize if analytics tab is active initially
+        if (document.getElementById('analytics-tab').classList.contains('active')) {
+            setTimeout(initReviewCompletionChart, 100);
+        }
+    });
+    </script>

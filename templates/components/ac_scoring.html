@@ -1,0 +1,166 @@
+<div class="px-4 py-5 sm:p-6">
+        <div id="ac-scoring-chart-container" class="mb-6">
+            <canvas id="ac-scoring-chart" style="max-height: 400px; height: 400px;"></canvas>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Area Chair</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Review Score</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Meta Score</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Difference</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Review Count</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Meta Count</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for ac in ac_scoring_data %}
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {{ ac.name }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ ac.overall_avg if ac.overall_avg is not none else "-" }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ ac.meta_avg if ac.meta_avg is not none else "-" }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500
+                            {% if ac.difference is not none %}
+                                {% if ac.difference > 0.2 %}
+                                    text-green-600 font-medium
+                                {% elif ac.difference < -0.2 %}
+                                    text-red-600 font-medium
+                                {% endif %}
+                            {% endif %}">
+                            {{ ac.difference if ac.difference is not none else "-" }}
+                            {% if ac.difference is not none %}
+                                {% if ac.difference > 0 %}
+                                    <span class="ml-1">↑</span>
+                                {% elif ac.difference < 0 %}
+                                    <span class="ml-1">↓</span>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ ac.overall_count }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ ac.meta_count }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const initACScoringChart = function() {
+            const ctx = document.getElementById('ac-scoring-chart');
+            if (!ctx) return;
+            
+            const scoringData = {{ ac_scoring_data | tojson }};
+            
+            if (!scoringData.length) {
+                document.getElementById('ac-scoring-chart-container').innerHTML = 
+                    '<div class="text-center py-8 text-gray-500">No AC scoring data available.</div>';
+                return;
+            }
+            
+            // Take only top 10 ACs for better readability
+            const chartData = scoringData.slice(0, 10);
+            
+            // Prepare data for bar chart
+            const labels = chartData.map(item => item.name);
+            const overallData = chartData.map(item => item.overall_avg);
+            const metaData = chartData.map(item => item.meta_avg);
+            const diffData = chartData.map(item => item.difference);
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Avg Review Score',
+                            data: overallData,
+                            backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 1,
+                            order: 2
+                        },
+                        {
+                            label: 'Avg Meta Score',
+                            data: metaData,
+                            backgroundColor: 'rgba(220, 38, 38, 0.7)',
+                            borderColor: 'rgba(220, 38, 38, 1)',
+                            borderWidth: 1,
+                            order: 1
+                        },
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            max: 5,
+                            title: {
+                                display: true,
+                                text: 'Average Score'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Area Chair'
+                            }
+                        },
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.dataset.label;
+                                    const value = context.formattedValue;
+                                    
+                                    if (label === 'Difference') {
+                                        const val = parseFloat(value);
+                                        if (val > 0) {
+                                            return `${label}: +${value} (Meta > Review)`;
+                                        } else if (val < 0) {
+                                            return `${label}: ${value} (Meta < Review)`;
+                                        } else {
+                                            return `${label}: ${value} (Equal)`;
+                                        }
+                                    }
+                                    
+                                    return `${label}: ${value}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        };
+        
+        // Call function when analytics tab is shown
+        const analyticsTab = document.querySelector('[data-tab="analytics-tab"]');
+        if (analyticsTab) {
+            analyticsTab.addEventListener('click', function() {
+                setTimeout(initACScoringChart, 100);
+            });
+        }
+        
+        // Also initialize if analytics tab is active initially
+        if (document.getElementById('analytics-tab').classList.contains('active')) {
+            setTimeout(initACScoringChart, 100);
+        }
+    });
+    </script>

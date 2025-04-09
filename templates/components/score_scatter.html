@@ -1,0 +1,171 @@
+<div class="px-4 py-5 sm:p-6">
+        <div class="flex flex-col md:flex-row">
+            <div class="w-full md:w-1/2 mb-6 md:mb-0">
+                <h3 class="text-lg font-medium text-gray-900 mb-3">Scatter Plot</h3>
+                <div class="relative">
+                    <canvas id="score-scatter-chart" style="max-height: 350px; height: 350px;"></canvas>
+                </div>
+                <p class="text-sm text-gray-500 mt-2 text-center">
+                    Each point represents a paper showing the relationship between average review score and meta-review score.
+                </p>
+            </div>
+            <div class="w-full md:w-1/2 md:pl-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-3">Score Difference Distribution</h3>
+                <div class="relative">
+                    <canvas id="score-difference-chart" style="max-height: 350px; height: 350px;"></canvas>
+                </div>
+                <p class="text-sm text-gray-500 mt-2 text-center">
+                    Distribution of differences between meta-review score and average review score.
+                    Positive values indicate meta-review scores higher than average review scores.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const initScoreCharts = function() {
+            const scatterCtx = document.getElementById('score-scatter-chart');
+            const diffCtx = document.getElementById('score-difference-chart');
+            if (!scatterCtx || !diffCtx) return;
+            
+            const scatterData = {{ score_scatter_data.scatter | tojson }};
+            const diffData = {{ score_scatter_data.differences | tojson }};
+            
+            if (!scatterData.length) {
+                scatterCtx.parentNode.innerHTML = '<div class="text-center py-8 text-gray-500">No score comparison data available.</div>';
+                diffCtx.parentNode.innerHTML = '<div class="text-center py-8 text-gray-500">No score difference data available.</div>';
+                return;
+            }
+            
+            // Create scatter plot
+            new Chart(scatterCtx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Papers',
+                        data: scatterData.map(item => ({x: item.x, y: item.y})),
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Average Overall Assessment'
+                            },
+                            min: 1,
+                            max: 5,
+                            ticks: {
+                                stepSize: 0.5
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Meta-Review Score'
+                            },
+                            min: 1,
+                            max: 5,
+                            ticks: {
+                                stepSize: 0.5
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const point = scatterData[context.dataIndex];
+                                    return `Paper: ${point.paper}, Avg Review: ${point.x.toFixed(1)}, Meta: ${point.y.toFixed(1)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Create difference histogram
+            new Chart(diffCtx, {
+                type: 'bar',
+                data: {
+                    labels: diffData.labels,
+                    datasets: [{
+                        label: 'Number of Papers',
+                        data: diffData.counts,
+                        backgroundColor: function(context) {
+                            const value = parseFloat(context.chart.data.labels[context.dataIndex]);
+                            if (value > 0) return 'rgba(34, 197, 94, 0.7)';  // Green for positive
+                            if (value < 0) return 'rgba(239, 68, 68, 0.7)';  // Red for negative
+                            return 'rgba(107, 114, 128, 0.7)';               // Gray for zero
+                        },
+                        borderColor: function(context) {
+                            const value = parseFloat(context.chart.data.labels[context.dataIndex]);
+                            if (value > 0) return 'rgba(34, 197, 94, 1)';
+                            if (value < 0) return 'rgba(239, 68, 68, 1)';
+                            return 'rgba(107, 114, 128, 1)';
+                        },
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Score Difference (Meta - Avg)'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Papers'
+                            },
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                title: function(tooltipItems) {
+                                    const diff = parseFloat(tooltipItems[0].label);
+                                    if (diff > 0) {
+                                        return `Meta score is ${diff} points higher`;
+                                    } else if (diff < 0) {
+                                        return `Meta score is ${Math.abs(diff)} points lower`;
+                                    } else {
+                                        return 'Meta score equals average review score';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        };
+        
+        // Call function when analytics tab is shown
+        const analyticsTab = document.querySelector('[data-tab="analytics-tab"]');
+        if (analyticsTab) {
+            analyticsTab.addEventListener('click', function() {
+                setTimeout(initScoreCharts, 100);
+            });
+        }
+        
+        // Also initialize if analytics tab is active initially
+        if (document.getElementById('analytics-tab').classList.contains('active')) {
+            setTimeout(initScoreCharts, 100);
+        }
+    });
+    </script>

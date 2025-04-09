@@ -1,0 +1,84 @@
+<div class="px-4 py-5 sm:p-6">
+    <div class="mb-4 flex items-center">
+        <div class="max-w-xl">
+            <label for="ac-filter" class="text-sm font-medium text-gray-700">Filter by Area Chair:</label>
+            <span id="ac-filter"></span>
+        </div>
+    </div>
+    <div class="w-full">
+        <table id="papers-table" class="w-full table-fixed divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="w-16 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        #
+                    </th>
+                    <th scope="col" class="w-64 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Title
+                    </th>
+                    <th scope="col" class="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Type
+                    </th>
+                    <th scope="col" class="w-48 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Area Chair
+                    </th>
+                    <th scope="col" class="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <span title="Completed / Expected">Completed</span>
+                    </th>
+                    <th scope="col" class="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Ready
+                    </th>
+                    <th scope="col" class="w-48 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Overall Score
+                    </th>
+                    <th scope="col" class="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Meta Review
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for paper in papers %}
+                <tr>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {{ paper["Paper #"] }}
+                    </td>
+                    <td class="px-4 py-4 text-sm text-gray-500">
+                        <div class="truncate" title="{{ paper.Title }}">
+                            <a href="https://openreview.net/forum?id={{ paper['Paper ID'] }}" target="_blank" class="text-indigo-600 hover:text-indigo-900">{{ paper.Title }}</a>
+                        </div>
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ paper["Paper Type"] }}
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ paper["Area Chair"] }}
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ paper["Completed Reviews"] }} / {{ paper["Expected Reviews"] }}
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {% if paper["Ready for Rebuttal"] %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            {{ paper["Ready for Rebuttal"] }}
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            -
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-4 text-sm text-gray-500">
+                        {{ paper["Overall Assessment"] }}
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {% if paper["Meta Review Score"] %}
+                        <span class="font-semibold">{{ paper["Meta Review Score"] }}</span>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

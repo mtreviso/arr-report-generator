@@ -1,0 +1,190 @@
+
+<!-- Template function for rendering comment threads -->
+{% macro render_comment_thread(thread, level) %}
+    {% set comment = thread.comment %}
+    {% set bg_color = "bg-gray-50" if level % 2 == 0 else "bg-white" %}
+    {% set indent = level * 20 %}
+    
+    <div class="comment-thread mb-3 ml-{{ indent }} {{ bg_color }} border-l-4 border-gray-200 rounded-lg shadow-sm overflow-hidden comment-item"
+         data-paper="{{ comment['Paper #'] }}" 
+         data-type="{{ comment.Type }}" 
+         data-role="{{ comment.Role }}">
+        <div class="px-4 py-3">
+            <div class="flex justify-between items-start">
+                <div>
+                    <span class="inline-block mr-2 text-xs font-medium text-gray-500">Paper #{{ comment['Paper #'] }}</span>
+                    {% if comment.Type == "Review Issue" %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 mr-2">{{ comment.Type }}</span>
+                    {% elif comment.Type == "Author-Editor Confidential" %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 mr-2">{{ comment.Type }}</span>
+                    {% else %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 mr-2">{{ comment.Type }}</span>
+                    {% endif %}
+                    <span class="font-medium">{{ comment.Role }}</span>
+                    <span class="text-sm text-gray-500 ml-2">{{ comment.Date }}</span>
+                </div>
+                <a href="{{ comment.Link }}" target="_blank" class="text-indigo-600 hover:text-indigo-900 text-sm">View on OpenReview</a>
+            </div>
+            <div class="mt-2 prose max-w-none comment-content">
+                {{ comment.Content }}
+            </div>
+        </div>
+    </div>
+    
+    {% if thread.children %}
+        {% for child in thread.children %}
+            {{ render_comment_thread(child, level + 1) }}
+        {% endfor %}
+    {% endif %}
+{% endmacro %}
+
+<div class="px-4 py-5 sm:p-6">
+    <!-- Filters for comments -->
+    <div class="mb-6 bg-gray-50 p-4 rounded-lg">
+        <h3 class="text-lg font-medium text-gray-900 mb-3">Filter Comments</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label for="paper-filter" class="block text-sm font-medium text-gray-700 mb-1">Paper #</label>
+                <select id="paper-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm w-full">
+                    <option value="all">All Papers</option>
+                    <!-- Paper options will be populated by JavaScript -->
+                </select>
+            </div>
+            <div>
+                <label for="type-filter" class="block text-sm font-medium text-gray-700 mb-1">Comment Type</label>
+                <select id="type-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm w-full">
+                    <option value="all">All Types</option>
+                    <option value="Review Issue">Review Issues</option>
+                    <option value="Author-Editor Confidential">Author-Editor Confidential</option>
+                    <option value="Confidential Comment">Confidential Comments</option>
+                </select>
+            </div>
+            <div>
+                <label for="role-filter" class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                <select id="role-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm w-full">
+                    <option value="all">All Roles</option>
+                    <option value="Author">Author</option>
+                    <option value="Reviewer">Reviewer</option>
+                    <option value="Area Chair">Area Chair</option>
+                    <option value="Senior Area Chair">Senior Area Chair</option>
+                    <option value="Program Chair">Program Chair</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Threaded view -->
+    <div id="comments-threaded">
+        {% if comment_trees %}
+            <div id="no-comments-message" class="hidden text-center py-8 text-gray-500">No comments match the selected filters.</div>
+            
+            {% for paper in comment_trees %}
+                <div class="paper-section border-t border-gray-200 pt-4 mt-4 first:border-t-0 first:pt-0 first:mt-0" data-paper="{{ paper.paper_num }}">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Paper #{{ paper.paper_num }}</h3>
+                    {% for thread in paper.threads %}
+                        {{ render_comment_thread(thread, 0) }}
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="text-center py-8 text-gray-500">No comments found.</div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Populate paper filter dropdown
+        const paperFilter = document.getElementById('paper-filter');
+        const paperSections = document.querySelectorAll('.paper-section');
+        const commentItems = document.querySelectorAll('.comment-item');
+        const noCommentsMessage = document.getElementById('no-comments-message');
+        
+        // Build unique paper numbers set
+        const papers = new Set();
+        paperSections.forEach(section => {
+            papers.add(section.getAttribute('data-paper'));
+        });
+        
+        // Build unique role set
+        const roles = new Set();
+        commentItems.forEach(item => {
+            roles.add(item.getAttribute('data-role'));
+        });
+        
+        // Add paper options to dropdown
+        const paperArray = Array.from(papers).sort((a, b) => parseInt(a) - parseInt(b));
+        paperArray.forEach(paper => {
+            const option = document.createElement('option');
+            option.value = paper;
+            option.textContent = `Paper #${paper}`;
+            paperFilter.appendChild(option);
+        });
+        
+        // Add role options to dropdown (if not already defined in template)
+        const roleFilter = document.getElementById('role-filter');
+        if (roleFilter.children.length <= 1) {
+            const rolesArray = Array.from(roles).sort();
+            rolesArray.forEach(role => {
+                if (role && role !== 'all') {
+                    const option = document.createElement('option');
+                    option.value = role;
+                    option.textContent = role;
+                    roleFilter.appendChild(option);
+                }
+            });
+        }
+        
+        // Filter function
+        function filterComments() {
+            const selectedPaper = paperFilter.value;
+            const selectedType = document.getElementById('type-filter').value;
+            const selectedRole = roleFilter.value;
+            
+            let visibleCount = 0;
+            
+            // Hide all paper sections initially
+            paperSections.forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // Filter comments
+            commentItems.forEach(item => {
+                const paperMatch = selectedPaper === 'all' || item.getAttribute('data-paper') === selectedPaper;
+                const typeMatch = selectedType === 'all' || item.getAttribute('data-type') === selectedType;
+                const roleMatch = selectedRole === 'all' || item.getAttribute('data-role') === selectedRole;
+                
+                if (paperMatch && typeMatch && roleMatch) {
+                    item.classList.remove('hidden');
+                    
+                    // Show the parent paper section
+                    const parentSection = item.closest('.paper-section');
+                    if (parentSection) {
+                        parentSection.classList.remove('hidden');
+                    }
+                    
+                    visibleCount++;
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+            
+            // Show "no comments" message if no matches
+            if (visibleCount === 0) {
+                noCommentsMessage.classList.remove('hidden');
+            } else {
+                noCommentsMessage.classList.add('hidden');
+            }
+        }
+        
+        // Add event listeners to filters
+        paperFilter.addEventListener('change', filterComments);
+        document.getElementById('type-filter').addEventListener('change', filterComments);
+        roleFilter.addEventListener('change', filterComments);
+        
+        // Initialize Markdown rendering for comments
+        document.querySelectorAll('.comment-content').forEach(function(element) {
+            element.innerHTML = marked.parse(element.textContent);
+        });
+    });
+</script>
