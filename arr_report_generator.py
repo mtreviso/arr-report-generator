@@ -1826,35 +1826,6 @@ class ARRReportGenerator:
             });
         }
 
-        // Function to select the first paper when comments tab is opened
-        function selectFirstPaper() {
-            const paperFilter = document.getElementById('paper-filter');
-            
-            // If there are paper options (excluding the "All Papers" option)
-            if (paperFilter && paperFilter.options.length > 1) {
-                // Select the first paper (index 1, since index 0 is "All Papers")
-                paperFilter.selectedIndex = 1;
-                
-                // Trigger the change event to apply the filter
-                const event = new Event('change');
-                paperFilter.dispatchEvent(event);
-            }
-        }
-        
-        // Add event listener for comments tab button
-        const commentsTabButton = document.querySelector('[data-tab="comments-tab"]');
-        if (commentsTabButton) {
-            commentsTabButton.addEventListener('click', function() {
-                // Add a small delay to ensure dropdown is fully populated
-                setTimeout(selectFirstPaper, 100);
-            });
-        }
-        
-        // Also run on initial load if comments tab is active
-        if (document.getElementById('comments-tab').classList.contains('active')) {
-            setTimeout(selectFirstPaper, 100);
-        }
-        
         // Filter function
         function filterComments() {
             const selectedPaper = paperFilter.value;
