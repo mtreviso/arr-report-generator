@@ -36,6 +36,21 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #555;
         }
+
+        /* Enhanced title column handling */
+        #papers-table td:nth-child(2) {
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        #papers-table td:nth-child(2) div {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         
         /* Content cell */
         .content-cell {
@@ -58,6 +73,7 @@
             position: relative;
             background-image: none !important;
             padding-right: 25px !important;
+            cursor: pointer;
         }
         
         table.dataTable thead th.sorting:after,
@@ -205,7 +221,9 @@
         <!-- Header -->
         <header class="bg-indigo-600 shadow-md">
             <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-                <h1 class="text-3xl font-bold text-white">ARR Review Dashboard</h1>
+                <h1 class="text-3xl font-bold text-white">
+                    🎛️ ARR Review Dashboard
+                </h1>
                 <div class="text-right">
                     <p class="text-white text-sm">{{ venue_id }}</p>
                     <p class="text-white text-sm opacity-80">Generated at {{ generated_date }}</p>
@@ -393,8 +411,8 @@
                     order: [[0, 'asc']],
                     columnDefs: [
                         { type: 'num', targets: [0, 4, 5] },
-                        { className: 'overall-assessment', targets: 6 },
-                        { className: 'meta-review', targets: 7 }
+                        { className: 'overall-assessment', targets: 9 },
+                        { className: 'meta-review', targets: 10 }
                     ],
                     language: {
                         search: "_INPUT_",

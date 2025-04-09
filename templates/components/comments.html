@@ -235,7 +235,7 @@
             option.textContent = `Paper #${paper}`;
             paperFilter.appendChild(option);
         });
-        
+
         // Add role options to dropdown (if not already defined in template)
         const roleFilter = document.getElementById('role-filter');
         if (roleFilter.children.length <= 1) {
@@ -249,7 +249,7 @@
                 }
             });
         }
-        
+
         // Filter function
         function filterComments() {
             const selectedPaper = paperFilter.value;

@@ -5,71 +5,105 @@
             <span id="ac-filter"></span>
         </div>
     </div>
-    <div class="w-full">
-        <table id="papers-table" class="w-full table-fixed divide-y divide-gray-200">
+    <div class="overflow-x-auto w-full" style="max-width: 100%;">
+        <table id="papers-table" class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th scope="col" class="w-16 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 40px; width: 40px;">
                         #
                     </th>
-                    <th scope="col" class="w-64 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 150px; width: 150px; max-width: 150px;">
                         Title
                     </th>
-                    <th scope="col" class="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 60px; width: 60px;">
                         Type
                     </th>
-                    <th scope="col" class="w-48 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 120px; width: 120px;">
                         Area Chair
                     </th>
-                    <th scope="col" class="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <span title="Completed / Expected">Completed</span>
+                    <th scope="col" class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 80px; width: 80px;">
+                        <span title="Completed / Expected">Reviews</span>
                     </th>
-                    <th scope="col" class="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" class="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 50px; width: 50px;">
                         Ready
                     </th>
-                    <th scope="col" class="w-48 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Overall Score
+                    <th scope="col" class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 90px; width: 90px;">
+                        Confidence
                     </th>
-                    <th scope="col" class="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Meta Review
+                    <th scope="col" class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 90px; width: 90px;">
+                        Soundness
+                    </th>
+                    <th scope="col" class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 90px; width: 90px;">
+                        Excitement
+                    </th>
+                    <th scope="col" class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 90px; width: 90px;">
+                        Overall
+                    </th>
+                    <th scope="col" class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 70px; width: 70px;">
+                        Meta
                     </th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
                 {% for paper in papers %}
                 <tr>
-                    <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td class="px-2 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                         {{ paper["Paper #"] }}
                     </td>
-                    <td class="px-4 py-4 text-sm text-gray-500">
+                    <td class="px-2 py-3 text-sm text-gray-500" style="max-width: 150px;">
                         <div class="truncate" title="{{ paper.Title }}">
                             <a href="https://openreview.net/forum?id={{ paper['Paper ID'] }}" target="_blank" class="text-indigo-600 hover:text-indigo-900">{{ paper.Title }}</a>
                         </div>
                     </td>
-                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td class="px-2 py-3 whitespace-nowrap text-sm text-gray-500">
                         {{ paper["Paper Type"] }}
                     </td>
-                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td class="px-2 py-3 whitespace-nowrap text-sm text-gray-500">
                         {{ paper["Area Chair"] }}
                     </td>
-                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ paper["Completed Reviews"] }} / {{ paper["Expected Reviews"] }}
+                    <td class="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-center">
+                        {{ paper["Completed Reviews"] }}/{{ paper["Expected Reviews"] }}
                     </td>
-                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td class="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-center">
                         {% if paper["Ready for Rebuttal"] %}
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            {{ paper["Ready for Rebuttal"] }}
+                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            ✓
                         </span>
                         {% else %}
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                             -
                         </span>
                         {% endif %}
                     </td>
-                    <td class="px-4 py-4 text-sm text-gray-500">
-                        {{ paper["Overall Assessment"] }}
+                    <td class="px-2 py-3 text-sm text-gray-500">
+                        {% if paper["Reviewer Confidence"] %}
+                        <span title="{{ paper["Confidence List"] }}">{{ paper["Reviewer Confidence"] }}</span>
+                        {% else %}
+                        -
+                        {% endif %}
                     </td>
-                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td class="px-2 py-3 text-sm text-gray-500">
+                        {% if paper["Soundness Score"] %}
+                        <span title="{{ paper["Soundness List"] }}">{{ paper["Soundness Score"] }}</span>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td class="px-2 py-3 text-sm text-gray-500">
+                        {% if paper["Excitement Score"] %}
+                        <span title="{{ paper["Excitement List"] }}">{{ paper["Excitement Score"] }}</span>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td class="px-2 py-3 text-sm text-gray-500">
+                        {% if paper["Overall Assessment"] %}
+                        <span title="{{ paper["Overall List"] }}">{{ paper["Overall Assessment"] }}</span>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td class="px-2 py-3 whitespace-nowrap text-sm text-gray-500">
                         {% if paper["Meta Review Score"] %}
                         <span class="font-semibold">{{ paper["Meta Review Score"] }}</span>
                         {% else %}

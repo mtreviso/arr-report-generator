@@ -54,13 +54,11 @@ def main():
     if not args.me:
         args.me = input("Enter your OpenReview ID (e.g., ~Your_Name1): ")
     
-    # Create output directory with timestamp
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_dir = os.path.join(args.output_dir, f"arr_report_{timestamp}")
-    os.makedirs(output_dir, exist_ok=True)
+    # Create output directory if it does not exist
+    os.makedirs(args.output_dir, exist_ok=True)
     
     print(f"Generating ARR report for venue: {args.venue_id}")
-    print(f"Report will be saved in: {output_dir}")
+    print(f"Report will be saved in: {args.output_dir}")
     
     # Create and run the generator
     generator = ARRReportGenerator(
@@ -71,7 +69,7 @@ def main():
     )
     
     # Generate the report
-    report_path = generator.generate_report(output_dir=output_dir)
+    report_path = generator.generate_report(output_dir=args.output_dir)
     
     print(f"\nReport successfully generated!")
     print(f"Report location: {report_path}")

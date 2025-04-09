@@ -25,14 +25,24 @@ class ARRReportGenerator:
             invitation=f'{venue_id}/-/{self.submission_name}', 
             details='replies'
         )
-        
+
         # Get SAC groups for filtering
-        self.my_sac_groups = {
-            g.id
-            for g in self.client.get_all_groups(members=me, prefix=f'{venue_id}/{self.submission_name}')
-            if g.id.endswith('Senior_Area_Chairs')
-        }
-        
+        try:
+            self.my_sac_groups = {
+                g.id
+                for g in self.client.get_all_groups(members=me, prefix=f'{venue_id}/{self.submission_name}')
+                if g.id.endswith('Senior_Area_Chairs')
+            }
+        except:
+            # Fix for old API version
+            self.my_sac_groups = set()
+            all_groups = self.client.get_all_groups(prefix=f'{venue_id}/{self.submission_name}')
+            for g in all_groups:
+                if g.id.endswith('Senior_Area_Chairs'):
+                    # Check if the user is a member of this group
+                    if hasattr(g, 'members') and me in g.members:
+                        self.my_sac_groups.add(g.id)
+
         # Data containers
         self.papers_data = []
         self.ac_meta_data = None
@@ -61,6 +71,14 @@ class ARRReportGenerator:
             avg = sum(scores) / len(scores)
             score_list = " / ".join(f"{s:.1f}" for s in scores)
             return f"{avg:.1f} ({score_list})"
+        else:
+            return ""
+
+    def format_scores_as_avg_std(self, scores):
+        if scores:
+            avg = np.mean(scores)
+            std = np.std(scores)
+            return f"{avg:.1f} ± {std:.1f}"
         else:
             return ""
         
@@ -229,10 +247,17 @@ class ARRReportGenerator:
                     except:
                         pass
 
-            reviewer_confidence = self.format_scores_as_list(confidence_scores)
-            reviewer_soundness = self.format_scores_as_list(soundness_scores)
-            reviewer_excitement = self.format_scores_as_list(excitement_scores)
-            reviewer_overall = self.format_scores_as_list(overall_assessment_scores)
+            # Store both the summary and the full list for tooltips
+            reviewer_confidence = self.format_scores_as_avg_std(confidence_scores)
+            reviewer_soundness = self.format_scores_as_avg_std(soundness_scores)
+            reviewer_excitement = self.format_scores_as_avg_std(excitement_scores)
+            reviewer_overall = self.format_scores_as_avg_std(overall_assessment_scores)
+            
+            # Format full lists for tooltip display
+            confidence_list = " / ".join(f"{s:.1f}" for s in confidence_scores) if confidence_scores else ""
+            soundness_list = " / ".join(f"{s:.1f}" for s in soundness_scores) if soundness_scores else ""
+            excitement_list = " / ".join(f"{s:.1f}" for s in excitement_scores) if excitement_scores else ""
+            overall_list = " / ".join(f"{s:.1f}" for s in overall_assessment_scores) if overall_assessment_scores else ""
             
             # Get paper title
             paper_title = submission.content.get("title", {}).get("value", "Untitled")
@@ -247,9 +272,13 @@ class ARRReportGenerator:
                 "Expected Reviews": expected_reviews,
                 "Ready for Rebuttal": status,
                 "Reviewer Confidence": reviewer_confidence,
+                "Confidence List": confidence_list,
                 "Soundness Score": reviewer_soundness,
+                "Soundness List": soundness_list,
                 "Excitement Score": reviewer_excitement,
+                "Excitement List": excitement_list,
                 "Overall Assessment": reviewer_overall,
+                "Overall List": overall_list,
                 "Meta Review Score": meta_review_score
             }
             
@@ -809,6 +838,21 @@ class ARRReportGenerator:
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #555;
         }
+
+        /* Enhanced title column handling */
+        #papers-table td:nth-child(2) {
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        #papers-table td:nth-child(2) div {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         
         /* Content cell */
         .content-cell {
@@ -831,6 +875,7 @@ class ARRReportGenerator:
             position: relative;
             background-image: none !important;
             padding-right: 25px !important;
+            cursor: pointer;
         }
         
         table.dataTable thead th.sorting:after,
@@ -978,7 +1023,9 @@ class ARRReportGenerator:
         <!-- Header -->
         <header class="bg-indigo-600 shadow-md">
             <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-                <h1 class="text-3xl font-bold text-white">ARR Review Dashboard</h1>
+                <h1 class="text-3xl font-bold text-white">
+                    🎛️ ARR Review Dashboard
+                </h1>
                 <div class="text-right">
                     <p class="text-white text-sm">{{ venue_id }}</p>
                     <p class="text-white text-sm opacity-80">Generated at {{ generated_date }}</p>
@@ -1166,8 +1213,8 @@ class ARRReportGenerator:
                     order: [[0, 'asc']],
                     columnDefs: [
                         { type: 'num', targets: [0, 4, 5] },
-                        { className: 'overall-assessment', targets: 6 },
-                        { className: 'meta-review', targets: 7 }
+                        { className: 'overall-assessment', targets: 9 },
+                        { className: 'meta-review', targets: 10 }
                     ],
                     language: {
                         search: "_INPUT_",
@@ -1348,71 +1395,105 @@ class ARRReportGenerator:
             <span id="ac-filter"></span>
         </div>
     </div>
-    <div class="w-full">
-        <table id="papers-table" class="w-full table-fixed divide-y divide-gray-200">
+    <div class="overflow-x-auto w-full" style="max-width: 100%;">
+        <table id="papers-table" class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th scope="col" class="w-16 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 40px; width: 40px;">
                         #
                     </th>
-                    <th scope="col" class="w-64 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 150px; width: 150px; max-width: 150px;">
                         Title
                     </th>
-                    <th scope="col" class="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 60px; width: 60px;">
                         Type
                     </th>
-                    <th scope="col" class="w-48 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 120px; width: 120px;">
                         Area Chair
                     </th>
-                    <th scope="col" class="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <span title="Completed / Expected">Completed</span>
+                    <th scope="col" class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 80px; width: 80px;">
+                        <span title="Completed / Expected">Reviews</span>
                     </th>
-                    <th scope="col" class="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" class="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 50px; width: 50px;">
                         Ready
                     </th>
-                    <th scope="col" class="w-48 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Overall Score
+                    <th scope="col" class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 90px; width: 90px;">
+                        Confidence
                     </th>
-                    <th scope="col" class="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Meta Review
+                    <th scope="col" class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 90px; width: 90px;">
+                        Soundness
+                    </th>
+                    <th scope="col" class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 90px; width: 90px;">
+                        Excitement
+                    </th>
+                    <th scope="col" class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 90px; width: 90px;">
+                        Overall
+                    </th>
+                    <th scope="col" class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="min-width: 70px; width: 70px;">
+                        Meta
                     </th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
                 {% for paper in papers %}
                 <tr>
-                    <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td class="px-2 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                         {{ paper["Paper #"] }}
                     </td>
-                    <td class="px-4 py-4 text-sm text-gray-500">
+                    <td class="px-2 py-3 text-sm text-gray-500" style="max-width: 150px;">
                         <div class="truncate" title="{{ paper.Title }}">
                             <a href="https://openreview.net/forum?id={{ paper['Paper ID'] }}" target="_blank" class="text-indigo-600 hover:text-indigo-900">{{ paper.Title }}</a>
                         </div>
                     </td>
-                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td class="px-2 py-3 whitespace-nowrap text-sm text-gray-500">
                         {{ paper["Paper Type"] }}
                     </td>
-                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td class="px-2 py-3 whitespace-nowrap text-sm text-gray-500">
                         {{ paper["Area Chair"] }}
                     </td>
-                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ paper["Completed Reviews"] }} / {{ paper["Expected Reviews"] }}
+                    <td class="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-center">
+                        {{ paper["Completed Reviews"] }}/{{ paper["Expected Reviews"] }}
                     </td>
-                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td class="px-2 py-3 whitespace-nowrap text-sm text-gray-500 text-center">
                         {% if paper["Ready for Rebuttal"] %}
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            {{ paper["Ready for Rebuttal"] }}
+                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            ✓
                         </span>
                         {% else %}
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                             -
                         </span>
                         {% endif %}
                     </td>
-                    <td class="px-4 py-4 text-sm text-gray-500">
-                        {{ paper["Overall Assessment"] }}
+                    <td class="px-2 py-3 text-sm text-gray-500">
+                        {% if paper["Reviewer Confidence"] %}
+                        <span title="{{ paper["Confidence List"] }}">{{ paper["Reviewer Confidence"] }}</span>
+                        {% else %}
+                        -
+                        {% endif %}
                     </td>
-                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td class="px-2 py-3 text-sm text-gray-500">
+                        {% if paper["Soundness Score"] %}
+                        <span title="{{ paper["Soundness List"] }}">{{ paper["Soundness Score"] }}</span>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td class="px-2 py-3 text-sm text-gray-500">
+                        {% if paper["Excitement Score"] %}
+                        <span title="{{ paper["Excitement List"] }}">{{ paper["Excitement Score"] }}</span>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td class="px-2 py-3 text-sm text-gray-500">
+                        {% if paper["Overall Assessment"] %}
+                        <span title="{{ paper["Overall List"] }}">{{ paper["Overall Assessment"] }}</span>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td class="px-2 py-3 whitespace-nowrap text-sm text-gray-500">
                         {% if paper["Meta Review Score"] %}
                         <span class="font-semibold">{{ paper["Meta Review Score"] }}</span>
                         {% else %}
@@ -1811,7 +1892,7 @@ class ARRReportGenerator:
             option.textContent = `Paper #${paper}`;
             paperFilter.appendChild(option);
         });
-        
+
         // Add role options to dropdown (if not already defined in template)
         const roleFilter = document.getElementById('role-filter');
         if (roleFilter.children.length <= 1) {
