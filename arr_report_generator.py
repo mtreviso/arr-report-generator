@@ -583,18 +583,29 @@ class ARRReportGenerator:
     
     def generate_histogram_data(self):
         """Generate histogram data for review scores."""
-        # Define bins for scores: from 1 to 5 (0.5 interval)
-        bins = np.arange(1, 5.5, 0.5)  # bin edges: 1, 1.5, 2, ..., 5
-        bin_labels = [f"{x}" for x in np.arange(1, 5, 0.5)]
+        # Define bins for scores: from 1 to 5 (0.25 interval)
+        # bins_overall = np.arange(1, 5.26, 0.25)
+        bins_overall = [1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0, 3.25, 3.5, 3.75, 
+                        4.0, 4.25, 4.5, 4.75, 5.0, 5.25]
+        # For meta-reviews, use 0.5 interval
+        # bins_meta = np.arange(1, 5.56, 0.5)
+        bins_meta = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5]
+
+        # Use bin starts as labels
+        bin_labels_overall = [f"{x:.2f}" for x in bins_overall[:-1]]
+        bin_labels_meta = [f"{x:.2f}" for x in bins_meta[:-1]]
+
+        print(bins_overall, bin_labels_overall)
+        print(bins_meta, bin_labels_meta)
         
         histogram_data = {
             'overall_assessment': {
                 'counts': [],
-                'labels': bin_labels
+                'labels': bin_labels_overall
             },
             'meta_review': {
                 'counts': [],
-                'labels': bin_labels
+                'labels': bin_labels_meta
             }
         }
         
@@ -602,7 +613,7 @@ class ARRReportGenerator:
         if self.score_distributions['overall_assessment']:
             hist, _ = np.histogram(
                 self.score_distributions['overall_assessment'], 
-                bins=bins
+                bins=bins_overall
             )
             histogram_data['overall_assessment']['counts'] = hist.tolist()
             
@@ -610,7 +621,7 @@ class ARRReportGenerator:
         if self.score_distributions['meta_review']:
             hist, _ = np.histogram(
                 self.score_distributions['meta_review'], 
-                bins=bins
+                bins=bins_meta
             )
             histogram_data['meta_review']['counts'] = hist.tolist()
             
@@ -718,7 +729,7 @@ class ARRReportGenerator:
             autoescape=jinja2.select_autoescape(['html', 'xml'])
         )
         
-        # Create template files if they don't exist
+        # Create template files
         self._create_template_files(template_dir)
         
         # Render the main template
@@ -749,12 +760,12 @@ class ARRReportGenerator:
         return fixed_html
         
     def _create_template_files(self, template_dir):
-        """Create the template files if they don't exist."""
+        """Create the template files."""
+        
         # Create main report template
         report_template = template_dir / "report.html"
-        if not report_template.exists():
-            with open(report_template, "w", encoding="utf-8") as f:
-                f.write(self._get_main_template())
+        with open(report_template, "w", encoding="utf-8") as f:
+            f.write(self._get_main_template())
                 
         # Create components templates
         components_dir = template_dir / "components"
@@ -763,57 +774,48 @@ class ARRReportGenerator:
             
         # Create papers table component
         papers_table = components_dir / "papers_table.html"
-        if not papers_table.exists():
-            with open(papers_table, "w", encoding="utf-8") as f:
-                f.write(self._get_papers_table_template())
+        with open(papers_table, "w", encoding="utf-8") as f:
+            f.write(self._get_papers_table_template())
                 
         # Create AC dashboard component
         ac_dashboard = components_dir / "ac_dashboard.html"
-        if not ac_dashboard.exists():
-            with open(ac_dashboard, "w", encoding="utf-8") as f:
-                f.write(self._get_ac_dashboard_template())
+        with open(ac_dashboard, "w", encoding="utf-8") as f:
+            f.write(self._get_ac_dashboard_template())
                 
         # Create comments component
         comments = components_dir / "comments.html"
-        if not comments.exists():
-            with open(comments, "w", encoding="utf-8") as f:
-                f.write(self._get_comments_template())
+        with open(comments, "w", encoding="utf-8") as f:
+            f.write(self._get_comments_template())
                 
         # Create score distribution component
         score_distribution = components_dir / "score_distribution.html"
-        if not score_distribution.exists():
-            with open(score_distribution, "w", encoding="utf-8") as f:
-                f.write(self._get_score_distribution_template())
+        with open(score_distribution, "w", encoding="utf-8") as f:
+            f.write(self._get_score_distribution_template())
                 
         # Create correlation matrix component
         correlation_matrix = components_dir / "correlation_matrix.html"
-        if not correlation_matrix.exists():
-            with open(correlation_matrix, "w", encoding="utf-8") as f:
-                f.write(self._get_correlation_matrix_template())
+        with open(correlation_matrix, "w", encoding="utf-8") as f:
+            f.write(self._get_correlation_matrix_template())
                 
         # Create paper type distribution component
         paper_type_distribution = components_dir / "paper_type_distribution.html"
-        if not paper_type_distribution.exists():
-            with open(paper_type_distribution, "w", encoding="utf-8") as f:
-                f.write(self._get_paper_type_distribution_template())
+        with open(paper_type_distribution, "w", encoding="utf-8") as f:
+            f.write(self._get_paper_type_distribution_template())
                 
         # Create review completion component
         review_completion = components_dir / "review_completion.html"
-        if not review_completion.exists():
-            with open(review_completion, "w", encoding="utf-8") as f:
-                f.write(self._get_review_completion_template())
+        with open(review_completion, "w", encoding="utf-8") as f:
+            f.write(self._get_review_completion_template())
                 
         # Create score scatter component
         score_scatter = components_dir / "score_scatter.html"
-        if not score_scatter.exists():
-            with open(score_scatter, "w", encoding="utf-8") as f:
-                f.write(self._get_score_scatter_template())
+        with open(score_scatter, "w", encoding="utf-8") as f:
+            f.write(self._get_score_scatter_template())
 
         # Create AC scoring component
         ac_scoring = components_dir / "ac_scoring.html"
-        if not ac_scoring.exists():
-            with open(ac_scoring, "w", encoding="utf-8") as f:
-                f.write(self._get_ac_scoring_template())
+        with open(ac_scoring, "w", encoding="utf-8") as f:
+            f.write(self._get_ac_scoring_template())
     
     def _get_main_template(self):
         """Get the main report template."""
@@ -1331,12 +1333,13 @@ class ARRReportGenerator:
             // Data from Jinja template
             const overallCounts = {{ histogram_data.overall_assessment.counts | tojson }};
             const metaCounts = {{ histogram_data.meta_review.counts | tojson }};
-            const binLabels = {{ histogram_data.overall_assessment.labels | tojson }};
+            const overallLabels = {{ histogram_data.overall_assessment.labels | tojson }};
+            const metaLabels = {{ histogram_data.meta_review.labels | tojson }};
 
             window.scoreChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: binLabels,
+                    labels: overallLabels, // Use overall labels for x-axis
                     datasets: [
                         {
                             label: 'Overall Assessment',
@@ -1352,7 +1355,10 @@ class ARRReportGenerator:
                         },
                         {
                             label: 'Meta Review Score',
-                            data: metaCounts,
+                            data: metaLabels.map((label, i) => ({
+                                x: label, // Use meta labels for x values
+                                y: metaCounts[i] // Use meta counts for y values
+                            })),
                             borderColor: 'rgba(220, 38, 38, 1)',
                             backgroundColor: 'rgba(220, 38, 38, 0.1)',
                             pointBackgroundColor: 'rgba(220, 38, 38, 1)',
@@ -1360,14 +1366,18 @@ class ARRReportGenerator:
                             pointHoverBackgroundColor: '#fff',
                             pointHoverBorderColor: 'rgba(220, 38, 38, 1)',
                             tension: 0.1,
-                            fill: true
+                            fill: true,
+                            parsing: {
+                                xAxisKey: 'x',
+                                yAxisKey: 'y'
+                            }
                         }
                     ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: true,
-                    aspectRatio: 2.5, // Make chart wider than tall
+                    aspectRatio: 2.5,
                     plugins: {
                         legend: {
                             position: 'top',
@@ -1375,10 +1385,15 @@ class ARRReportGenerator:
                         tooltip: {
                             callbacks: {
                                 title: function(context) {
-                                    return `Score: ${context[0].label}`;
+                                    // Handle both formats of data points
+                                    const dataPoint = context[0].raw;
+                                    const score = typeof dataPoint === 'object' ? dataPoint.x : overallLabels[context[0].dataIndex];
+                                    return `Score: ${score}`;
                                 },
                                 label: function(context) {
-                                    return `${context.dataset.label}: ${context.raw} papers`;
+                                    // Handle both formats of data points
+                                    const value = typeof context.raw === 'object' ? context.raw.y : context.raw;
+                                    return `${context.dataset.label}: ${value} papers`;
                                 }
                             }
                         }
@@ -1395,6 +1410,7 @@ class ARRReportGenerator:
                             }
                         },
                         x: {
+                            type: 'linear', // Use linear scale to position points correctly
                             title: {
                                 display: true,
                                 text: 'Score'

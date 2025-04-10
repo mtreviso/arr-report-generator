@@ -151,6 +151,11 @@
             border: 1px solid #e5e7eb;
             background: white;
             line-height: 1.25;
+            cursor: pointer;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+            cursor: default;
         }
         
         .dataTables_wrapper .dataTables_paginate .paginate_button.current {
@@ -507,12 +512,13 @@
             // Data from Jinja template
             const overallCounts = {{ histogram_data.overall_assessment.counts | tojson }};
             const metaCounts = {{ histogram_data.meta_review.counts | tojson }};
-            const binLabels = {{ histogram_data.overall_assessment.labels | tojson }};
+            const overallLabels = {{ histogram_data.overall_assessment.labels | tojson }};
+            const metaLabels = {{ histogram_data.meta_review.labels | tojson }};
 
             window.scoreChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: binLabels,
+                    labels: overallLabels, // Use overall labels for x-axis
                     datasets: [
                         {
                             label: 'Overall Assessment',
@@ -528,7 +534,10 @@
                         },
                         {
                             label: 'Meta Review Score',
-                            data: metaCounts,
+                            data: metaLabels.map((label, i) => ({
+                                x: label, // Use meta labels for x values
+                                y: metaCounts[i] // Use meta counts for y values
+                            })),
                             borderColor: 'rgba(220, 38, 38, 1)',
                             backgroundColor: 'rgba(220, 38, 38, 0.1)',
                             pointBackgroundColor: 'rgba(220, 38, 38, 1)',
@@ -536,14 +545,18 @@
                             pointHoverBackgroundColor: '#fff',
                             pointHoverBorderColor: 'rgba(220, 38, 38, 1)',
                             tension: 0.1,
-                            fill: true
+                            fill: true,
+                            parsing: {
+                                xAxisKey: 'x',
+                                yAxisKey: 'y'
+                            }
                         }
                     ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: true,
-                    aspectRatio: 2.5, // Make chart wider than tall
+                    aspectRatio: 2.5,
                     plugins: {
                         legend: {
                             position: 'top',
@@ -551,10 +564,15 @@
                         tooltip: {
                             callbacks: {
                                 title: function(context) {
-                                    return `Score: ${context[0].label}`;
+                                    // Handle both formats of data points
+                                    const dataPoint = context[0].raw;
+                                    const score = typeof dataPoint === 'object' ? dataPoint.x : overallLabels[context[0].dataIndex];
+                                    return `Score: ${score}`;
                                 },
                                 label: function(context) {
-                                    return `${context.dataset.label}: ${context.raw} papers`;
+                                    // Handle both formats of data points
+                                    const value = typeof context.raw === 'object' ? context.raw.y : context.raw;
+                                    return `${context.dataset.label}: ${value} papers`;
                                 }
                             }
                         }
@@ -571,6 +589,7 @@
                             }
                         },
                         x: {
+                            type: 'linear', // Use linear scale to position points correctly
                             title: {
                                 display: true,
                                 text: 'Score'
