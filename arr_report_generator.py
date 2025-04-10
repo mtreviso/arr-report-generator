@@ -312,6 +312,7 @@ class ARRReportGenerator:
                     pass
 
         print('Done!')
+        print('Total processed papers:', len(self.papers_data))
 
     def compute_ac_meta_data(self):
         """Compute metadata aggregated by Area Chair."""
@@ -732,7 +733,6 @@ class ARRReportGenerator:
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(html_content)
             
-        print(f"Report generated at: {output_path}")
         return output_path
 
     def _fix_comment_formatting(self, html_content):
@@ -970,6 +970,11 @@ class ARRReportGenerator:
             border: 1px solid #e5e7eb;
             background: white;
             line-height: 1.25;
+            cursor: pointer;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+            cursor: default;
         }
         
         .dataTables_wrapper .dataTables_paginate .paginate_button.current {
