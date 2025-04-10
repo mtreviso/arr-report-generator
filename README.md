@@ -22,7 +22,7 @@ This tool generates beautiful, interactive HTML reports for reviewing ARR submis
 
 2. Install required dependencies:
    ```
-   pip install openreview-py pandas numpy jinja2 markdown
+   pip install openreview-py pandas numpy jinja2 markdown tqdm
    ```
 
 ## Usage

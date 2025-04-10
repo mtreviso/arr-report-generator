@@ -4,6 +4,7 @@ import json
 import openreview
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
 from datetime import datetime
 import os
 import jinja2
@@ -64,6 +65,17 @@ class ARRReportGenerator:
     def is_meta_review(self, reply):
         """Check if a reply is a meta-review."""
         return any('/-/Meta_Review' in invitation for invitation in reply.get('invitations', []))
+
+    def is_withdrawn(self, submission):
+        # Check if there's a non-empty withdrawal_confirmation field.
+        withdrawal_conf = submission.content.get("withdrawal_confirmation", {}).get("value", "").strip()
+        if withdrawal_conf:
+            return True
+        # Alternatively, check if the venue value contains "withdrawn" (case insensitive).
+        venue_val = submission.content.get("venue", {}).get("value", "").lower()
+        if "withdrawn" in venue_val:
+            return True
+        return False
 
     def format_scores_as_list(self, scores):
         """Format a list of scores into "avg_score (score1 / score2 / ...)" with 1 decimal precision."""
@@ -161,10 +173,13 @@ class ARRReportGenerator:
 
     def process_papers_data(self):
         """Process all papers data."""
-        for submission in self.submissions:
-            # Skip withdrawn or desk rejected papers
-            if ("withdrawn" in submission.content and submission.content["withdrawn"].lower() == "yes") or \
-               ("venue" in submission.content and "desk rejected" in submission.content["venue"]["value"].lower()):
+        for submission in tqdm(self.submissions):
+            # Skip withdrawn or desk rejected papers.
+            if self.is_withdrawn(submission):
+                print(f"Skipping withdrawn paper: {submission.id}")
+                continue
+            if "venue" in submission.content and "desk rejected" in submission.content["venue"]["value"].lower():
+                print(f"Skipping desk rejected paper: {submission.id}")
                 continue
 
             prefix = f'{self.venue_id}/{self.submission_name}{submission.number}'
@@ -295,6 +310,8 @@ class ARRReportGenerator:
                     self.score_distributions['meta_review'].append(meta_score)
                 except:
                     pass
+
+        print('Done!')
 
     def compute_ac_meta_data(self):
         """Compute metadata aggregated by Area Chair."""
