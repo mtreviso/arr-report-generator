@@ -594,9 +594,6 @@ class ARRReportGenerator:
         # Use bin starts as labels
         bin_labels_overall = [f"{x:.2f}" for x in bins_overall[:-1]]
         bin_labels_meta = [f"{x:.2f}" for x in bins_meta[:-1]]
-
-        print(bins_overall, bin_labels_overall)
-        print(bins_meta, bin_labels_meta)
         
         histogram_data = {
             'overall_assessment': {
@@ -824,6 +821,7 @@ class ARRReportGenerator:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎛️</text></svg>">
     <title>{{ title }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Load jQuery first -->
@@ -1707,7 +1705,7 @@ class ARRReportGenerator:
         <div class="px-4 py-3">
             <div class="flex justify-between items-start">
                 <div>
-                    <span class="inline-block mr-2 text-xs font-medium text-gray-500">Paper #{{ comment['Paper #'] }}</span>
+                    <!-- <span class="inline-block mr-2 text-xs font-medium text-gray-500">Paper #{{ comment['Paper #'] }}</span> -->
                     {% if comment.Type == "Review Issue" %}
                         <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 mr-2">{{ comment.Type }}</span>
                     {% elif comment.Type == "Author-Editor Confidential" %}
@@ -1852,7 +1850,7 @@ class ARRReportGenerator:
     <!-- Filters for comments -->
     <div class="mb-6 bg-gray-50 p-4 rounded-lg">
         <h3 class="text-lg font-medium text-gray-900 mb-3">Filter Comments</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
                 <label for="paper-filter" class="block text-sm font-medium text-gray-700 mb-1">Paper #</label>
                 <select id="paper-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm w-full">
@@ -1880,8 +1878,19 @@ class ARRReportGenerator:
                     <option value="Program Chair">Program Chair</option>
                 </select>
             </div>
+            <div>
+                <label for="comments-per-page" class="block text-sm font-medium text-gray-700 mb-1">Comments per page</label>
+                <select id="comments-per-page" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm w-full">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="30" selected>30</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
         </div>
     </div>
+
 
     <!-- Threaded view -->
     <div id="comments-threaded">
@@ -1900,20 +1909,58 @@ class ARRReportGenerator:
             <div class="text-center py-8 text-gray-500">No comments found.</div>
         {% endif %}
     </div>
+
+
+    <!-- Pagination navigation -->
+    <div id="pagination-container" class="mt-6 flex justify-center">
+        <div class="inline-flex rounded-md shadow-sm">
+            <button id="prev-page" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                Previous
+            </button>
+            <div id="page-numbers" class="flex">
+                <!-- Page numbers will be inserted here by JavaScript -->
+            </div>
+            <button id="next-page" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-r-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                Next
+            </button>
+        </div>
+    </div>
 </div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Populate paper filter dropdown
+        // Pagination variables
+        let currentPage = 1;
+        let commentsPerPage = 30;
+        let totalPages = 1;
+        let visibleComments = [];
+
+        // Populate paper filter dropdown with comment counts
         const paperFilter = document.getElementById('paper-filter');
         const paperSections = document.querySelectorAll('.paper-section');
         const commentItems = document.querySelectorAll('.comment-item');
         const noCommentsMessage = document.getElementById('no-comments-message');
         
+        // Count comments per paper
+        const paperCounts = {};
+        commentItems.forEach(item => {
+            const paperNum = item.getAttribute('data-paper');
+            paperCounts[paperNum] = (paperCounts[paperNum] || 0) + 1;
+        });
+        
         // Build unique paper numbers set
         const papers = new Set();
         paperSections.forEach(section => {
             papers.add(section.getAttribute('data-paper'));
+        });
+        
+        // Add paper options to dropdown with comment counts
+        const paperArray = Array.from(papers).sort((a, b) => parseInt(a) - parseInt(b));
+        paperArray.forEach(paper => {
+            const option = document.createElement('option');
+            option.value = paper;
+            option.textContent = `Paper #${paper} (${paperCounts[paper] || 0})`;
+            paperFilter.appendChild(option);
         });
         
         // Build unique role set
@@ -1922,15 +1969,6 @@ class ARRReportGenerator:
             roles.add(item.getAttribute('data-role'));
         });
         
-        // Add paper options to dropdown
-        const paperArray = Array.from(papers).sort((a, b) => parseInt(a) - parseInt(b));
-        paperArray.forEach(paper => {
-            const option = document.createElement('option');
-            option.value = paper;
-            option.textContent = `Paper #${paper}`;
-            paperFilter.appendChild(option);
-        });
-
         // Add role options to dropdown (if not already defined in template)
         const roleFilter = document.getElementById('role-filter');
         if (roleFilter.children.length <= 1) {
@@ -1944,14 +1982,107 @@ class ARRReportGenerator:
                 }
             });
         }
+        
+        // Generate page number buttons
+        function updatePageNumbers() {
+            const pageNumbersContainer = document.getElementById('page-numbers');
+            pageNumbersContainer.innerHTML = '';
+            
+            // Determine range of page numbers to show (max 5)
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, startPage + 4);
+            
+            // Adjust startPage if we're near the end
+            if (endPage - startPage < 4 && startPage > 1) {
+                startPage = Math.max(1, endPage - 4);
+            }
+            
+            // Create page number buttons
+            for (let i = startPage; i <= endPage; i++) {
+                const pageButton = document.createElement('button');
+                pageButton.textContent = i;
+                pageButton.classList.add('px-4', 'py-2', 'text-sm', 'font-medium', 'border', 'border-gray-300');
+                
+                // Highlight current page
+                if (i === currentPage) {
+                    pageButton.classList.add('bg-indigo-600', 'text-white', 'z-10');
+                } else {
+                    pageButton.classList.add('bg-white', 'text-gray-700', 'hover:bg-gray-50');
+                }
+                
+                // Add border styling (except for first and last)
+                if (i === startPage) {
+                    pageButton.classList.add('border-r-0');
+                } else if (i === endPage) {
+                    pageButton.classList.add('border-l-0');
+                } else {
+                    pageButton.classList.add('border-l-0', 'border-r-0');
+                }
+                
+                pageButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    currentPage = i;
+                    showCurrentPageComments();
+                });
+                
+                pageNumbersContainer.appendChild(pageButton);
+            }
+            
+            // Update buttons state
+            document.getElementById('prev-page').disabled = currentPage === 1;
+            document.getElementById('next-page').disabled = currentPage === totalPages;
+        }
+        
+        // Show comments for current page
+        function showCurrentPageComments() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
 
-        // Filter function
+            // Hide all visible comments first
+            visibleComments.forEach(item => {
+                item.classList.add('hidden');
+            });
+            
+            // Show only comments for current page
+            const startIndex = (currentPage - 1) * commentsPerPage;
+            const endIndex = Math.min(startIndex + commentsPerPage, visibleComments.length);
+            
+            for (let i = startIndex; i < endIndex; i++) {
+                visibleComments[i].classList.remove('hidden');
+            }
+            
+            // Make sure parent sections are visible
+            const visibleSections = new Set();
+            visibleComments.slice(startIndex, endIndex).forEach(item => {
+                const parentSection = item.closest('.paper-section');
+                if (parentSection) {
+                    visibleSections.add(parentSection);
+                }
+            });
+            
+            // Show only relevant paper sections
+            paperSections.forEach(section => {
+                if (visibleSections.has(section)) {
+                    section.classList.remove('hidden');
+                } else {
+                    section.classList.add('hidden');
+                }
+            });
+            
+            // Update page numbers
+            updatePageNumbers();
+        }
+        
+        // Filter comments
         function filterComments() {
             const selectedPaper = paperFilter.value;
             const selectedType = document.getElementById('type-filter').value;
             const selectedRole = roleFilter.value;
             
-            let visibleCount = 0;
+            // Reset visible comments
+            visibleComments = [];
             
             // Hide all paper sections initially
             paperSections.forEach(section => {
@@ -1965,25 +2096,27 @@ class ARRReportGenerator:
                 const roleMatch = selectedRole === 'all' || item.getAttribute('data-role') === selectedRole;
                 
                 if (paperMatch && typeMatch && roleMatch) {
-                    item.classList.remove('hidden');
-                    
-                    // Show the parent paper section
-                    const parentSection = item.closest('.paper-section');
-                    if (parentSection) {
-                        parentSection.classList.remove('hidden');
-                    }
-                    
-                    visibleCount++;
+                    item.classList.add('hidden'); // Initially hide all, we'll show page items later
+                    visibleComments.push(item);
                 } else {
                     item.classList.add('hidden');
                 }
             });
             
+            // Calculate total pages
+            totalPages = Math.max(1, Math.ceil(visibleComments.length / commentsPerPage));
+            
+            // Reset to page 1 when filter changes
+            currentPage = 1;
+            
             // Show "no comments" message if no matches
-            if (visibleCount === 0) {
+            if (visibleComments.length === 0) {
                 noCommentsMessage.classList.remove('hidden');
+                document.getElementById('pagination-container').classList.add('hidden');
             } else {
                 noCommentsMessage.classList.add('hidden');
+                document.getElementById('pagination-container').classList.remove('hidden');
+                showCurrentPageComments();
             }
         }
         
@@ -1991,6 +2124,29 @@ class ARRReportGenerator:
         paperFilter.addEventListener('change', filterComments);
         document.getElementById('type-filter').addEventListener('change', filterComments);
         roleFilter.addEventListener('change', filterComments);
+        document.getElementById('comments-per-page').addEventListener('change', function() {
+            commentsPerPage = parseInt(this.value);
+            totalPages = Math.max(1, Math.ceil(visibleComments.length / commentsPerPage));
+            currentPage = 1; // Reset to first page
+            showCurrentPageComments();
+        });
+        
+        // Page navigation handlers
+        document.getElementById('prev-page').addEventListener('click', function(e) {
+            e.preventDefault();
+            if (currentPage > 1) {
+                currentPage--;
+                showCurrentPageComments();
+            }
+        });
+        
+        document.getElementById('next-page').addEventListener('click', function(e) {
+            e.preventDefault();
+            if (currentPage < totalPages) {
+                currentPage++;
+                showCurrentPageComments();
+            }
+        });
         
         // Render comment content - we'll use a simple approach to avoid markdown issues
         const commentData = {{ comments | tojson }};
@@ -2013,7 +2169,11 @@ class ARRReportGenerator:
                 container.innerHTML = html;
             }
         });
+        
+        // Initialize the comments display
+        filterComments();
     });
+
 </script>'''
 
     def _get_score_distribution_template(self):
