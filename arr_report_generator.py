@@ -973,6 +973,7 @@ class ARRReportGenerator:
             background: white;
             line-height: 1.25;
             cursor: pointer;
+            font-size: small;
         }
 
         .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
@@ -993,8 +994,12 @@ class ARRReportGenerator:
         
         .dataTables_wrapper .dataTables_info {
             padding-top: 0.5rem;
+            padding-bottom: 1rem;
             font-size: 0.875rem;
-            color: #6b7280;
+            color: #999;
+            text-align: center;
+            border-top: 1px solid rgb(229, 231, 235);
+            font-size: small;
         }
 
         .dataTables_wrapper {
@@ -1021,22 +1026,6 @@ class ARRReportGenerator:
             overflow-wrap: break-word;
         }
         
-        /* Filter dropdown */
-        #ac-filter select {
-            border: 1px solid #e5e7eb;
-            padding: 0.375rem 2.25rem 0.375rem 0.75rem;
-            font-size: 0.875rem;
-            line-height: 1.25rem;
-            border-radius: 0.375rem;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            background-color: #fff;
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-            background-position: right 0.5rem center;
-            background-repeat: no-repeat;
-            background-size: 1.5em 1.5em;
-            appearance: none;
-        }
-
         #papers-table_paginate{
             margin-bottom: 10px;
         }
@@ -1092,7 +1081,7 @@ class ARRReportGenerator:
             <!-- Papers Tab -->
             <div id="papers-tab" class="tab-content active">
                 <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
-                    <div class="px-4 py-5 sm:px-6">
+                    <div class="px-4 pt-5 sm:px-6">
                         <h2 class="text-xl font-semibold text-gray-800">Papers Overview</h2>
                         <p class="mt-1 text-sm text-gray-500">
                             Complete status of all papers in your batch, including review scores and meta-review status.
@@ -1105,7 +1094,7 @@ class ARRReportGenerator:
             <!-- AC Dashboard Tab -->
             <div id="ac-dashboard-tab" class="tab-content">
                 <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
-                    <div class="px-4 py-5 sm:px-6">
+                    <div class="px-4 pt-5 sm:px-6">
                         <h2 class="text-xl font-semibold text-gray-800">Area Chair Dashboard</h2>
                         <p class="mt-1 text-sm text-gray-500">
                             Performance overview of all Area Chairs in your batch.
@@ -1118,7 +1107,7 @@ class ARRReportGenerator:
             <!-- Comments Tab -->
             <div id="comments-tab" class="tab-content">
                 <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
-                    <div class="px-4 py-5 sm:px-6">
+                    <div class="px-4 pt-5 sm:px-6">
                         <h2 class="text-xl font-semibold text-gray-800">Comments & Review Issues</h2>
                         <p class="mt-1 text-sm text-gray-500">
                             All confidential comments and review issue reports.
@@ -1131,7 +1120,7 @@ class ARRReportGenerator:
             <!-- Analytics Tab -->
             <div id="analytics-tab" class="tab-content">
                 <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
-                    <div class="px-4 py-5 sm:px-6">
+                    <div class="px-4 pt-5 sm:px-6">
                         <h2 class="text-xl font-semibold text-gray-800">Score Distribution</h2>
                         <p class="mt-1 text-sm text-gray-500">
                             Distribution of overall assessment and meta-review scores.
@@ -1141,7 +1130,7 @@ class ARRReportGenerator:
                 </div>
                 
                 <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
-                    <div class="px-4 py-5 sm:px-6">
+                    <div class="px-4 pt-5 sm:px-6">
                         <h2 class="text-xl font-semibold text-gray-800">Paper Type Distribution</h2>
                         <p class="mt-1 text-sm text-gray-500">
                             Distribution of papers by type.
@@ -1151,7 +1140,7 @@ class ARRReportGenerator:
                 </div>
                 
                 <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
-                    <div class="px-4 py-5 sm:px-6">
+                    <div class="px-4 pt-5 sm:px-6">
                         <h2 class="text-xl font-semibold text-gray-800">Review Completion Status</h2>
                         <p class="mt-1 text-sm text-gray-500">
                             Percentage of reviews completed per Area Chair.
@@ -1161,7 +1150,7 @@ class ARRReportGenerator:
                 </div>
                 
                 <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
-                    <div class="px-4 py-5 sm:px-6">
+                    <div class="px-4 pt-5 sm:px-6">
                         <h2 class="text-xl font-semibold text-gray-800">Score Comparison: Overall vs Meta</h2>
                         <p class="mt-1 text-sm text-gray-500">
                             Comparison between average overall assessment scores and meta-review scores.
@@ -1171,7 +1160,7 @@ class ARRReportGenerator:
                 </div>
 
                 <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
-                    <div class="px-4 py-5 sm:px-6">
+                    <div class="px-4 pt-5 sm:px-6">
                         <h2 class="text-xl font-semibold text-gray-800">Area Chair Scoring Analysis</h2>
                         <p class="mt-1 text-sm text-gray-500">
                             Comparison of average review scores and meta-review scores by Area Chair.
@@ -1182,7 +1171,7 @@ class ARRReportGenerator:
 
 
                 <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
-                    <div class="px-4 py-5 sm:px-6">
+                    <div class="px-4 pt-5 sm:px-6">
                         <h2 class="text-xl font-semibold text-gray-800">Score Correlation Matrix</h2>
                         <p class="mt-1 text-sm text-gray-500">
                             Correlation matrix between different types of scores.
@@ -1229,7 +1218,7 @@ class ARRReportGenerator:
 
             // Initialize DataTables for papers table
             $(document).ready(function() {
-                // Papers table
+                // Initialize DataTables for papers table
                 $('#papers-table').DataTable({
                     pageLength: 100,
                     autoWidth: false,
@@ -1243,13 +1232,13 @@ class ARRReportGenerator:
                     language: {
                         search: "_INPUT_",
                         searchPlaceholder: "Search papers...",
-                        lengthMenu: "Show _MENU_ papers"
+                        lengthMenu: "_MENU_"
                     },
                     initComplete: function() {
                         // Add custom filtering for Area Chair column
                         this.api().columns(3).every(function() {
                             const column = this;
-                            const select = $('<select class="ml-2"><option value="">All ACs</option></select>')
+                            const select = $('<select id="ac-filter-select" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm w-full"><option value="">All ACs</option></select>')
                                 .appendTo('#ac-filter')
                                 .on('change', function() {
                                     const val = $.fn.dataTable.util.escapeRegex($(this).val());
@@ -1260,6 +1249,19 @@ class ARRReportGenerator:
                                 select.append('<option value="' + d + '">' + d + '</option>');
                             });
                         });
+                        
+                        // Move the DataTables controls to our custom containers
+                        $('#papers-table_length').detach().appendTo('#papers-length-container');
+                        $('#papers-table_filter').detach().appendTo('#papers-search-container');
+                        
+                        // Style the moved controls
+                        $('#papers-table_length select').addClass('bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm w-full');
+                        $('#papers-table_filter input').addClass('bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm w-full');
+                        
+                        // Remove the label text and keep just the select element
+                        $('#papers-table_length label').contents().filter(function() {
+                            return this.nodeType === 3; // Text nodes
+                        }).remove();
                     }
                 });
 
@@ -1427,10 +1429,21 @@ class ARRReportGenerator:
     def _get_papers_table_template(self):
         """Get the papers table template."""
         return '''<div class="px-4 py-5 sm:p-6">
-    <div class="mb-4 flex items-center">
-        <div class="max-w-xl">
-            <label for="ac-filter" class="text-sm font-medium text-gray-700">Filter by Area Chair:</label>
-            <span id="ac-filter"></span>
+    <div class="mb-6 bg-gray-50 p-4 rounded-lg" id="papers-filter-container">
+        <h3 class="text-lg font-medium text-gray-900 mb-3">Filter Papers</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label for="ac-filter-select" class="block text-sm font-medium text-gray-700 mb-1">Area Chair</label>
+                <div id="ac-filter"></div>
+            </div>
+            <div id="papers-length-container">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Papers per page</label>
+                <!-- DataTables length control will be moved here -->
+            </div>
+            <div id="papers-search-container">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                <!-- DataTables search control will be moved here -->
+            </div>
         </div>
     </div>
     <div class="overflow-x-auto w-full" style="max-width: 100%;">
@@ -1543,7 +1556,8 @@ class ARRReportGenerator:
             </tbody>
         </table>
     </div>
-</div>'''
+</div>
+'''
 
     def _get_ac_dashboard_template(self):
         """Get the AC dashboard template."""
