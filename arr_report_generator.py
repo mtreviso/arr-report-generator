@@ -500,10 +500,12 @@ class ARRReportGenerator:
         
         for i, row in df.iterrows():
             if not np.isnan(row["Overall_Assessment_Avg"]) and not np.isnan(row["Meta_Review_Score"]):
+                # Get the paper number directly from papers_data
+                paper_number = self.papers_data[i]["Paper #"] if i < len(self.papers_data) else i
                 scatter_data.append({
                     'x': float(row["Overall_Assessment_Avg"]),
                     'y': float(row["Meta_Review_Score"]),
-                    'paper': i  # This is the index for reference
+                    'paper': paper_number
                 })
         
         # Create a histogram of score differences
