@@ -46,7 +46,7 @@ class ARRReportGenerator:
 
         # Data containers
         self.papers_data = []
-        self.ac_meta_data = None
+        self.ac_meta_data = []
         self.comments_data = []
         
         # Score distributions for visualization
@@ -739,7 +739,7 @@ class ARRReportGenerator:
         html_content = self._fix_comment_formatting(html_content)
         
         # Write the HTML file
-        output_path = Path(output_dir) / "arr_report.html"
+        output_path = Path(output_dir) / "review_report.html"
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(html_content)
             
@@ -1034,7 +1034,7 @@ class ARRReportGenerator:
 <body class="bg-gray-50 min-h-screen">
     <div class="relative">
         <!-- Header -->
-        <header class="bg-indigo-600 shadow-md">
+        <header class="bg-slate-600 shadow-md">
             <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
                 <h1 class="text-3xl font-bold text-white">
                     🎛️ ARR Review Dashboard
@@ -1184,6 +1184,17 @@ class ARRReportGenerator:
 
         </main>
     </div>
+
+    <footer>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4">
+                <div class="flex justify-center">
+                    <span class="text-sm text-gray-500">
+                        Code at <a class="text-gray-500 hover:text-gray-700" href="https://github.com/mtreviso/arr-report-generator" target="_blank">github.com/mtreviso/arr-report-generator</a>
+                    </span> 
+                </div>
+            </div>
+        <div>
+    </footer>
 
     <!-- JavaScript for Functionality -->
     <script>

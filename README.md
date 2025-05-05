@@ -1,16 +1,14 @@
 # ARR Report Generator
 
-This tool generates beautiful, interactive HTML reports for reviewing ARR submissions using OpenReview data. The report includes:
-
-- **Papers Overview**: Complete status of all papers in your batch with interactive filtering/sorting
-- **AC Dashboard**: Performance metrics for all Area Chairs
-- **Comments & Issues**: Threaded view of all confidential comments and review issues
-- **Analytics**: Score distributions and correlation analysis
+This tool generates beautiful, interactive HTML reports for reviewing ARR submissions using OpenReview data. 
 
 
 ## Screenshots
 
-*Install and run the tool to see the beautiful report!*
+| ![](ss/ss1.png) | ![](ss/ss2.png) | ![](ss/ss3.png) |
+|-----------------|-----------------|-----------------|
+| ![](ss/ss4.png) | ![](ss/ss5.png) | ![](ss/ss6.png) |
+
 
 ## Installation
 
@@ -22,28 +20,43 @@ This tool generates beautiful, interactive HTML reports for reviewing ARR submis
 
 2. Install required dependencies:
    ```
-   pip install openreview-py pandas numpy jinja2 markdown tqdm
+   pip install -r requirements.txt
    ```
 
 ## Usage
 
 ### Basic Usage
 
-Run the script with your OpenReview credentials:
+Run the script with your OpenReview credentials. The script will generate an HTML report in the `.reports/` directory. Just open the HTML file on your favorite browser.
+
+**Review Phase:**
 
 ```bash
-python main.py --username "your_username" --password "your_password" --me "~Your_Name1" --venue_id "aclweb.org/ACL/ARR/2025/February"
+python generate_review_report.py --username "your_username" --password "your_password" --me "~Your_Name1" --venue_id "aclweb.org/ACL/ARR/2025/February"
 ```
 
-The script will generate an HTML report in the `./reports` directory.
+Output in `./reports/review_report.html`. 
 
-### Command-line Arguments
+
+**Commitment Phase:**
+
+```bash
+python generate_commitment_report.py --username "your_username" --password "your_password" --me "~Your_Name1" --venue_id "aclweb.org/ACL/2025/Conference"
+```
+
+Output in `./reports/commitment_report.html`. 
+
+
+
+**Command-line Arguments:**
 
 - `--username`: Your OpenReview username (can also be set via `OPENREVIEW_USERNAME` environment variable)
 - `--password`: Your OpenReview password (can also be set via `OPENREVIEW_PASSWORD` environment variable)
 - `--me`: Your OpenReview ID (e.g., `~Your_Name1`)
 - `--venue_id`: The OpenReview venue ID (default: `aclweb.org/ACL/ARR/2025/February`)
 - `--output_dir`: Directory to save the generated report (default: `./reports`)
+
+
 
 ### Environment Variables
 
@@ -61,29 +74,8 @@ Then run the script without specifying these parameters:
 python main.py --venue_id "aclweb.org/ACL/ARR/2025/February"
 ```
 
-## Report Structure
+See `run.sh` for an example.
 
-The generated HTML report contains multiple sections accessible via tabs:
-
-1. **Papers Overview**:
-   - Interactive table with paper details
-   - Filter by Area Chair
-   - Sort by any column
-   - Links to OpenReview forums
-
-2. **AC Dashboard**:
-   - Performance metrics for Area Chairs
-   - Review completion status
-   - Meta-review completion status
-
-3. **Comments & Review Issues**:
-   - Threaded view of all comments
-   - Table view with filtering capabilities
-   - Direct links to OpenReview
-
-4. **Analytics**:
-   - Score distribution chart
-   - Correlation matrix of different scores
 
 ## Data Security Note
 

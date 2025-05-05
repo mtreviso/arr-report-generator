@@ -174,3 +174,5 @@ cython_debug/
 .pypirc
 
 reports/
+run_commitment.sh
+run_review.sh

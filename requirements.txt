@@ -1,0 +1,9 @@
+Jinja2==3.1.6
+Markdown==3.7
+MarkupSafe==3.0.2
+numpy==2.2.4
+openpyxl==3.1.5
+openreview-py==1.47.3
+pandas==2.2.3
+requests==2.32.3
+tqdm==4.67.1
