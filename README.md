@@ -68,10 +68,11 @@ export OPENREVIEW_PASSWORD="your_password"
 export OPENREVIEW_ID="~Your_Name1"
 ```
 
-Then run the script without specifying these parameters:
+Then run the script without specifying these parameters, e.g.,
 
 ```bash
-python main.py --venue_id "aclweb.org/ACL/ARR/2025/February"
+python generate_review_report.py --venue_id "aclweb.org/ACL/ARR/2025/February"
+python generate_commitment_report.py --venue_id "aclweb.org/ACL/2025/Conference"
 ```
 
 See `run.sh` for an example.
