@@ -214,10 +214,10 @@
 <body class="bg-gray-50 min-h-screen">
     <div class="relative">
         <!-- Header -->
-        <header class="bg-slate-600 shadow-md">
+        <header class="bg-slate-600 bg-slate-600 shadow-md">
             <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
                 <h1 class="text-3xl font-bold text-white">
-                    🎛️ ARR Review Dashboard
+                    🎛️ ARR Commitment Dashboard
                 </h1>
                 <div class="text-right">
                     <p class="text-white text-sm">{{ venue_id }}</p>
@@ -234,11 +234,6 @@
                         <li>
                             <button class="tab-button py-4 px-1 text-center border-b-2 border-transparent hover:border-indigo-500 font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none active" data-tab="papers-tab">
                                 Papers Overview
-                            </button>
-                        </li>
-                        <li>
-                            <button class="tab-button py-4 px-1 text-center border-b-2 border-transparent hover:border-indigo-500 font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none" data-tab="ac-dashboard-tab">
-                                AC Dashboard
                             </button>
                         </li>
                         <li>
@@ -268,19 +263,6 @@
                         </p>
                     </div>
                     {% include 'components/papers_table.html' %}
-                </div>
-            </div>
-
-            <!-- AC Dashboard Tab -->
-            <div id="ac-dashboard-tab" class="tab-content">
-                <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
-                    <div class="px-4 pt-5 sm:px-6">
-                        <h2 class="text-xl font-semibold text-gray-800">Area Chair Dashboard</h2>
-                        <p class="mt-1 text-sm text-gray-500">
-                            Performance overview of all Area Chairs in your batch.
-                        </p>
-                    </div>
-                    {% include 'components/ac_dashboard.html' %}
                 </div>
             </div>
 
@@ -321,16 +303,6 @@
                 
                 <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
                     <div class="px-4 pt-5 sm:px-6">
-                        <h2 class="text-xl font-semibold text-gray-800">Review Completion Status</h2>
-                        <p class="mt-1 text-sm text-gray-500">
-                            Percentage of reviews completed per Area Chair.
-                        </p>
-                    </div>
-                    {% include 'components/review_completion.html' %}
-                </div>
-                
-                <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
-                    <div class="px-4 pt-5 sm:px-6">
                         <h2 class="text-xl font-semibold text-gray-800">Score Comparison: Overall vs Meta</h2>
                         <p class="mt-1 text-sm text-gray-500">
                             Comparison between average overall assessment scores and meta-review scores.
@@ -338,17 +310,6 @@
                     </div>
                     {% include 'components/score_scatter.html' %}
                 </div>
-
-                <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
-                    <div class="px-4 pt-5 sm:px-6">
-                        <h2 class="text-xl font-semibold text-gray-800">Area Chair Scoring Analysis</h2>
-                        <p class="mt-1 text-sm text-gray-500">
-                            Comparison of average review scores and meta-review scores by Area Chair.
-                        </p>
-                    </div>
-                    {% include 'components/ac_scoring.html' %}
-                </div>
-
 
                 <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
                     <div class="px-4 pt-5 sm:px-6">
@@ -413,12 +374,12 @@
                 $('#papers-table').DataTable({
                     pageLength: 100,
                     autoWidth: false,
-                    scrollX: false,
+                    scrollX: true,
                     order: [[0, 'asc']],
                     columnDefs: [
-                        { type: 'num', targets: [0, 4, 5] },
-                        { className: 'overall-assessment', targets: 9 },
-                        { className: 'meta-review', targets: 10 }
+                        { type: 'num', targets: [0] },
+                        { className: 'overall-assessment', targets: 7 },
+                        { className: 'meta-review', targets: 8 }
                     ],
                     language: {
                         search: "_INPUT_",
@@ -426,11 +387,11 @@
                         lengthMenu: "_MENU_"
                     },
                     initComplete: function() {
-                        // Add custom filtering for Area Chair column
+                        // Add custom filtering for Paper Type column
                         this.api().columns(3).every(function() {
                             const column = this;
-                            const select = $('<select id="ac-filter-select" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm w-full"><option value="">All ACs</option></select>')
-                                .appendTo('#ac-filter')
+                            const select = $('<select id="paper-type-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm w-full"><option value="">All Types</option></select>')
+                                .appendTo('#paper-type-filter')
                                 .on('change', function() {
                                     const val = $.fn.dataTable.util.escapeRegex($(this).val());
                                     column.search(val ? '^' + val + '$' : '', true, false).draw();
@@ -454,16 +415,6 @@
                             return this.nodeType === 3; // Text nodes
                         }).remove();
                     }
-                });
-
-                // AC Dashboard table
-                $('#ac-dashboard-table').DataTable({
-                    paging: false,
-                    searching: false,
-                    info: false,
-                    autoWidth: false,
-                    scrollX: false,
-                    order: [[5, 'desc']]
                 });
 
                 // Comments table
@@ -506,11 +457,6 @@
             // Paper type chart
             if (typeof initPaperTypeChart === 'function') {
                 initPaperTypeChart();
-            }
-            
-            // Review completion chart
-            if (typeof initReviewCompletionChart === 'function') {
-                initReviewCompletionChart();
             }
             
             // Score comparison charts

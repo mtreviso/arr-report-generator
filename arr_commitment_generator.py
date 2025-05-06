@@ -159,6 +159,24 @@ class CommitmentReportGenerator(ARRReportGenerator):
                             continue
             except Exception:
                 pass
+
+            # Get SAC meta-review
+            base_forum_prefix = f"{self.venue_id}/{self.submission_name}"
+            recommendation = ""
+            presentation_mode = ""
+            award = ""
+            try:
+                meta_inv = f"{base_forum_prefix}{submission.number}/-/Meta_Review"
+                metas = self.client.get_notes(invitation=meta_inv)
+                if metas:
+                    meta = metas[0]  # there should be exactly one Meta_Review note per paper
+                    c = meta.content
+                    recommendation = c.get("recommendation", {}).get("value", "")
+                    presentation_mode = c.get("presentation_mode", {}).get("value", "")
+                    award_field = c.get("award", {}).get("value", [])
+                    award = ", ".join(award_field) if isinstance(award_field, list) else award_field
+            except Exception as e:
+                print(f"Error parsing SAC meta-review: {e}")
             
             # Get paper title and basic info
             paper_title = submission.content.get('title', {}).get('value', 'Untitled')
@@ -168,7 +186,6 @@ class CommitmentReportGenerator(ARRReportGenerator):
             linked_forum = None
             linked_note = None
             replies = []
-            
             if hasattr(submission, 'content') and 'paper_link' in submission.content:
                 paper_link = submission.content['paper_link'].get('value', '')
                 
@@ -218,9 +235,6 @@ class CommitmentReportGenerator(ARRReportGenerator):
                 completed_reviews = sum(1 for reply in replies if self.is_actual_review(reply))
                 
                 # Get meta-review
-                recommendation = ""
-                presentation_mode = ""
-                award = ""
                 for reply in replies:
                     if self.is_meta_review(reply):
                         if hasattr(reply, 'content'):
@@ -231,23 +245,13 @@ class CommitmentReportGenerator(ARRReportGenerator):
                                 content.get('score', {}).get('value', '')
                             )
                             
-                            # Extract additional fields
-                            recommendation = content.get('recommendation', {}).get('value', '')
-                            presentation_mode = content.get('presentation_mode', {}).get('value', '')
-                            award_field = content.get('award', {}).get('value', [])
-                            
-                            # Handle award field (might be a list)
-                            if isinstance(award_field, list):
-                                award = ", ".join(award_field) 
-                            else:
-                                award = award_field
-                            
                             # Check for ethics concerns
                             if 'ethical_concerns' in content:
                                 ethical_concerns = content['ethical_concerns'].get('value', '').strip().lower()
                                 if ethical_concerns and "no concerns" not in ethical_concerns:
                                     ethics_flag = "AC: yes"
                         break
+
                 
                 # Process reviewer data
                 reviewer_ethics = []
