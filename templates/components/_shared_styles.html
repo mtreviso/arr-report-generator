@@ -39,8 +39,8 @@
         table.dataTable thead th .dt-column-order {
             display: none !important;
         }
-        table.dataTable thead th.dt-orderable-asc::after,
-        table.dataTable thead th.dt-orderable-desc::after {
+        table.dataTable thead th.dt-orderable-asc::before,
+        table.dataTable thead th.dt-orderable-desc::before {
             content: "⇅";
             display: inline-block;
             margin-left: 0px;
@@ -48,8 +48,8 @@
             opacity: 0.35;
             vertical-align: middle;
         }
-        table.dataTable thead th.dt-ordering-asc::after  { content: "↑"; opacity: 1; color: #6366f1; }
-        table.dataTable thead th.dt-ordering-desc::after { content: "↓"; opacity: 1; color: #6366f1; }
+        table.dataTable thead th.dt-ordering-asc::before  { content: "↑"; opacity: 1; color: #6366f1; }
+        table.dataTable thead th.dt-ordering-desc::before { content: "↓"; opacity: 1; color: #6366f1; }
         table.dataTable th.overall-assessment { min-width: 200px; }
         table.dataTable th.meta-review { min-width: 100px; }
 
