@@ -18,10 +18,10 @@
                     {% else %}
                         <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 mr-2">{{ comment.Type }}</span>
                     {% endif %}
-                    <span class="text-xs font-medium text-gray-700">{{ comment.Role }}</span>
-                    <span class="text-xs text-gray-400 ml-2">{{ comment.Date }}</span>
+                    <span class="font-medium">{{ comment.Role }}</span>
+                    <span class="text-sm text-gray-500 ml-2">{{ comment.Date }}</span>
                 </div>
-                <a href="{{ comment.Link }}" target="_blank" class="text-indigo-600 hover:text-indigo-900 text-xs flex-shrink-0 ml-4">View on OpenReview ↗</a>
+                <a href="{{ comment.Link }}" target="_blank" class="text-indigo-600 hover:text-indigo-900 text-sm flex-shrink-0 ml-4">View on OpenReview ↗</a>
             </div>
             <div class="mt-2 markdown-content comment-content" id="comment-{{ comment.NoteId }}">{{ comment.Content }}</div>
         </div>
@@ -32,7 +32,7 @@
 {% endmacro %}
 
 <style>
-    .markdown-content { font-size: 0.75rem; line-height: 1.6; word-wrap: break-word; overflow-wrap: break-word; }
+    .markdown-content { line-height: 1.6; word-wrap: break-word; overflow-wrap: break-word; }
     .markdown-content p { margin-top: 0.5em; margin-bottom: 0.5em; }
     .markdown-content h1,.markdown-content h2,.markdown-content h3 { margin-top:1.5em; margin-bottom:0.5em; font-weight:600; }
     .markdown-content h1{font-size:1.5em;}.markdown-content h2{font-size:1.25em;}.markdown-content h3{font-size:1.125em;}
@@ -52,17 +52,17 @@
 <div class="px-4 py-5 sm:p-6">
     <!-- Filters -->
     <div class="mb-6 bg-gray-50 p-4 rounded-lg">
-        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Filters</h3>
+        <h3 class="text-lg font-medium text-gray-900 mb-3">Filter Comments</h3>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Paper #</label>
-                <select id="paper-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Paper #</label>
+                <select id="paper-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm w-full">
                     <option value="all">All Papers</option>
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Comment Type</label>
-                <select id="type-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Comment Type</label>
+                <select id="type-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm w-full">
                     <option value="all">All Types</option>
                     <option value="Review Issue">Review Issues</option>
                     <option value="Meta Review Issue">Meta Review Issues</option>
@@ -71,8 +71,8 @@
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Role</label>
-                <select id="role-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                <select id="role-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm w-full">
                     <option value="all">All Roles</option>
                     <option value="Author">Author</option>
                     <option value="Reviewer">Reviewer</option>
@@ -82,8 +82,8 @@
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Per page</label>
-                <select id="comments-per-page" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Per page</label>
+                <select id="comments-per-page" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm w-full">
                     <option value="10">10</option>
                     <option value="20">20</option>
                     <option value="30" selected>30</option>

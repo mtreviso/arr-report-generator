@@ -1,86 +1,152 @@
 # ARR Report Generator
 
-This tool generates beautiful, interactive HTML reports for reviewing ARR submissions using OpenReview data. 
+Interactive HTML dashboards for ACL Rolling Review Senior Area Chairs, covering both the **review phase** and the **commitment phase**.
 
+> Runs entirely on your machine. Your OpenReview credentials are only used to fetch data and are never stored or transmitted elsewhere.
+
+---
 
 ## Screenshots
 
 | ![](ss/ss1.png) | ![](ss/ss2.png) | ![](ss/ss3.png) |
-|-----------------|-----------------|-----------------|
+|:---:|:---:|:---:|
 | ![](ss/ss4.png) | ![](ss/ss5.png) | ![](ss/ss6.png) |
 
+---
+
+## Features
+
+**Both phases**
+- Papers table with sortable columns (score, Ready status, flags)
+- Anonymity indicator per paper (Anon / Non-anon badge, inferred from OpenReview metadata)
+- Low-confidence reviewer flag — highlights papers where any reviewer confidence is ≤ 2
+- Review Issue badge with a direct link to the issue note on OpenReview
+- Threaded comment viewer with per-paper / per-type / per-role filtering
+- Score distribution, paper-type breakdown, and score scatter charts
+
+**Review phase**
+- Area Chair dashboard (review + meta-review completion per AC)
+- Area Chair filter on the papers table
+- AC scoring analysis chart
+
+**Commitment phase**
+- Meta-review Issue badge with direct link to the issue note
+- Linked ARR forum surfaced in the title column
+- SAC recommendation, presentation mode, and award columns
+- Resubmission link when present
+
+---
 
 ## Installation
 
-1. Clone this repository or download the source files:
-   ```
-   git clone <repository-url>
-   cd arr-report-generator
-   ```
+```bash
+git clone https://github.com/mtreviso/arr-report-generator
+cd arr-report-generator
+pip install -r requirements.txt
+```
 
-2. Install required dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
+---
 
 ## Usage
 
-### Basic Usage
+### Review phase
 
-Run the script with your OpenReview credentials. The script will generate an HTML report in the `.reports/` directory. Just open the HTML file on your favorite browser.
-
-**Review Phase:**
+Run as a Senior Area Chair during the ARR review cycle.
 
 ```bash
-python generate_review_report.py --username "your_username" --password "your_password" --me "~Your_Name1" --venue_id "aclweb.org/ACL/ARR/2025/February"
+python generate_review_report.py \
+  --username "you@email.com" \
+  --password "••••••••" \
+  --me "~Your_Name1" \
+  --venue_id "aclweb.org/ACL/ARR/2025/February"
 ```
 
-Output in `./reports/review_report.html`. 
+Output: `./reports/review_report.html`
 
+### Commitment phase
 
-**Commitment Phase:**
+Run as an Area Chair after authors have committed their ARR submissions to a venue.
 
 ```bash
-python generate_commitment_report.py --username "your_username" --password "your_password" --me "~Your_Name1" --venue_id "aclweb.org/ACL/2025/Conference"
+python generate_commitment_report.py \
+  --username "you@email.com" \
+  --password "••••••••" \
+  --me "~Your_Name1" \
+  --venue_id "aclweb.org/ACL/2025/Conference"
 ```
 
-Output in `./reports/commitment_report.html`. 
+Output: `./reports/commitment_report.html`
 
+Open either file in your browser — no server required.
 
+### Arguments
 
-**Command-line Arguments:**
+| Argument | Description | Default |
+|---|---|---|
+| `--username` | OpenReview username / email | env `OPENREVIEW_USERNAME` |
+| `--password` | OpenReview password | env `OPENREVIEW_PASSWORD` |
+| `--me` | Your OpenReview profile ID, e.g. `~Jane_Doe1` | env `OPENREVIEW_ID` |
+| `--venue_id` | OpenReview venue ID | — |
+| `--output_dir` | Directory for the generated report | `./reports` |
 
-- `--username`: Your OpenReview username (can also be set via `OPENREVIEW_USERNAME` environment variable)
-- `--password`: Your OpenReview password (can also be set via `OPENREVIEW_PASSWORD` environment variable)
-- `--me`: Your OpenReview ID (e.g., `~Your_Name1`)
-- `--venue_id`: The OpenReview venue ID (default: `aclweb.org/ACL/ARR/2025/February`)
-- `--output_dir`: Directory to save the generated report (default: `./reports`)
+### Environment variables
 
-
-
-### Environment Variables
-
-Instead of providing credentials on the command line, you can set these environment variables:
+To avoid repeating credentials on every run, export them once:
 
 ```bash
-export OPENREVIEW_USERNAME="your_username"
-export OPENREVIEW_PASSWORD="your_password"
+export OPENREVIEW_USERNAME="you@email.com"
+export OPENREVIEW_PASSWORD="••••••••"
 export OPENREVIEW_ID="~Your_Name1"
-```
 
-Then run the script without specifying these parameters, e.g.,
-
-```bash
 python generate_review_report.py --venue_id "aclweb.org/ACL/ARR/2025/February"
 python generate_commitment_report.py --venue_id "aclweb.org/ACL/2025/Conference"
 ```
 
-See `run.sh` for an example.
+See `run.sh` for a ready-made example.
 
+---
 
-## Data Security Note
+## Project structure
 
-This tool runs entirely on your local machine. Your OpenReview credentials are only used to fetch data and are not stored or sent anywhere else.
+```
+arr-report-generator/
+├── generate_review_report.py       # Entry point — review phase
+├── generate_commitment_report.py   # Entry point — commitment phase
+├── arr_report_generator.py         # Core logic (SAC, review phase)
+├── arr_commitment_generator.py     # Extends core for commitment phase
+├── templates/
+│   ├── review_report.html          # Full-page layout — review
+│   ├── commitment_report.html      # Full-page layout — commitment
+│   └── components/
+│       ├── _shared_styles.html     # CSS shared by both layouts
+│       ├── _shared_tab_js.html     # Tab navigation + chart init JS
+│       ├── papers_table_review.html
+│       ├── papers_table_commitment.html
+│       ├── ac_dashboard.html
+│       ├── comments.html
+│       ├── score_distribution.html
+│       ├── score_scatter.html
+│       ├── paper_type_distribution.html
+│       ├── review_completion.html
+│       ├── ac_scoring.html
+│       └── correlation_matrix.html
+└── requirements.txt
+```
+
+Templates are plain Jinja2 HTML files — edit them directly to customise the layout, add columns, or change styling without touching any Python.
+
+---
+
+## Configuring the low-confidence threshold
+
+The low-confidence flag triggers when any reviewer on a paper has a confidence score at or below the threshold. The default is **2**. To change it, edit the class variable near the top of `arr_report_generator.py`:
+
+```python
+class ARRReportGenerator:
+    LOW_CONF_THRESHOLD = 2   # ← change this
+```
+
+---
 
 ## Credits
 
@@ -89,6 +155,3 @@ This tool runs entirely on your local machine. Your OpenReview credentials are o
 ## License
 
 MIT
-
-
-

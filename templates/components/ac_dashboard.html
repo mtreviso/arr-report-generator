@@ -1,76 +1,55 @@
-<div class="px-4 py-5 sm:p-6">
-    <div>
+<style>
+  #ac-dashboard-table { font-size: 0.75rem; }
+  #ac-dashboard-table th, #ac-dashboard-table td {
+    padding: 5px 6px !important;
+    outline: none !important;
+    text-align: left !important;
+  }
+  #ac-dashboard-table thead th {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    font-weight: 400 !important;
+  }
+</style>
+
+<div class="px-2 py-4 sm:p-5">
+    <div class="overflow-x-auto w-full">
         <table id="ac-dashboard-table" class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Area Chair
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Completed Reviews
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Expected Reviews
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Papers Ready
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Total Papers
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        All Reviews Ready
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Meta Reviews
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        All Meta-reviews Ready
-                    </th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:140px;">Area Chair</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:90px;">Completed</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:90px;">Expected</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:90px;">Papers Ready</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:70px;">Total</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;">All Ready</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">Meta Reviews</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:110px;">All Meta Done</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
                 {% for ac in ac_meta %}
                 <tr>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {{ ac["Area Chair"] }}
+                    <td class="whitespace-nowrap text-gray-900">
+                        {% set em = ac.get("Area Chair Email") %}
+                        {% if em and "****" not in em %}
+                            <a href="mailto:{{ em }}" class="text-indigo-600 hover:text-indigo-900">{{ ac["Area Chair"] }}</a>
+                        {% else %}{{ ac["Area Chair"] }}{% endif %}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ ac["Completed_Reviews"] }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ ac["Expected_Reviews"] }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ ac["Papers_Ready"] }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ ac["Num_Papers"] }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                        {% if ac["All Reviews Ready"] %}
-                        <span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800">
-                            {{ ac["All Reviews Ready"] }}
+                    <td class="whitespace-nowrap text-gray-500">{{ ac["Completed_Reviews"] }}</td>
+                    <td class="whitespace-nowrap text-gray-500">{{ ac["Expected_Reviews"] }}</td>
+                    <td class="whitespace-nowrap text-gray-500">{{ ac["Papers_Ready"] }}</td>
+                    <td class="whitespace-nowrap text-gray-500">{{ ac["Num_Papers"] }}</td>
+                    <td class="whitespace-nowrap">
+                        <span class="inline-flex items-center px-2 py-0.5 text-xs rounded-full {% if ac['All Reviews Ready'] %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-500{% endif %}">
+                            {{ ac["All Reviews Ready"] or "–" }}
                         </span>
-                        {% else %}
-                        <span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold rounded-full bg-gray-100 text-gray-800">
-                            -
-                        </span>
-                        {% endif %}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ ac["Meta_Reviews_Done"] }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                        {% if ac["All Meta-reviews Ready"] %}
-                        <span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800">
-                            {{ ac["All Meta-reviews Ready"] }}
+                    <td class="whitespace-nowrap text-gray-500">{{ ac["Meta_Reviews_Done"] }}</td>
+                    <td class="whitespace-nowrap">
+                        <span class="inline-flex items-center px-2 py-0.5 text-xs rounded-full {% if ac['All Meta-reviews Ready'] %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-500{% endif %}">
+                            {{ ac["All Meta-reviews Ready"] or "–" }}
                         </span>
-                        {% else %}
-                        <span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold rounded-full bg-gray-100 text-gray-800">
-                            -
-                        </span>
-                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}

@@ -1,0 +1,475 @@
+{#
+  Columns (0-indexed):
+  0  #
+  1  Title
+  2  Type
+  3  Area Chair
+  4  Flags   ← Anon + Review Issue + Confidential + Low Confidence
+  5  Reviews
+  6  Ready
+  7  Confidence
+  8  Soundness
+  9  Excitement
+  10 Overall
+  11 Meta
+#}
+<style>
+  #papers-table { font-size: 0.75rem; }
+  #papers-table th, #papers-table td {
+    padding: 5px 6px !important;
+    outline: none !important;
+  }
+  #papers-table thead th {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    font-weight: 400 !important;
+    text-align: left !important;
+  }
+  /* Hide DT2's horizontal scrollbar bar div */
+  .dt-scroll-foot { display: none !important; }
+
+  /* Tooltip — uses fixed positioning set by JS so it never clips behind sticky header */
+  .tip {
+    position: relative;
+    display: inline-flex;
+    cursor: default;
+  }
+  .tip::after {
+    content: attr(data-tip);
+    position: fixed;
+    top: var(--ty, 0);
+    left: var(--tx, 0);
+    transform: translate(-50%, -100%);
+    background: #1e293b;
+    color: #f8fafc;
+    padding: 5px 9px;
+    border-radius: 5px;
+    font-size: 0.68rem;
+    font-weight: 400;
+    white-space: pre-line;
+    max-width: 240px;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+    z-index: 99999;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    line-height: 1.45;
+  }
+  /* Arrow */
+  .tip::before {
+    content: '';
+    position: fixed;
+    top: var(--ay, 0);
+    left: var(--tx, 0);
+    transform: translate(-50%, -100%);
+    border: 5px solid transparent;
+    border-top-color: #1e293b;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+    z-index: 99999;
+  }
+  .tip:hover::after,
+  .tip:hover::before { opacity: 1; }
+
+  /* Left-anchored tooltip (for wide columns near left edge) */
+  .tip-left::after {
+    transform: translate(0, -100%);
+  }
+  .tip-left::before {
+    transform: translate(0, -100%);
+    left: calc(var(--tx, 0px) + 8px);
+  }
+</style>
+
+<div class="px-2 py-4 sm:p-5">
+    <!-- Filter bar -->
+    <div class="mb-5 bg-gray-50 p-4 rounded-lg">
+        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Filters</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Area Chair</label>
+                <div id="ac-filter"></div>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Paper Type</label>
+                <div id="paper-type-filter"></div>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Ready</label>
+                <select id="ready-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">All</option>
+                    <option value="1">&#10003; Ready</option>
+                    <option value="0">Not ready</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Anon</label>
+                <select id="anon-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">All</option>
+                    <option value="yes">Anon</option>
+                    <option value="no">Non-anon</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Issues</label>
+                <select id="issues-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">All</option>
+                    <option value="1">Has issues</option>
+                    <option value="0">No issues</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Low confidence</label>
+                <select id="lowconf-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">All</option>
+                    <option value="1">Has low conf</option>
+                    <option value="0">All high conf</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Meta review</label>
+                <select id="meta-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">All</option>
+                    <option value="1">Has meta</option>
+                    <option value="0">No meta yet</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Confidential</label>
+                <select id="conf-comment-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">All</option>
+                    <option value="1">Has confidential</option>
+                    <option value="0">None</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Min. Overall</label>
+                <select id="overall-min-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">Any</option>
+                    <option value="1">&#8805; 1</option>
+                    <option value="2">&#8805; 2</option>
+                    <option value="3">&#8805; 3</option>
+                    <option value="4">&#8805; 4</option>
+                    <option value="5">&#8805; 5</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Max. Overall</label>
+                <select id="overall-max-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">Any</option>
+                    <option value="2">&#8804; 2</option>
+                    <option value="3">&#8804; 3</option>
+                    <option value="4">&#8804; 4</option>
+                    <option value="5">&#8804; 5</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Min. Excitement</label>
+                <select id="exc-min-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">Any</option>
+                    <option value="1">&#8805; 1</option>
+                    <option value="2">&#8805; 2</option>
+                    <option value="3">&#8805; 3</option>
+                    <option value="4">&#8805; 4</option>
+                    <option value="5">&#8805; 5</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Min. Confidence</label>
+                <select id="conf-min-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">Any</option>
+                    <option value="1">&#8805; 1</option>
+                    <option value="2">&#8805; 2</option>
+                    <option value="3">&#8805; 3</option>
+                    <option value="4">&#8805; 4</option>
+                    <option value="5">&#8805; 5</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Per page</label>
+                <select id="papers-length-select" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100" selected>100</option>
+                    <option value="-1">All</option>
+                </select>
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Search</label>
+                <input id="papers-search-input" type="text" placeholder="Search papers..." class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+            </div>
+
+            <!-- Flag legend -->
+            <div class="lg:col-span-6 mt-1 pt-3 border-t border-gray-200">
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Flag legend</p>
+                <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
+                    <span><span class="flag-badge flag-nonanon">P</span> Has public preprint</span>
+                    <span><span class="flag-badge flag-issue">!</span> Review issue report (clickable)</span>
+                    <span><span class="flag-badge flag-info">C</span> Confidential comment</span>
+                    <span><span class="flag-badge flag-warn">&#9888;</span> Low-confidence reviewer (conf. &#8804; 2)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="overflow-x-auto w-full">
+        <table id="papers-table" class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:36px;width:36px;">#</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:200px;">Title</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:48px;width:48px;">Type</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:110px;width:110px;">AC</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:72px;width:72px;">Flags</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:60px;width:60px;">Reviews</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:42px;width:42px;">Ready</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:110px;">Confidence</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">Soundness</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">Excitement</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">Overall</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:55px;width:55px;">Meta</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for paper in papers %}
+                {% set has_issue = paper["Has Review Issue"] or paper["Has Confidential"] %}
+                <tr data-ready="{{ 1 if paper['Ready for Rebuttal'] else 0 }}"
+                    data-anon="{{ paper['Is Anonymous'] | lower }}"
+                    data-has-issue="{{ 1 if has_issue else 0 }}"
+                    data-has-confidential="{{ 1 if paper['Has Confidential'] else 0 }}"
+                    data-low-conf="{{ 1 if paper['Has Low Confidence'] else 0 }}"
+                    data-has-meta="{{ 1 if paper['Meta Review Score'] else 0 }}"
+                    data-overall="{{ paper['Overall Assessment'] }}"
+                    data-excitement="{{ paper['Excitement Score'] }}"
+                    data-confidence="{{ paper['Reviewer Confidence'] }}"
+                    data-type="{{ paper['Paper Type'] }}">
+
+                    {# 0 # #}
+                    <td class="whitespace-nowrap font-medium text-gray-900">{{ paper["Paper #"] }}</td>
+
+                    {# 1 Title #}
+                    <td class="text-gray-500" style="max-width:240px;">
+                        <div class="truncate">
+                            <span class="tip tip-left" data-tip="{{ paper.Title }}">
+                                <a href="https://openreview.net/forum?id={{ paper['Paper ID'] }}" target="_blank" class="text-indigo-600 hover:text-indigo-900">{{ paper.Title }}</a>
+                            </span>
+                        </div>
+                    </td>
+
+                    {# 2 Type #}
+                    <td class="whitespace-nowrap text-gray-500">{{ paper["Paper Type"] }}</td>
+
+                    {# 3 AC #}
+                    <td class="whitespace-nowrap text-gray-500">
+                        {% set ac_email = paper.get("Area Chair Email") %}
+                        {% if ac_email and "****" not in ac_email %}
+                            <a href="mailto:{{ ac_email }}" class="text-indigo-600 hover:text-indigo-900">
+                                <span class="tip" data-tip="{{ ac_email }}">{{ paper["Area Chair"] }}</span>
+                            </a>
+                        {% else %}{{ paper["Area Chair"] }}{% endif %}
+                    </td>
+
+                    {# 4 Flags: Anon · Review Issue · Confidential · Low Confidence #}
+                    <td class="whitespace-nowrap">
+                        <div class="flex gap-1 items-center justify-start">
+                        {% if paper["Is Anonymous"] == "No" %}
+                            <span class="tip flag-badge flag-nonanon" data-tip="Has public preprint">P</span>
+                        {% endif %}
+
+                        {% if paper["Has Review Issue"] %}
+                            <a href="{{ paper['Review Issue Link'] }}" target="_blank">
+                                <span class="tip flag-badge flag-issue" data-tip="Review Issue Report&#10;Click to open on OpenReview">!</span>
+                            </a>
+                        {% endif %}
+
+                        {% if paper["Has Confidential"] %}
+                            <span class="tip flag-badge flag-info" data-tip="Confidential comment present">C</span>
+                        {% endif %}
+
+                        {% if paper["Has Low Confidence"] %}
+                            <span class="tip flag-badge flag-warn" data-tip="Low confidence reviewer(s)&#10;{{ paper['Low Confidence Reviewers'] }}">&#9888;</span>
+                        {% endif %}
+
+                        {% if paper["Is Anonymous"] != "No" and not paper["Has Review Issue"] and not paper["Has Confidential"] and not paper["Has Low Confidence"] %}
+                            <span class="text-gray-300">&#8211;</span>
+                        {% endif %}
+                        </div>
+                    </td>
+
+                    {# 5 Reviews #}
+                    <td class="whitespace-nowrap text-gray-500">{{ paper["Completed Reviews"] }}/{{ paper["Expected Reviews"] }}</td>
+
+                    {# 6 Ready #}
+                    <td class="whitespace-nowrap" data-sort="{{ 1 if paper['Ready for Rebuttal'] else 0 }}">
+                        {% if paper["Ready for Rebuttal"] %}
+                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-medium bg-green-100 text-green-700">&#10003;</span>
+                        {% else %}
+                        <span class="text-gray-300">&#8211;</span>
+                        {% endif %}
+                    </td>
+
+                    {# 7 Confidence #}
+                    <td class="text-gray-500">
+                        {% if paper["Reviewer Confidence"] %}
+                            <span class="tip" data-tip="Individual scores:&#10;{{ paper['Confidence List'] }}">{{ paper["Reviewer Confidence"] }}</span>
+                        {% else %}&#8211;{% endif %}
+                    </td>
+
+                    {# 8 Soundness #}
+                    <td class="text-gray-500">
+                        {% if paper["Soundness Score"] %}
+                            <span class="tip" data-tip="Individual scores:&#10;{{ paper['Soundness List'] }}">{{ paper["Soundness Score"] }}</span>
+                        {% else %}&#8211;{% endif %}
+                    </td>
+
+                    {# 9 Excitement #}
+                    <td class="text-gray-500">
+                        {% if paper["Excitement Score"] %}
+                            <span class="tip" data-tip="Individual scores:&#10;{{ paper['Excitement List'] }}">{{ paper["Excitement Score"] }}</span>
+                        {% else %}&#8211;{% endif %}
+                    </td>
+
+                    {# 10 Overall #}
+                    <td class="text-gray-500">
+                        {% if paper["Overall Assessment"] %}
+                            <span class="tip" data-tip="Individual scores:&#10;{{ paper['Overall List'] }}">{{ paper["Overall Assessment"] }}</span>
+                        {% else %}&#8211;{% endif %}
+                    </td>
+
+                    {# 11 Meta #}
+                    <td class="whitespace-nowrap text-gray-700">
+                        {% if paper["Meta Review Score"] %}<span class="font-semibold">{{ paper["Meta Review Score"] }}</span>{% else %}&#8211;{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+
+    // Position tooltip using fixed coords so it never clips behind headers.
+    $(document).on('mouseenter', '.tip', function() {
+        const el = this;
+        const rect = el.getBoundingClientRect();
+        const isLeft = el.classList.contains('tip-left');
+        const tx = isLeft ? rect.left : rect.left + rect.width / 2;
+        el.style.setProperty('--tx', tx + 'px');
+        el.style.setProperty('--ty', (rect.top - 10) + 'px');
+        el.style.setProperty('--ay', (rect.top - 1) + 'px');
+    });
+
+    function parseAvg(str) {
+        if (!str || str === '–' || str === 'None' || str === '') return null;
+        const m = String(str).match(/^([\d.]+)/);
+        return m ? parseFloat(m[1]) : null;
+    }
+
+    DataTable.ext.search.push(function(settings, data, dataIndex) {
+        if (settings.nTable.id !== 'papers-table') return true;
+        const row = $('#papers-table tbody tr').eq(dataIndex);
+
+        const ready       = $('#ready-filter').val();
+        const issues      = $('#issues-filter').val();
+        const lconf       = $('#lowconf-filter').val();
+        const meta        = $('#meta-filter').val();
+        const anon        = $('#anon-filter').val();
+        const confComment = $('#conf-comment-filter').val();
+        const overallMin  = $('#overall-min-filter').val();
+        const overallMax  = $('#overall-max-filter').val();
+        const excMin      = $('#exc-min-filter').val();
+        const confMin     = $('#conf-min-filter').val();
+
+        if (ready       && row.attr('data-ready')           !== ready)       return false;
+        if (issues      && row.attr('data-has-issue')        !== issues)      return false;
+        if (lconf       && row.attr('data-low-conf')         !== lconf)       return false;
+        if (meta        && row.attr('data-has-meta')         !== meta)        return false;
+        if (confComment && row.attr('data-has-confidential') !== confComment) return false;
+
+        if (anon) {
+            const ra = (row.attr('data-anon') || '').toLowerCase();
+            if (anon === 'yes' && ra !== 'yes') return false;
+            if (anon === 'no'  && ra !== 'no')  return false;
+        }
+        if (overallMin || overallMax) {
+            const v = parseAvg(row.attr('data-overall'));
+            if (v === null) return false;
+            if (overallMin && v < parseFloat(overallMin)) return false;
+            if (overallMax && v > parseFloat(overallMax)) return false;
+        }
+        if (excMin) {
+            const v = parseAvg(row.attr('data-excitement'));
+            if (v === null || v < parseFloat(excMin)) return false;
+        }
+        if (confMin) {
+            const v = parseAvg(row.attr('data-confidence'));
+            if (v === null || v < parseFloat(confMin)) return false;
+        }
+        return true;
+    });
+
+    const dt = $('#papers-table').DataTable({
+        pageLength: 100,
+        autoWidth: false,
+        order: [[0, 'asc']],
+        layout: {
+            topStart: null,
+            topEnd: null,
+            bottomStart: 'info',
+            bottomEnd: 'paging'
+        },
+        columnDefs: [
+            { type: 'num', targets: [0, 4] },
+            { type: 'num', targets: [5], render: function(d, type, row, meta) {
+                if (type === 'sort')
+                    return parseInt($('#papers-table tbody tr').eq(meta.row).attr('data-ready') || '0');
+                return d;
+            }},
+            { className: 'overall-assessment', targets: [10] },
+            { className: 'meta-review',        targets: [11] }
+        ],
+        initComplete: function() {
+            const api = new DataTable.Api(this);
+
+            api.columns(3).every(function() {
+                const col = this;
+                const sel = $('<select class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none"><option value="">All ACs</option></select>')
+                    .appendTo('#ac-filter')
+                    .on('change', function() {
+                        const v = DataTable.util.escapeRegex($(this).val());
+                        col.search(v ? '^'+v+'$' : '', true, false).draw();
+                    });
+                col.data().unique().sort().each(function(d) {
+                    if (d) sel.append('<option value="'+d+'">'+d+'</option>');
+                });
+            });
+
+            api.columns(2).every(function() {
+                const col = this;
+                const sel = $('<select class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none"><option value="">All Types</option></select>')
+                    .appendTo('#paper-type-filter')
+                    .on('change', function() {
+                        const v = DataTable.util.escapeRegex($(this).val());
+                        col.search(v ? '^'+v+'$' : '', true, false).draw();
+                    });
+                col.data().unique().sort().each(function(d) {
+                    if (d) sel.append('<option value="'+d+'">'+d+'</option>');
+                });
+            });
+        }
+    });
+
+    // Custom search and length inputs
+    $('#papers-search-input').on('input', function() { dt.search(this.value).draw(); });
+    $('#papers-length-select').on('change', function() { dt.page.len(this.value).draw(); });
+
+    $('#ready-filter, #issues-filter, #lowconf-filter, #meta-filter, #anon-filter, #conf-comment-filter, #overall-min-filter, #overall-max-filter, #exc-min-filter, #conf-min-filter').on('change', function() {
+        dt.draw();
+    });
+});
+</script>

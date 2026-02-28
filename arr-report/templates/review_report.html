@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎛️</text></svg>">
+    <title>{{ title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.2/marked.min.js"></script>
+    {% include 'components/_shared_styles.html' %}
+</head>
+<body class="bg-gray-50 min-h-screen">
+<div class="relative">
+    <header class="bg-slate-600 shadow-md">
+        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+            <h1 class="text-3xl font-bold text-white">🎛️ ARR Review Dashboard</h1>
+            <div class="text-right">
+                <p class="text-white text-sm">{{ venue_id }}</p>
+                <p class="text-white text-sm opacity-80">Generated at {{ generated_date }}</p>
+            </div>
+        </div>
+    </header>
+
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-center">
+                <ul class="flex space-x-8">
+                    <li><button class="tab-button active py-4 px-1 text-center border-b-2 border-indigo-500 text-indigo-600 font-medium transition-colors duration-200 focus:outline-none" data-tab="papers-tab">Papers Overview</button></li>
+                    <li><button class="tab-button py-4 px-1 text-center border-b-2 border-transparent hover:border-indigo-500 font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none" data-tab="ac-tab">AC Dashboard</button></li>
+                    <li><button class="tab-button py-4 px-1 text-center border-b-2 border-transparent hover:border-indigo-500 font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none" data-tab="comments-tab">Comments ({{ comments_count }})</button></li>
+                    <li><button class="tab-button py-4 px-1 text-center border-b-2 border-transparent hover:border-indigo-500 font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none" data-tab="analytics-tab">Analytics</button></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+
+        <!-- Papers Tab -->
+        <div id="papers-tab" class="tab-content active">
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Papers Overview</h2>
+                    <p class="mt-1 text-sm text-gray-500">All papers in your batch with review scores and flags.</p>
+                </div>
+                {% include 'components/papers_table_review.html' %}
+            </div>
+        </div>
+
+        <!-- AC Tab -->
+        <div id="ac-tab" class="tab-content">
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Area Chair Dashboard</h2>
+                    <p class="mt-1 text-sm text-gray-500">Review and meta-review progress per Area Chair.</p>
+                </div>
+                {% include 'components/ac_dashboard.html' %}
+            </div>
+        </div>
+
+        <!-- Comments Tab -->
+        <div id="comments-tab" class="tab-content">
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Comments &amp; Review Issues</h2>
+                    <p class="mt-1 text-sm text-gray-500">All confidential comments and review issue reports.</p>
+                </div>
+                {% include 'components/comments.html' %}
+            </div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div id="analytics-tab" class="tab-content">
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Score Distribution</h2>
+                    <p class="mt-1 text-sm text-gray-500">Distribution of overall assessment and meta-review scores.</p>
+                </div>
+                {% include 'components/score_distribution.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Paper Type Distribution</h2>
+                </div>
+                {% include 'components/paper_type_distribution.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Review Completion by AC</h2>
+                </div>
+                {% include 'components/review_completion.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Score Comparison: Overall vs Meta</h2>
+                </div>
+                {% include 'components/score_scatter.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Area Chair Scoring Analysis</h2>
+                </div>
+                {% include 'components/ac_scoring.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Score Correlation Matrix</h2>
+                </div>
+                {% include 'components/correlation_matrix.html' %}
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<footer class="mt-4">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4 flex justify-center">
+        <span class="text-sm text-gray-500">Code at <a class="hover:text-gray-700" href="https://github.com/mtreviso/arr-report-generator" target="_blank">github.com/mtreviso/arr-report-generator</a></span>
+    </div>
+</footer>
+
+{% include 'components/_shared_tab_js.html' %}
+
+<script>
+// AC Dashboard DataTable (review-specific)
+$(document).ready(function() {
+    $('#ac-dashboard-table').DataTable({
+        paging: false, searching: false, info: false, autoWidth: false, scrollX: false,
+        order: [[5, 'desc']]
+    });
+});
+</script>
+
+</body>
+</html>
