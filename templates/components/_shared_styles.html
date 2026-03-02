@@ -39,17 +39,17 @@
         table.dataTable thead th .dt-column-order {
             display: none !important;
         }
-        table.dataTable thead th.dt-orderable-asc::before,
-        table.dataTable thead th.dt-orderable-desc::before {
+        table.dataTable thead th.dt-orderable-asc::after,
+        table.dataTable thead th.dt-orderable-desc::after {
             content: "⇅";
             display: inline-block;
-            margin-left: 0px;
+            margin-left: 5px;
             font-size: 0.7em;
             opacity: 0.35;
             vertical-align: middle;
         }
-        table.dataTable thead th.dt-ordering-asc::before  { content: "↑"; opacity: 1; color: #6366f1; }
-        table.dataTable thead th.dt-ordering-desc::before { content: "↓"; opacity: 1; color: #6366f1; }
+        table.dataTable thead th.dt-ordering-asc::after  { content: "↑"; opacity: 1; color: #6366f1; }
+        table.dataTable thead th.dt-ordering-desc::after { content: "↓"; opacity: 1; color: #6366f1; }
         table.dataTable th.overall-assessment { min-width: 200px; }
         table.dataTable th.meta-review { min-width: 100px; }
 
@@ -105,6 +105,12 @@
         .flag-ok    { background: #d1fae5; color: #065f46; }
         .flag-anon  { background: #f3e8ff; color: #6b21a8; }
         .flag-nonanon { background: #ffedd5; color: #9a3412; }
+        /* Focus ring for select elements (matches input behaviour) */
+        select:focus {
+            outline: 2px solid #6366f1 !important;
+            outline-offset: 1px !important;
+        }
+
         /* ── Global table normalisation ─────────────────────────────
            Applies to every table on the page (papers, AC dashboard,
            analytics) so font-size, padding and weight are consistent.

@@ -176,3 +176,4 @@ cython_debug/
 reports/
 run_commitment.sh
 run_review.sh
+env

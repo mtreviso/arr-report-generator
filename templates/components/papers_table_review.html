@@ -372,7 +372,7 @@ $(document).ready(function() {
 
     DataTable.ext.search.push(function(settings, data, dataIndex) {
         if (settings.nTable.id !== 'papers-table') return true;
-        const row = $('#papers-table tbody tr').eq(dataIndex);
+        const row = $(settings.aoData[dataIndex].nTr);
 
         const ready       = $('#ready-filter').val();
         const issues      = $('#issues-filter').val();
