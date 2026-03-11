@@ -39,6 +39,10 @@
         table.dataTable thead th .dt-column-order {
             display: none !important;
         }
+        table.dataTable thead th.dt-orderable-asc::after,
+        table.dataTable thead th.dt-orderable-desc::after {
+            display: none !important;
+        }
         table.dataTable thead th.dt-orderable-asc::before,
         table.dataTable thead th.dt-orderable-desc::before {
             content: "⇅";

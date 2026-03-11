@@ -33,13 +33,13 @@ function renderScoreDistributionChart() {
                     label: 'Overall Assessment',
                     data: overallCounts,
                     borderColor: 'rgba(59,130,246,1)', backgroundColor: 'rgba(59,130,246,0.1)',
-                    tension: 0.3, fill: true, pointRadius: 3
+                    tension: 0.0, fill: true, pointRadius: 3
                 },
                 {
                     label: 'AC Score (meta)',
                     data: metaLabels.map((lbl,i) => ({x: lbl, y: metaCounts[i]})),
                     borderColor: 'rgba(220,38,38,1)', backgroundColor: 'rgba(220,38,38,0.1)',
-                    tension: 0.3, fill: true, pointRadius: 3,
+                    tension: 0.0, fill: true, pointRadius: 3,
                     parsing: {xAxisKey: 'x', yAxisKey: 'y'}
                 }
             ]
