@@ -284,9 +284,11 @@ class PCReportGenerator(ARRReportGenerator):
             ethics           = int((group["Ethics Flag"] != "").sum())
             sac_id    = group["Senior Area Chair ID"].iloc[0]
             sac_email = group["Senior Area Chair Email"].iloc[0]
-            emerg_decl   = int(group["Has Emergency Declaration"].sum()) if "Has Emergency Declaration" in group.columns else 0
             emerg_assign = int(group["Has Emergency Reviewer"].sum()) if "Has Emergency Reviewer" in group.columns else 0
-            emerg_unmet  = max(0, emerg_decl - emerg_assign)
+            emerg_decl  = int(df["Has Emergency Declaration"].sum()) if "Has Emergency Declaration" in df.columns else 0
+            emerg_unmet = int(
+                ((df["Has Emergency Declaration"] == True) & (df["Has Emergency Reviewer"] == False)).sum()
+            ) if "Has Emergency Declaration" in df.columns else 0
             late_papers  = int((group["Completed Reviews"] < group["Expected Reviews"]).sum())
             rows.append({
                 "Senior Area Chair":       sac_name,
@@ -377,20 +379,38 @@ class PCReportGenerator(ARRReportGenerator):
         sac_count      = df["Senior Area Chair"].nunique() if "Senior Area Chair" in df.columns else 0
         ac_count       = df["Area Chair"].nunique()
 
+        # Score averages
+        overall_vals = df["Overall Assessment"].apply(self.parse_avg).dropna()
+        meta_vals    = df["Meta Review Score"].apply(
+            lambda x: float(x) if x and str(x).strip() else np.nan
+        ).dropna()
+
+        # Emergency stats
+        emerg_decl  = int(df["Has Emergency Declaration"].sum()) if "Has Emergency Declaration" in df.columns else 0
+        emerg_unmet = int((df["Has Emergency Declaration"] & ~df["Has Emergency Reviewer"]).sum()) if "Has Emergency Declaration" in df.columns else 0
+
+        # Paper type breakdown
+        type_counts = df["Paper Type"].value_counts().to_dict() if "Paper Type" in df.columns else {}
+
         return {
-            "total_papers":      total,
-            "reviews_done":      reviews_done,
-            "reviews_expected":  reviews_exp,
-            "review_pct":        round(100 * reviews_done / reviews_exp, 1) if reviews_exp else 0,
-            "papers_all_reviewed": all_reviewed,
+            "total_papers":            total,
+            "reviews_done":            reviews_done,
+            "reviews_expected":        reviews_exp,
+            "review_pct":              round(100 * reviews_done / reviews_exp, 1) if reviews_exp else 0,
+            "papers_all_reviewed":     all_reviewed,
             "papers_all_reviewed_pct": round(100 * all_reviewed / total, 1) if total else 0,
-            "meta_done":         meta_done,
-            "meta_pct":          round(100 * meta_done / total, 1) if total else 0,
-            "review_issues":     issues,
-            "ethics_papers":     ethics,
-            "low_conf_papers":   low_conf,
-            "sac_count":         sac_count,
-            "ac_count":          ac_count,
+            "meta_done":               meta_done,
+            "meta_pct":                round(100 * meta_done / total, 1) if total else 0,
+            "review_issues":           issues,
+            "ethics_papers":           ethics,
+            "low_conf_papers":         low_conf,
+            "sac_count":               sac_count,
+            "ac_count":                ac_count,
+            "emergency_declared":      emerg_decl,
+            "emergency_unmet":         emerg_unmet,
+            "avg_overall":             round(float(overall_vals.mean()), 2) if len(overall_vals) else None,
+            "avg_meta":                round(float(meta_vals.mean()),    2) if len(meta_vals)    else None,
+            "type_counts":             type_counts,
         }
 
     # -----------------------------------------------------------------------
