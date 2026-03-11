@@ -442,6 +442,7 @@ $(document).ready(function() {
     });
 
     const dt = $('#papers-table').DataTable({
+        deferRender: true,
         pageLength: 100,
         autoWidth: false,
         order: [[0, 'asc']],

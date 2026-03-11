@@ -15,7 +15,7 @@
 </head>
 <body class="bg-gray-50 min-h-screen">
 <div class="relative">
-    <header class="bg-slate-600 shadow-md">
+    <header class="bg-indigo-900 shadow-md">
         <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
             <h1 class="text-3xl font-bold text-white">🎛️ ARR Review Dashboard</h1>
             <div class="text-right">
@@ -124,16 +124,6 @@
 </footer>
 
 {% include 'components/_shared_tab_js.html' %}
-
-<script>
-// AC Dashboard DataTable (review-specific)
-$(document).ready(function() {
-    $('#ac-dashboard-table').DataTable({
-        paging: false, searching: false, info: false, autoWidth: false, scrollX: false,
-        order: [[5, 'desc']]
-    });
-});
-</script>
 
 </body>
 </html>

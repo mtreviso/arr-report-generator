@@ -231,6 +231,16 @@ class ARRReportGenerator:
             self.profile_cache[user_id] = None
             return None
 
+    def _sanitize_tilde_id(self, uid):
+        """~Foo_Bar1 → Foo Bar"""
+        if not uid or not uid.startswith("~"):
+            return uid
+        import re
+        name = uid.lstrip("~")
+        name = re.sub(r'\\d+$', '', name)
+        name = name.replace("_", " ").strip()
+        return name.title()
+
     def get_display_name_for_user(self, user_id):
         if not user_id:
             return "Unknown"
@@ -264,7 +274,7 @@ class ARRReportGenerator:
             name = profile.name
         if not name and hasattr(profile, "id"):
             name = profile.id
-        return str(name or default)
+        return str(name) if name else self._sanitize_tilde_id(str(default))
 
     def get_email_for_user(self, user_id):
         if not user_id:
