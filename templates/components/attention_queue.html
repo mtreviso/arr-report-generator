@@ -122,8 +122,16 @@
                             </a>
                         </div>
                     </td>
-                    <td class="whitespace-nowrap text-gray-500">{{ p.get("Senior Area Chair","") }}</td>
-                    <td class="whitespace-nowrap text-gray-500">{{ p.get("Area Chair","") }}</td>
+                    <td class="whitespace-nowrap text-gray-500">
+                        {% set sac_id = p.get("Senior Area Chair ID") %}
+                        {% if sac_id %}<a href="https://openreview.net/profile?id={{ sac_id }}" target="_blank" class="text-gray-500 hover:underline" style="text-decoration:none;">{{ p.get("Senior Area Chair","") }}</a>
+                        {% else %}{{ p.get("Senior Area Chair","") }}{% endif %}
+                    </td>
+                    <td class="whitespace-nowrap text-gray-500">
+                        {% set ac_id = p.get("Area Chair ID") %}
+                        {% if ac_id %}<a href="https://openreview.net/profile?id={{ ac_id }}" target="_blank" class="text-gray-500 hover:underline" style="text-decoration:none;">{{ p.get("Area Chair","") }}</a>
+                        {% else %}{{ p.get("Area Chair","") }}{% endif %}
+                    </td>
                     <td class="whitespace-nowrap {% if p['Completed Reviews'] < p['Expected Reviews'] %}text-red-600{% else %}text-gray-500{% endif %}">
                         {{ p["Completed Reviews"] }}/{{ p["Expected Reviews"] }}
                     </td>

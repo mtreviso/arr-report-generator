@@ -224,21 +224,19 @@
 
                     {# 3 SAC #}
                     <td class="whitespace-nowrap text-gray-500">
-                        {% set sac_email = paper.get("Senior Area Chair Email") %}
-                        {% if sac_email and "****" not in sac_email %}
-                            <a href="mailto:{{ sac_email }}" class="text-indigo-600 hover:text-indigo-900">
-                                <span class="tip" data-tip="{{ sac_email }}">{{ paper["Senior Area Chair"] }}</span>
-                            </a>
+                        {% set sac_id = paper.get("Senior Area Chair ID") %}
+                        {% if sac_id %}
+                            <a href="https://openreview.net/profile?id={{ sac_id }}" target="_blank"
+                               class="text-gray-500 hover:underline" style="text-decoration:none;">{{ paper["Senior Area Chair"] }}</a>
                         {% else %}{{ paper.get("Senior Area Chair","") }}{% endif %}
                     </td>
 
                     {# 4 AC #}
                     <td class="whitespace-nowrap text-gray-500">
-                        {% set ac_email = paper.get("Area Chair Email") %}
-                        {% if ac_email and "****" not in ac_email %}
-                            <a href="mailto:{{ ac_email }}" class="text-indigo-600 hover:text-indigo-900">
-                                <span class="tip" data-tip="{{ ac_email }}">{{ paper["Area Chair"] }}</span>
-                            </a>
+                        {% set ac_id = paper.get("Area Chair ID") %}
+                        {% if ac_id %}
+                            <a href="https://openreview.net/profile?id={{ ac_id }}" target="_blank"
+                               class="text-gray-500 hover:underline" style="text-decoration:none;">{{ paper["Area Chair"] }}</a>
                         {% else %}{{ paper.get("Area Chair","") }}{% endif %}
                     </td>
 

@@ -678,8 +678,12 @@ class ARRReportGenerator:
         meta_df["Emergency_Unassigned"] = (
             meta_df["Emergency_Declared"] - meta_df["Emergency_Assigned"]
         ).clip(lower=0)
-        meta_df["Area Chair Email"] = meta_df["Area Chair"].map(
-            lambda ac: self.ac_email_cache.get(ac, "")
+        # Carry forward the tilde ID (needed for profile links in templates)
+        ac_id_map = df.groupby("Area Chair")["Area Chair ID"].first().to_dict()
+        meta_df["Area Chair ID"] = meta_df["Area Chair"].map(ac_id_map).fillna("")
+        # Email: look up by tilde ID (ac_email_cache is keyed by user_id, not name)
+        meta_df["Area Chair Email"] = meta_df["Area Chair ID"].map(
+            lambda uid: self.ac_email_cache.get(uid, "")
         )
         # If PC mode and SAC info available per paper, attach SAC name per AC
         if "Senior Area Chair" in df.columns:
@@ -752,6 +756,7 @@ class ARRReportGenerator:
         if not self.papers_data:
             return []
         df = pd.DataFrame(self.papers_data)
+        ac_id_map = df.groupby("Area Chair")["Area Chair ID"].first().to_dict() if "Area Chair ID" in df.columns else {}
         result = []
         for ac_name in df['Area Chair'].unique():
             ac_papers = df[df['Area Chair'] == ac_name]
@@ -760,7 +765,7 @@ class ARRReportGenerator:
             if overall_scores or meta_scores:
                 result.append({
                     'name':          ac_name,
-                    'email':         self.ac_email_cache.get(ac_name, ""),
+                    'user_id':       ac_id_map.get(ac_name, ""),
                     'overall_avg':   round(np.mean(overall_scores), 2) if overall_scores else None,
                     'meta_avg':      round(np.mean(meta_scores), 2)    if meta_scores    else None,
                     'overall_count': len(overall_scores),
@@ -802,16 +807,26 @@ class ARRReportGenerator:
                     forum_id = reply.get("forum", "")
                     note_id  = reply.get("id", "")
                     link     = f"{base_url}?id={forum_id}&noteId={note_id}"
+                    signatures = reply.get("signatures", [])
+                    role = self.infer_role_from_signature(signatures)
+                    # Resolve display name for non-anonymous signers (tilde IDs)
+                    author_name = ""
+                    if signatures:
+                        sig = signatures[0]
+                        if sig.startswith("~"):
+                            author_name = self.get_display_name_for_user(sig)
                     self.comments_data.append({
-                        "Paper #":  submission.number,
-                        "Paper ID": submission.id,
-                        "Type":     self.classify_comment_type(reply),
-                        "Role":     self.infer_role_from_signature(reply.get("signatures", [])),
-                        "Date":     self.format_timestamp(reply.get("tcdate")),
-                        "Content":  self.extract_comment_text(reply),
-                        "Link":     link,
-                        "ReplyTo":  reply.get("replyto"),
-                        "NoteId":   note_id,
+                        "Paper #":    submission.number,
+                        "Paper ID":   submission.id,
+                        "Type":       self.classify_comment_type(reply),
+                        "Role":       role,
+                        "AuthorName": author_name,
+                        "Date":       self.format_timestamp(reply.get("tcdate")),
+                        "Content":    self.extract_comment_text(reply),
+                        "Link":       link,
+                        "ReplyTo":    reply.get("replyto"),
+                        "NoteId":     note_id,
+                        "AuthorID":   signatures[0] if signatures and signatures[0].startswith("~") else "",
                     })
 
     def process_data(self):
@@ -875,7 +890,7 @@ class ARRReportGenerator:
             "or in your current working directory."
         )
 
-    def generate_report(self, output_dir="."):
+    def generate_report(self, output_dir=".", filename="review_report.html"):
         """Generate the HTML report using external Jinja2 templates."""
         os.makedirs(output_dir, exist_ok=True)
 
@@ -912,7 +927,7 @@ class ARRReportGenerator:
         template    = env.get_template("review_report.html")
         html_content = template.render(**template_data)
 
-        output_path = Path(output_dir) / "review_report.html"
+        output_path = Path(output_dir) / filename
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(html_content)
 

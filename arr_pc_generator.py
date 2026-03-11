@@ -183,7 +183,20 @@ class PCReportGenerator(ARRReportGenerator):
             if rg and getattr(rg, 'members', None):
                 expected_reviews = len(rg.members)
                 for rev_id in rg.members:
-                    self.reviewer_load[rev_id] = self.reviewer_load.get(rev_id, 0) + 1
+                    # Anonymous venues store per-submission group IDs like
+                    # venue/SubmissionN/Reviewer_abc — resolve to the real tilde ID
+                    actual_rev_id = rev_id
+                    if '/Reviewer_' in rev_id:
+                        rev_grp = self.group_index.get(rev_id)
+                        if rev_grp is None:
+                            try:
+                                rev_grp = self.client.get_group(rev_id)
+                                self.group_index[rev_id] = rev_grp
+                            except Exception:
+                                rev_grp = None
+                        if rev_grp and getattr(rev_grp, 'members', None):
+                            actual_rev_id = rev_grp.members[0]
+                    self.reviewer_load[actual_rev_id] = self.reviewer_load.get(actual_rev_id, 0) + 1
 
             # Emergency reviewer group
             has_emergency_reviewer = False
@@ -438,7 +451,9 @@ class PCReportGenerator(ARRReportGenerator):
                     "Paper ID":   p["Paper ID"],
                     "Title":      p["Title"],
                     "SAC":        p.get("Senior Area Chair", ""),
+                    "SAC_ID":     p.get("Senior Area Chair ID", ""),
                     "AC":         p.get("Area Chair", ""),
+                    "AC_ID":      p.get("Area Chair ID", ""),
                     "Avg Review": round(avg, 2),
                     "AC Score":   float(meta),
                     "Diff":       round(float(meta) - avg, 2),
@@ -471,7 +486,9 @@ class PCReportGenerator(ARRReportGenerator):
                     "Paper ID": p["Paper ID"],
                     "Title":    p["Title"],
                     "SAC":      p.get("Senior Area Chair", ""),
+                    "SAC_ID":   p.get("Senior Area Chair ID", ""),
                     "AC":       p.get("Area Chair", ""),
+                    "AC_ID":    p.get("Area Chair ID", ""),
                     "Scores":   scores_raw,
                     "Std Dev":  round(std, 2),
                     "Avg":      round(float(np.mean(scores)), 2),
@@ -496,11 +513,10 @@ class PCReportGenerator(ARRReportGenerator):
         total = len(self.reviewer_load)
         avg_load = round(sum(self.reviewer_load.values()) / total, 2) if total else 0
         return {
-            "labels":          labels,
-            "counts":          counts,
-            "total_reviewers": total,
-            "zero_reviews":    zero_count,
-            "avg_load":        avg_load,
+            "labels":  labels,
+            "counts":  counts,
+            "total":   total,
+            "avg_load": avg_load,
         }
 
     # -----------------------------------------------------------------------
@@ -566,7 +582,7 @@ class PCReportGenerator(ARRReportGenerator):
             sac_row    = next((r for r in self.sac_meta_data if r["Senior Area Chair"] == sac_name), {})
             results.append({
                 "name":          sac_name,
-                "email":         sac_row.get("Senior Area Chair Email", ""),
+                "user_id":       sac_row.get("Senior Area Chair ID", ""),
                 "avg_review":    avg_review,
                 "avg_meta":      avg_meta,
                 "difference":    diff,
@@ -602,14 +618,14 @@ class PCReportGenerator(ARRReportGenerator):
                 return p
         raise FileNotFoundError("Cannot find templates/ with pc_report.html")
 
-    def generate_report(self, output_dir="."):
+    def generate_report(self, output_dir=".", filename="pc_report.html"):
         os.makedirs(output_dir, exist_ok=True)
         self.process_data()
 
         if not self.papers_data:
             html = ("<html><body><h1>No papers found</h1>"
                     f"<p>Venue: {self.venue_id}</p></body></html>")
-            p = Path(output_dir) / "pc_report.html"
+            p = Path(output_dir) / filename
             p.write_text(html)
             return p
 
@@ -647,6 +663,6 @@ class PCReportGenerator(ARRReportGenerator):
             autoescape=jinja2.select_autoescape(['html', 'xml'])
         )
         html = env.get_template("pc_report.html").render(**template_data)
-        output_path = Path(output_dir) / "pc_report.html"
+        output_path = Path(output_dir) / filename
         output_path.write_text(html, encoding="utf-8")
         return output_path

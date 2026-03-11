@@ -276,11 +276,10 @@
 
                     {# 3 AC #}
                     <td class="whitespace-nowrap text-gray-500">
-                        {% set ac_email = paper.get("Area Chair Email") %}
-                        {% if ac_email and "****" not in ac_email %}
-                            <a href="mailto:{{ ac_email }}" class="text-indigo-600 hover:text-indigo-900">
-                                <span class="tip" data-tip="{{ ac_email }}">{{ paper["Area Chair"] }}</span>
-                            </a>
+                        {% set ac_id = paper.get("Area Chair ID") %}
+                        {% if ac_id %}
+                            <a href="https://openreview.net/profile?id={{ ac_id }}" target="_blank"
+                               class="text-gray-500 hover:underline" style="text-decoration:none;">{{ paper["Area Chair"] }}</a>
                         {% else %}{{ paper["Area Chair"] }}{% endif %}
                     </td>
 

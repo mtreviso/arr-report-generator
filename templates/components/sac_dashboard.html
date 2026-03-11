@@ -85,6 +85,7 @@
             <thead class="bg-gray-50">
                 <tr>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:160px;">Senior Area Chair</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:160px;">Email</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:70px;">Papers</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">Reviews Done</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;">Review %</th>
@@ -108,10 +109,17 @@
                     data-emergency-unmet="{{ 1 if sac.get('Emergency_Unassigned',0) > 0 else 0 }}"
                 >
                     <td class="whitespace-nowrap text-gray-900">
+                        {% set sac_id = sac.get("Senior Area Chair ID") %}
+                        {% if sac_id %}
+                            <a href="https://openreview.net/profile?id={{ sac_id }}" target="_blank"
+                               class="text-gray-900 hover:underline" style="text-decoration:none;">{{ sac["Senior Area Chair"] }}</a>
+                        {% else %}{{ sac["Senior Area Chair"] }}{% endif %}
+                    </td>
+                    <td class="whitespace-nowrap text-gray-400" style="font-size:0.7rem;">
                         {% set em = sac.get("Senior Area Chair Email") %}
                         {% if em and "****" not in em %}
-                            <a href="mailto:{{ em }}" class="text-indigo-600 hover:text-indigo-900">{{ sac["Senior Area Chair"] }}</a>
-                        {% else %}{{ sac["Senior Area Chair"] }}{% endif %}
+                            <a href="mailto:{{ em }}" class="text-gray-400 hover:text-gray-600" style="text-decoration:none;">{{ em }}</a>
+                        {% else %}–{% endif %}
                     </td>
                     <td class="whitespace-nowrap text-gray-500">{{ sac["Num_Papers"] }}</td>
                     <td class="whitespace-nowrap text-gray-500">{{ sac["Completed_Reviews"] }} / {{ sac["Expected_Reviews"] }}</td>

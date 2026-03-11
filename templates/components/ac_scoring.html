@@ -38,9 +38,10 @@
                 {% for ac in ac_scoring_data %}
                 <tr>
                     <td class="whitespace-nowrap text-gray-900">
-                        {% set em = ac.get("email") %}
-                        {% if em and "****" not in em %}
-                            <a href="mailto:{{ em }}" class="text-indigo-600 hover:text-indigo-900" title="{{ em }}">{{ ac.name }}</a>
+                        {% set uid = ac.get("user_id") %}
+                        {% if uid %}
+                            <a href="https://openreview.net/profile?id={{ uid }}" target="_blank"
+                               class="text-gray-900 hover:underline" style="text-decoration:none;">{{ ac.name }}</a>
                         {% else %}{{ ac.name }}{% endif %}
                     </td>
                     <td class="whitespace-nowrap text-gray-500">{{ ac.overall_avg if ac.overall_avg is not none else "–" }}</td>

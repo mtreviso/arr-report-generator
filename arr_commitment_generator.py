@@ -524,11 +524,11 @@ class CommitmentReportGenerator(ARRReportGenerator):
             hd['meta_review']['counts'] = hist.tolist()
         return hd
 
-    def generate_report(self, output_dir="."):
+    def generate_report(self, output_dir=".", filename="commitment_report.html"):
         os.makedirs(output_dir, exist_ok=True)
 
         if not self.submissions:
-            return self._write_error_report(output_dir, "No papers found",
+            return self._write_error_report(output_dir, filename, "No papers found",
                 f"No papers found for role={self.role}, user={self.me}, venue={self.venue_id}.<br>"
                 f"SAC role: ensure you appear in a Senior_Area_Chairs group.<br>"
                 f"AC role: ensure you appear in an Area_Chairs group.")
@@ -536,7 +536,7 @@ class CommitmentReportGenerator(ARRReportGenerator):
         self.process_data()
 
         if not self.papers_data:
-            return self._write_error_report(output_dir, "No paper data generated",
+            return self._write_error_report(output_dir, filename, "No paper data generated",
                 f"Found {len(self.submissions)} submissions but none could be processed.<br>"
                 f"Papers may be withdrawn or linked ARR submissions may be inaccessible.")
 
@@ -561,7 +561,7 @@ class CommitmentReportGenerator(ARRReportGenerator):
             autoescape=jinja2.select_autoescape(['html', 'xml'])
         )
         html = env.get_template("commitment_report.html").render(**template_data)
-        output_path = Path(output_dir) / "commitment_report.html"
+        output_path = Path(output_dir) / filename
         output_path.write_text(html, encoding="utf-8")
         return output_path
 
@@ -571,7 +571,7 @@ class CommitmentReportGenerator(ARRReportGenerator):
                 return p
         raise FileNotFoundError("Cannot find templates/ directory with commitment_report.html")
 
-    def _write_error_report(self, output_dir, title, message):
+    def _write_error_report(self, output_dir, filename, title, message):
         html = (f'<!DOCTYPE html><html><head><title>Error</title>'
                 f'<style>body{{font-family:sans-serif;margin:2em}}'
                 f'.e{{background:#fef2f2;border:1px solid #fca5a5;padding:1.5em;border-radius:8px}}'
@@ -580,6 +580,6 @@ class CommitmentReportGenerator(ARRReportGenerator):
                 f'<div class="e"><p>{message}</p>'
                 f'<p><b>ID:</b> {self.me} &nbsp; <b>Venue:</b> {self.venue_id} &nbsp; <b>Role:</b> {self.role}</p>'
                 f'</div></body></html>')
-        output_path = Path(output_dir) / "commitment_report.html"
+        output_path = Path(output_dir) / filename
         output_path.write_text(html, encoding="utf-8")
         return output_path
