@@ -72,6 +72,7 @@ class PCReportGenerator(ARRReportGenerator):
             ac_uid    = self._resolve_ac_user_id(ac_entry)
             ac_name   = self.get_display_name_for_user(ac_uid) if ac_uid else ""
             ac_email  = self.get_email_for_user(ac_uid) if ac_uid else ""
+            ac_affiliation = self.get_affiliation_for_user(ac_uid) if ac_uid else ""
 
             # Senior Area Chair
             sac_group = self.group_index.get(f'{prefix}/Senior_Area_Chairs')
@@ -85,6 +86,7 @@ class PCReportGenerator(ARRReportGenerator):
             sac_uid   = self._resolve_ac_user_id(sac_entry)
             sac_name  = self.get_display_name_for_user(sac_uid) if sac_uid else ""
             sac_email = self.get_email_for_user(sac_uid) if sac_uid else ""
+            sac_affiliation = self.get_affiliation_for_user(sac_uid) if sac_uid else ""
 
             paper_type = submission.content.get("paper_type", {}).get("value", "")
             # Try multiple field names ARR uses across rounds
@@ -231,9 +233,11 @@ class PCReportGenerator(ARRReportGenerator):
                 "Area Chair":            ac_name,
                 "Area Chair ID":         ac_uid,
                 "Area Chair Email":      ac_email,
+                "Area Chair Affiliation": ac_affiliation,
                 "Senior Area Chair":     sac_name,
                 "Senior Area Chair ID":  sac_uid,
                 "Senior Area Chair Email": sac_email,
+                "Senior Area Chair Affiliation": sac_affiliation,
                 "Completed Reviews":     completed_reviews,
                 "Expected Reviews":      expected_reviews,
                 "Ready for Rebuttal":    "✓" if completed_reviews >= 3 else "",
@@ -300,14 +304,16 @@ class PCReportGenerator(ARRReportGenerator):
             ethics           = int((group["Ethics Flag"] != "").sum())
             sac_id    = group["Senior Area Chair ID"].iloc[0]
             sac_email = group["Senior Area Chair Email"].iloc[0]
+            sac_affil = group["Senior Area Chair Affiliation"].iloc[0] if "Senior Area Chair Affiliation" in group.columns else ""
             emerg_decl   = int(group["Has Emergency Declaration"].sum()) if "Has Emergency Declaration" in group.columns else 0
             emerg_assign = int(group["Has Emergency Reviewer"].sum()) if "Has Emergency Reviewer" in group.columns else 0
             emerg_unmet  = max(0, emerg_decl - emerg_assign)
             late_papers  = int((group["Completed Reviews"] < group["Expected Reviews"]).sum())
             rows.append({
-                "Senior Area Chair":       sac_name,
-                "Senior Area Chair ID":    sac_id,
-                "Senior Area Chair Email": sac_email,
+                "Senior Area Chair":            sac_name,
+                "Senior Area Chair ID":         sac_id,
+                "Senior Area Chair Email":      sac_email,
+                "Senior Area Chair Affiliation": sac_affil,
                 "Num_Papers":              num_papers,
                 "Completed_Reviews":       reviews_done,
                 "Expected_Reviews":        reviews_expected,

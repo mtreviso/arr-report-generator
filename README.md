@@ -35,7 +35,7 @@ python generate_review_report.py \
   --username your@email.com \
   --password yourpassword \
   --venue_id aclweb.org/ACL/ARR/2025/February \
-  --me ~Your_Name1
+  --me "~Your_Name1"
 ```
 
 `--role sac` (default): only papers in your SAC batch.  
@@ -47,20 +47,20 @@ Fetches **all** papers across all SAC batches. Intended for Program Chairs. May 
 
 ```bash
 python generate_pc_report.py \
-  --username your@email.com \
-  --password yourpassword \
-  --venue_id aclweb.org/ACL/ARR/2025/February \
-  --me ~Your_Name1
+  --username "your@email.com" \
+  --password "yourpassword" \
+  --venue_id "aclweb.org/ACL/ARR/2025/February" \
+  --me "~Your_Name1"
 ```
 
 ### Commitment Report (ACL/EMNLP/etc. venue)
 
 ```bash
 python generate_commitment_report.py \
-  --username your@email.com \
-  --password yourpassword \
-  --venue_id aclweb.org/ACL/2025/Conference \
-  --me ~Your_Name1 \
+  --username "your@email.com" \
+  --password "yourpassword" \
+  --venue_id "aclweb.org/ACL/2025/Conference" \
+  --me "~Your_Name1" \
   --role sac
 ```
 
@@ -73,9 +73,9 @@ python generate_commitment_report.py \
 All three scripts read these env vars if flags are not supplied:
 
 ```bash
-export OPENREVIEW_USERNAME=your@email.com
-export OPENREVIEW_PASSWORD=yourpassword
-export OPENREVIEW_ID=~Your_Name1
+export OPENREVIEW_USERNAME="your@email.com"
+export OPENREVIEW_PASSWORD="yourpassword"
+export OPENREVIEW_ID="~Your_Name1"
 python generate_review_report.py --venue_id aclweb.org/ACL/ARR/2025/February
 ```
 
@@ -106,7 +106,7 @@ python generate_review_report.py ... --use-cache
 `--cache-dir .dev_cache` (default) controls where the pickle files go. You can maintain multiple named caches, e.g. one per SAC:
 
 ```bash
-python generate_review_report.py ... --impersonate ~SAC_Name1 --save-cache --cache-dir .cache_sac1
+python generate_review_report.py ... --impersonate "~SAC_Name1" --save-cache --cache-dir .cache_sac1
 python generate_review_report.py ... --use-cache --cache-dir .cache_sac1
 ```
 
@@ -121,9 +121,12 @@ The cache stores three files: `submissions.pkl`, `group_index.pkl`, and `process
 The review and commitment reports support impersonating another OpenReview user before fetching data. This requires **PC-level permission** on the venue and uses the [OpenReview impersonate API](https://docs.openreview.net/reference/api-v2/openapi-definition#post-impersonate).
 
 ```bash
-python generate_review_report.py ... --impersonate ~SAC_Name1
-python generate_commitment_report.py ... --impersonate ~SAC_Name1
+
+python generate_review_report.py ... --me "~Target_SAC_Name1" --impersonate GROUP_ID
+python generate_commitment_report.py ... --impersonate "~SAC_Name1"
 ```
+
+Where `GROUP_ID` is the authorization group, e.g., `aclweb.org/ACL/ARR/2026/January/Program_Chairs`.
 
 Your own credentials are used to authenticate; all data is then fetched as the target user. Useful for verifying exactly what a SAC sees without asking them to run the script themselves. Can be combined with `--save-cache` / `--use-cache` for fast iteration.
 

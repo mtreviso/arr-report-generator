@@ -10,8 +10,12 @@ Usage:
     --username your@email.com --password yourpassword \
     --venue_id aclweb.org/ACL/ARR/2025/February --me ~Your_Name1
 
-  # Impersonate a SAC to see their view (requires PC permission):
-  python generate_review_report.py ... --impersonate ~SAC_Name1
+  # Impersonate the PC group to see a specific SAC's papers:
+  # --impersonate = group whose token to assume (must have permission)
+  # --me          = the SAC whose paper batch you want to view
+  python generate_review_report.py ... \
+    --impersonate aclweb.org/ACL/ARR/2026/January/Program_Chairs \
+    --me ~Target_SAC_Name1
 
   # Save a cache after a full run:
   python generate_review_report.py ... --save-cache
@@ -19,8 +23,10 @@ Usage:
   # Use cached data for fast iteration:
   python generate_review_report.py ... --use-cache
 
-  # Combine: impersonate a SAC, cache their data, then iterate quickly:
-  python generate_review_report.py ... --impersonate ~SAC_Name1 --save-cache --cache-dir .cache_sac1
+  # Combine: impersonate PC, view a SAC's batch, cache for fast iteration:
+  python generate_review_report.py ... \
+    --impersonate aclweb.org/ACL/ARR/2026/January/Program_Chairs \
+    --me ~Target_SAC_Name1 --save-cache --cache-dir .cache_sac1
   python generate_review_report.py ... --use-cache --cache-dir .cache_sac1
 """
 import os, sys, argparse, getpass
@@ -68,10 +74,11 @@ def main():
         gen = ARRReportGenerator(
             username=args.username, password=args.password,
             venue_id=args.venue_id, me=args.me, role=args.role,
+            impersonate_group=args.impersonate or None,
         )
 
         if args.impersonate:
-            impersonate_user(gen.client, args.impersonate)
+            print(f"[impersonate] Filtering papers for SAC: {args.me}")
 
         filename = make_filename(args.venue_id, "review_report", args.append_date)
         print(f"Output filename: {filename}")

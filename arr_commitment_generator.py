@@ -22,7 +22,8 @@ VALID_ROLES = ('sac', 'ac', 'pc')
 
 class CommitmentReportGenerator(ARRReportGenerator):
 
-    def __init__(self, username, password, venue_id, me, role='sac'):
+    def __init__(self, username, password, venue_id, me, role='sac',
+                 impersonate_group=None):
         if role not in VALID_ROLES:
             raise ValueError(f"role must be one of {VALID_ROLES}, got {role!r}")
         self.role = role
@@ -37,6 +38,11 @@ class CommitmentReportGenerator(ARRReportGenerator):
             username=username,
             password=password
         )
+
+        # Impersonate BEFORE any data fetching
+        if impersonate_group:
+            self._apply_impersonation(impersonate_group)
+
         self.venue_group     = self.client.get_group(venue_id)
         self.submission_name = self.venue_group.content['submission_name']['value']
 

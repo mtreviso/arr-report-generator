@@ -84,7 +84,7 @@
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:130px;">SAC</th>
                     {% endif %}
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:130px;">Area Chair</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:160px;">Email</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:160px;">Affiliation</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;">Completed</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;">Expected</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;">Papers Ready</th>
@@ -110,17 +110,16 @@
                     <td class="whitespace-nowrap text-gray-500">{{ ac["Senior Area Chair"] }}</td>
                     {% endif %}
                     <td class="whitespace-nowrap text-gray-900">
-                        {% set ac_id = ac.get("Area Chair ID") %}
+                        {% set ac_id    = ac.get("Area Chair ID") %}
+                        {% set ac_affil = ac.get("Area Chair Affiliation", "") %}
                         {% if ac_id %}
                             <a href="https://openreview.net/profile?id={{ ac_id }}" target="_blank"
-                               class="text-gray-900 hover:underline" style="text-decoration:none;">{{ ac["Area Chair"] }}</a>
-                        {% else %}{{ ac["Area Chair"] }}{% endif %}
+                               class="text-gray-900 hover:underline" style="text-decoration:none;"
+                               {% if ac_affil %}title="{{ ac_affil }}"{% endif %}>{{ ac["Area Chair"] }}</a>
+                        {% else %}<span {% if ac_affil %}title="{{ ac_affil }}"{% endif %}>{{ ac["Area Chair"] }}</span>{% endif %}
                     </td>
                     <td class="whitespace-nowrap text-gray-400" style="font-size:0.7rem;">
-                        {% set em = ac.get("Area Chair Email") %}
-                        {% if em and "****" not in em %}
-                            <a href="mailto:{{ em }}" class="text-gray-400 hover:text-gray-600" style="text-decoration:none;">{{ em }}</a>
-                        {% else %}–{% endif %}
+                        {{ ac.get("Area Chair Affiliation", "") or "–" }}
                     </td>
                     <td class="whitespace-nowrap text-gray-500">{{ ac["Completed_Reviews"] }}</td>
                     <td class="whitespace-nowrap text-gray-500">{{ ac["Expected_Reviews"] }}</td>

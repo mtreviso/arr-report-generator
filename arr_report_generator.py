@@ -15,19 +15,26 @@ class ARRReportGenerator:
     # Any reviewer with confidence at or below this threshold triggers the Low Conf flag.
     LOW_CONF_THRESHOLD = 2
 
-    def __init__(self, username, password, venue_id, me, role='sac'):
+    def __init__(self, username, password, venue_id, me, role='sac',
+                 impersonate_group=None):
         self.username = username
         self.password = password
         self.venue_id = venue_id
         self.me = me
         self.role = role
-        self.client = openreview.api.OpenReviewClient(baseurl='https://api2.openreview.net', 
-                                                     username=username, 
+        self.client = openreview.api.OpenReviewClient(baseurl='https://api2.openreview.net',
+                                                     username=username,
                                                      password=password)
+
+        # Impersonate a group BEFORE any data fetching so all subsequent
+        # API calls run under the impersonated identity.
+        if impersonate_group:
+            self._apply_impersonation(impersonate_group)
+
         self.venue_group = self.client.get_group(venue_id)
         self.submission_name = self.venue_group.content['submission_name']['value']
         self.submissions = self.client.get_all_notes(
-            invitation=f'{venue_id}/-/{self.submission_name}', 
+            invitation=f'{venue_id}/-/{self.submission_name}',
             details='replies'
         )
 
@@ -234,6 +241,69 @@ class ARRReportGenerator:
             self.profile_cache[user_id] = None
             return None
 
+    def _apply_impersonation(self, group_id: str) -> None:
+        """Patch client token to act as `group_id` before any API calls."""
+        import requests as _requests
+        url = f"{self.client.baseurl}/impersonate"
+        headers = {
+            "Authorization": f"Bearer {self.client.token}",
+            "Content-Type":  "application/json",
+        }
+        resp = _requests.post(url, json={"groupId": group_id}, headers=headers)
+        if resp.status_code != 200:
+            raise RuntimeError(
+                f"Impersonation failed (HTTP {resp.status_code}): {resp.text}\n"
+                f"Make sure your account can impersonate '{group_id}'.\n"
+                f"Typical value: <venue_id>/Program_Chairs"
+            )
+        data = resp.json()
+        new_token = data.get("token") or data.get("access_token")
+        if not new_token:
+            raise RuntimeError(
+                f"Impersonation response had no token. Response: {data}"
+            )
+        self.client.token = new_token
+        if hasattr(self.client, "session") and hasattr(self.client.session, "headers"):
+            self.client.session.headers["Authorization"] = f"Bearer {new_token}"
+        print(f"[impersonate] Now acting as group: {group_id}")
+
+    def get_affiliation_for_user(self, user_id: str) -> str:
+        """Return 'Position, Institution (Year–)' for the most recent history entry."""
+        if not user_id:
+            return ""
+        profile = self._get_profile(user_id)
+        if not profile:
+            return ""
+        content = getattr(profile, "content", None)
+        if not isinstance(content, dict):
+            return ""
+        history = content.get("history") or {}
+        if isinstance(history, dict):
+            history = history.get("value") or []
+        if not isinstance(history, list) or not history:
+            return ""
+        # Sort by start date descending; pick most recent entry
+        def _start(h):
+            return h.get("start") or 0
+        entry = max(history, key=_start)
+        parts = []
+        position = entry.get("position", "")
+        if position:
+            parts.append(position)
+        inst = entry.get("institution") or {}
+        if isinstance(inst, dict):
+            inst_name = inst.get("name") or inst.get("domain") or ""
+        else:
+            inst_name = str(inst)
+        if inst_name:
+            parts.append(inst_name)
+        start_year = entry.get("start")
+        end_year   = entry.get("end")
+        if start_year:
+            year_str = f"{start_year}–{end_year}" if end_year else f"{start_year}–"
+            parts.append(f"({year_str})")
+        return ", ".join(parts)
+
     def _sanitize_tilde_id(self, uid):
         """~Foo_Bar1 -> Foo Bar"""
         name = uid.strip().lstrip("~")
@@ -433,6 +503,7 @@ class ARRReportGenerator:
             ac_entry = area_chairs_group.members[0]
             ac_user_id = self._resolve_ac_user_id(ac_entry)
             ac_name = self.get_display_name_for_user(ac_user_id)
+            ac_affiliation = self.get_affiliation_for_user(ac_user_id)
             ac_email = ""  # OpenReview forbids SACs to view emails
 
             paper_type = submission.content.get("paper_type", {}).get("value", "")
@@ -608,6 +679,7 @@ class ARRReportGenerator:
                 "Area Chair":            ac_name,
                 "Area Chair ID":         ac_user_id,
                 "Area Chair Email":      ac_email,
+                "Area Chair Affiliation": ac_affiliation,
                 "Completed Reviews":     completed_reviews,
                 "Expected Reviews":      expected_reviews,
                 "Ready for Rebuttal":    status,
@@ -679,8 +751,12 @@ class ARRReportGenerator:
             meta_df["Emergency_Declared"] - meta_df["Emergency_Assigned"]
         ).clip(lower=0)
         # Carry forward the tilde ID (needed for profile links in templates)
-        ac_id_map = df.groupby("Area Chair")["Area Chair ID"].first().to_dict()
+        ac_id_map    = df.groupby("Area Chair")["Area Chair ID"].first().to_dict()
         meta_df["Area Chair ID"] = meta_df["Area Chair"].map(ac_id_map).fillna("")
+        # Affiliation: look up by tilde ID
+        meta_df["Area Chair Affiliation"] = meta_df["Area Chair ID"].map(
+            lambda uid: self.get_affiliation_for_user(uid) if uid else ""
+        )
         # Email: look up by tilde ID (ac_email_cache is keyed by user_id, not name)
         meta_df["Area Chair Email"] = meta_df["Area Chair ID"].map(
             lambda uid: self.ac_email_cache.get(uid, "")

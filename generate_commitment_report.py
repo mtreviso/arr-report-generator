@@ -66,10 +66,11 @@ def main():
         gen = CommitmentReportGenerator(
             username=args.username, password=args.password,
             venue_id=args.venue_id, me=args.me, role=args.role,
+            impersonate_group=args.impersonate or None,
         )
 
         if args.impersonate:
-            impersonate_user(gen.client, args.impersonate)
+            print(f"[impersonate] Filtering papers for: {args.me}")
 
         filename = make_filename(args.venue_id, "commitment_report", args.append_date)
         print(f"Output filename: {filename}")
