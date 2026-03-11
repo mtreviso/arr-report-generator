@@ -29,6 +29,9 @@ class ARRReportGenerator:
         # Impersonate a group BEFORE any data fetching so all subsequent
         # API calls run under the impersonated identity.
         if impersonate_group:
+            # Defaults to PC role if none group was provided
+            if not impersonate_group.strip() or impersonate_group == "__DEFAULT_PROGRAM_CHAIRS__":
+                impersonate_group = venue_id.rstrip('/') + '/' + 'Program_Chairs'
             self._apply_impersonation(impersonate_group)
 
         self.venue_group = self.client.get_group(venue_id)

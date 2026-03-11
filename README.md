@@ -122,13 +122,13 @@ The review and commitment reports support impersonating another OpenReview user 
 
 ```bash
 
-python generate_review_report.py ... --me "~Target_SAC_Name1" --impersonate GROUP_ID
-python generate_commitment_report.py ... --impersonate "~SAC_Name1"
+python generate_review_report.py ... --me "~Target_SAC_Name1" --impersonate
+python generate_commitment_report.py ... --me "~Target_SAC_Name1" --impersonate
 ```
 
-Where `GROUP_ID` is the authorization group, e.g., `aclweb.org/ACL/ARR/2026/January/Program_Chairs`.
+You can pass a `GROUP_ID` after the `--impersonate` flag, which corresponds to the authorization group, e.g., `aclweb.org/ACL/ARR/2025/October/Program_Chairs`. If `GROUP_ID` is empty, it will assume to be `<venue_id>/Program_Chairs`. Your own credentials are used to authenticate, and all data is then fetched as the target user. 
 
-Your own credentials are used to authenticate; all data is then fetched as the target user. Useful for verifying exactly what a SAC sees without asking them to run the script themselves. Can be combined with `--save-cache` / `--use-cache` for fast iteration.
+This is useful for verifying exactly what a SAC sees without asking them to run the script themselves. Can be combined with `--save-cache` / `--use-cache` for fast iteration.
 
 > Impersonation is intentionally not available in `generate_pc_report.py`, which already fetches all papers by design.
 

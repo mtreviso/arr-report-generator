@@ -206,12 +206,15 @@ def add_cache_args(parser) -> None:
 def add_impersonate_arg(parser) -> None:
     """Add --impersonate to an argparse parser."""
     parser.add_argument(
-        "--impersonate", default="", metavar="GROUP_ID",
+        "--impersonate",
+        nargs="?",
+        const="__DEFAULT_PROGRAM_CHAIRS__",
+        default="",
+        metavar="GROUP_ID",
         help=(
             "Impersonate an OpenReview group to fetch data under that group's identity. "
-            "Pass a full group ID, e.g. 'aclweb.org/ACL/ARR/2026/January/Program_Chairs'. "
-            "You must be a superuser or listed in that group's impersonators. "
-            "Most useful for running a SAC report with PC-level access."
+            "Use '--impersonate GROUP_ID' to pick a specific group, or just '--impersonate' "
+            "to default to '<venue_id>/Program_Chairs'."
         ),
     )
 
