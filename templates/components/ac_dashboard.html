@@ -1,5 +1,4 @@
 <style>
-  #ac-dashboard-table { font-size: 0.75rem; }
   #ac-dashboard-table th, #ac-dashboard-table td {
     padding: 5px 6px !important;
     outline: none !important;
@@ -17,19 +16,28 @@
         <table id="ac-dashboard-table" class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:140px;">Area Chair</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:90px;">Completed</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:90px;">Expected</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:90px;">Papers Ready</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:70px;">Total</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;">All Ready</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">Meta Reviews</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:110px;">All Meta Done</th>
+                    {% if ac_meta and ac_meta[0].get("Senior Area Chair") %}
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:130px;">SAC</th>
+                    {% endif %}
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:130px;">Area Chair</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;">Completed</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;">Expected</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;">Papers Ready</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:60px;">Total</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:75px;">All Ready</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:90px;">Meta Reviews</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:90px;">All Meta Done</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:70px;" title="Papers with fewer reviews than expected">Late Rev.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Papers with emergency review declared">⚡ Emerg.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;" title="Emergency declared but no reviewer assigned yet">⚡ Unmet</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
                 {% for ac in ac_meta %}
                 <tr>
+                    {% if ac.get("Senior Area Chair") %}
+                    <td class="whitespace-nowrap text-gray-500">{{ ac["Senior Area Chair"] }}</td>
+                    {% endif %}
                     <td class="whitespace-nowrap text-gray-900">
                         {% set em = ac.get("Area Chair Email") %}
                         {% if em and "****" not in em %}
@@ -50,6 +58,18 @@
                         <span class="inline-flex items-center px-2 py-0.5 text-xs rounded-full {% if ac['All Meta-reviews Ready'] %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-500{% endif %}">
                             {{ ac["All Meta-reviews Ready"] or "–" }}
                         </span>
+                    </td>
+                    {# Late reviews: papers where reviews not yet complete #}
+                    <td class="whitespace-nowrap {% if ac['Late_Papers'] > 0 %}text-red-600 font-medium{% else %}text-gray-400{% endif %}">
+                        {{ ac["Late_Papers"] if ac["Late_Papers"] > 0 else "–" }}
+                    </td>
+                    {# Emergency declared #}
+                    <td class="whitespace-nowrap {% if ac['Emergency_Declared'] > 0 %}text-blue-600{% else %}text-gray-400{% endif %}">
+                        {% if ac["Emergency_Declared"] > 0 %}⚡ {{ ac["Emergency_Declared"] }}{% else %}–{% endif %}
+                    </td>
+                    {# Emergency unmet (declared but no reviewer) #}
+                    <td class="whitespace-nowrap {% if ac['Emergency_Unassigned'] > 0 %}text-orange-600 font-medium{% else %}text-gray-400{% endif %}">
+                        {% if ac["Emergency_Unassigned"] > 0 %}⚠ {{ ac["Emergency_Unassigned"] }}{% else %}–{% endif %}
                     </td>
                 </tr>
                 {% endfor %}

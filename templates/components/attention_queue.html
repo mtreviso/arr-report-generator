@@ -1,0 +1,87 @@
+<style>
+  #attention-table th, #attention-table td {
+    padding: 5px 6px !important;
+    outline: none !important;
+    text-align: left !important;
+  }
+  #attention-table thead th {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    font-weight: 400 !important;
+  }
+</style>
+
+<div class="px-2 py-4 sm:p-5">
+    {% if not attention_papers %}
+    <div class="flex items-center gap-2 text-green-700 bg-green-50 rounded-lg p-4 border border-green-200">
+        <span class="text-lg">✓</span>
+        <span class="text-sm">No papers currently require PC attention.</span>
+    </div>
+    {% else %}
+    <p class="text-xs text-gray-500 mb-4">
+        Papers flagged for one or more of: review issue reported, ethics concern raised by a reviewer,
+        or fewer reviews submitted than expected.
+    </p>
+    <div class="overflow-x-auto w-full">
+        <table id="attention-table" class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider">#</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:200px;">Title</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider">SAC</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider">AC</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider">Reviews</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider">Flags</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for p in attention_papers %}
+                <tr>
+                    <td class="whitespace-nowrap text-gray-700">{{ p["Paper #"] }}</td>
+                    <td class="text-gray-700" style="max-width:240px;">
+                        <div class="truncate">
+                            <a href="https://openreview.net/forum?id={{ p['Paper ID'] }}" target="_blank"
+                               class="text-indigo-600 hover:text-indigo-900" title="{{ p['Title'] }}">
+                               {{ p["Title"] }}
+                            </a>
+                        </div>
+                    </td>
+                    <td class="whitespace-nowrap text-gray-500">{{ p.get("Senior Area Chair","") }}</td>
+                    <td class="whitespace-nowrap text-gray-500">{{ p.get("Area Chair","") }}</td>
+                    <td class="whitespace-nowrap {% if p['Completed Reviews'] < p['Expected Reviews'] %}text-red-600{% else %}text-gray-500{% endif %}">
+                        {{ p["Completed Reviews"] }}/{{ p["Expected Reviews"] }}
+                    </td>
+                    <td class="whitespace-nowrap">
+                        <div class="flex gap-1">
+                        {% if p["Has Review Issue"] %}
+                            <a href="{{ p['Review Issue Link'] }}" target="_blank">
+                                <span class="flag-badge flag-issue tip" data-tip="Review Issue — click to open">!</span>
+                            </a>
+                        {% endif %}
+                        {% if p["Ethics Flag"] %}
+                            <span class="flag-badge flag-warn tip" data-tip="Ethics concern: {{ p['Ethics Flag'] }}">⚠</span>
+                        {% endif %}
+                        {% if p["Completed Reviews"] < p["Expected Reviews"] %}
+                            <span class="flag-badge" style="background:#fee2e2;color:#991b1b;">
+                                {{ p["Expected Reviews"] - p["Completed Reviews"] }} missing
+                            </span>
+                        {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+$(document).ready(function() {
+    if ($('#attention-table tbody tr').length > 1) {
+        $('#attention-table').DataTable({
+            paging: true, pageLength: 25, searching: true, info: true, autoWidth: false
+        });
+    }
+});
+</script>

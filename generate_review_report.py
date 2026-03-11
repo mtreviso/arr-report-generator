@@ -1,79 +1,44 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
+#!/usr/bin/env python3
 """
-ARR Report Generator Runner
-===========================
+Generate ARR Review Phase Report.
 
-A simple script to run the ARR report generator with your OpenReview credentials.
-
-Author: Based on Yiming Cui's ARR Tool (https://ymcui.com/)
+--role sac (default): only papers in your SAC batch
+--role pc:            all papers in the venue (Program Chair / testing mode)
 """
-
-import argparse
-import os
-from datetime import datetime
+import os, sys, argparse, getpass
 from arr_report_generator import ARRReportGenerator
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Generate beautiful HTML report for ARR review status',
+        description='Generate ARR Review Phase Report',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    
-    parser.add_argument('--username', 
-                      default=os.environ.get('OPENREVIEW_USERNAME', ''), 
-                      help='OpenReview username (can be set via OPENREVIEW_USERNAME env var)')
-    
-    parser.add_argument('--password', 
-                      default=os.environ.get('OPENREVIEW_PASSWORD', ''),
-                      help='OpenReview password (can be set via OPENREVIEW_PASSWORD env var)')
-    
-    parser.add_argument('--venue_id', 
-                      default='aclweb.org/ACL/ARR/2025/February',
-                      help='OpenReview venue ID')
-    
-    parser.add_argument('--me', 
-                      default=os.environ.get('OPENREVIEW_ID', ''),
-                      help='Your OpenReview ID (e.g., ~Your_Name1)')
-    
-    parser.add_argument('--output_dir', 
-                      default='./reports',
-                      help='Directory to save the generated report')
-    
+    parser.add_argument('--username',   default=os.environ.get('OPENREVIEW_USERNAME', ''))
+    parser.add_argument('--password',   default=os.environ.get('OPENREVIEW_PASSWORD', ''))
+    parser.add_argument('--venue_id',   default='aclweb.org/ACL/ARR/2025/February')
+    parser.add_argument('--me',         default=os.environ.get('OPENREVIEW_ID', ''),
+                        help='Your OpenReview tilde ID, e.g. ~Your_Name1')
+    parser.add_argument('--role',       default='sac', choices=['sac', 'pc'],
+                        help='sac=Senior AC (default), pc=all papers (PC/test mode)')
+    parser.add_argument('--output_dir', default='./reports')
     args = parser.parse_args()
-    
-    # Check if credentials are provided
+
     if not args.username:
-        args.username = input("Enter your OpenReview username: ")
-    
+        args.username = input("OpenReview username: ")
     if not args.password:
-        import getpass
-        args.password = getpass.getpass("Enter your OpenReview password: ")
-    
+        args.password = getpass.getpass("OpenReview password: ")
     if not args.me:
-        args.me = input("Enter your OpenReview ID (e.g., ~Your_Name1): ")
-    
-    # Create output directory if it does not exist
+        args.me = input("Your OpenReview ID (e.g. ~Your_Name1): ")
+
     os.makedirs(args.output_dir, exist_ok=True)
-    
-    print(f"Generating ARR report for venue: {args.venue_id}")
-    print(f"Report will be saved in: {args.output_dir}")
-    
-    # Create and run the generator
-    generator = ARRReportGenerator(
-        username=args.username,
-        password=args.password,
-        venue_id=args.venue_id,
-        me=args.me
+    print(f"Generating review report | venue: {args.venue_id} | role: {args.role}")
+
+    gen = ARRReportGenerator(
+        username=args.username, password=args.password,
+        venue_id=args.venue_id, me=args.me, role=args.role
     )
-    
-    # Generate the report
-    report_path = generator.generate_report(output_dir=args.output_dir)
-    
-    print(f"\nReport successfully generated!")
-    print(f"Report location: {report_path}")
-    print(f"Open the HTML file in your browser to view the report.")
+    path = gen.generate_report(output_dir=args.output_dir)
+    print(f"Report generated: {path}")
 
 if __name__ == "__main__":
     main()

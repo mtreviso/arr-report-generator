@@ -15,11 +15,12 @@ class ARRReportGenerator:
     # Any reviewer with confidence at or below this threshold triggers the Low Conf flag.
     LOW_CONF_THRESHOLD = 2
 
-    def __init__(self, username, password, venue_id, me):
+    def __init__(self, username, password, venue_id, me, role='sac'):
         self.username = username
         self.password = password
         self.venue_id = venue_id
         self.me = me
+        self.role = role
         self.client = openreview.api.OpenReviewClient(baseurl='https://api2.openreview.net', 
                                                      username=username, 
                                                      password=password)
@@ -401,8 +402,8 @@ class ARRReportGenerator:
                 continue
 
             prefix = f'{self.venue_id}/{self.submission_name}{submission.number}'
-            # Process only submissions in your SAC batch
-            if not (set(submission.readers) & self.my_sac_groups):
+            # Process only submissions in your SAC batch (skip for PC role)
+            if self.role != 'pc' and not (set(submission.readers) & self.my_sac_groups):
                 continue
 
             # Retrieve the assigned Area Chair (use cached groups first)
@@ -434,9 +435,24 @@ class ARRReportGenerator:
             overall_assessment_scores = []
             has_review_issue = False
             review_issue_link = ""
+            review_issue_count = 0
             has_confidential = False
+            has_emergency_declaration = False
+            emergency_declaration_link = ""
+            emergency_declaration_count = 0
 
             replies = submission.details.get("replies", [])
+
+            # On first paper, surface all invitation patterns to help identify emergency fields
+            if not self.papers_data and replies:
+                all_invs = set()
+                for r in replies:
+                    for inv in r.get("invitations", []):
+                        # Show the suffix after /-/ which is the meaningful part
+                        if "/-/" in inv:
+                            all_invs.add(inv.split("/-/")[-1])
+                if all_invs:
+                    print(f"[DEBUG] Reply invitation types on paper #{submission.number}: {sorted(all_invs)}")
 
             for reply in replies:
                 invitations = reply.get("invitations", [])
@@ -444,10 +460,26 @@ class ARRReportGenerator:
                 # Review issue?
                 if any("/-/Review_Issue_Report" in inv for inv in invitations):
                     has_review_issue = True
+                    review_issue_count += 1
                     if not review_issue_link:
                         forum_id = reply.get("forum", "")
                         note_id  = reply.get("id", "")
                         review_issue_link = f"https://openreview.net/forum?id={forum_id}&noteId={note_id}"
+
+                # Emergency review declaration (AC requests emergency reviewer)?
+                EMERGENCY_DECL_PATTERNS = [
+                    "/-/Emergency_Review_Request",
+                    "/-/Emergency_Reviewer_Recruitment",
+                    "/-/Emergency_Reviewer_Request",
+                    "/-/Emergency_Review",
+                ]
+                if any(any(p in inv for p in EMERGENCY_DECL_PATTERNS) for inv in invitations):
+                    has_emergency_declaration = True
+                    emergency_declaration_count += 1
+                    if not emergency_declaration_link:
+                        forum_id = reply.get("forum", "")
+                        note_id  = reply.get("id", "")
+                        emergency_declaration_link = f"https://openreview.net/forum?id={forum_id}&noteId={note_id}"
 
                 # Confidential comment?
                 if self.is_relevant_comment(reply):
@@ -503,6 +535,27 @@ class ARRReportGenerator:
             if reviewers_group and getattr(reviewers_group, "members", None):
                 expected_reviews = len(reviewers_group.members)
 
+            # Emergency reviewer group
+            has_emergency_reviewer = False
+            emergency_reviewer_count = 0
+            EMERGENCY_GROUP_SUFFIXES = [
+                "/Emergency_Reviewers",
+                "/Emergency_Reviewer",
+                "/Emergency_Review_Assignees",
+            ]
+            for suffix in EMERGENCY_GROUP_SUFFIXES:
+                erg = self.group_index.get(f'{prefix}{suffix}')
+                if erg is None:
+                    try:
+                        erg = self.client.get_group(f'{prefix}{suffix}')
+                        self.group_index[f'{prefix}{suffix}'] = erg
+                    except Exception:
+                        erg = None
+                if erg and getattr(erg, 'members', None):
+                    has_emergency_reviewer = True
+                    emergency_reviewer_count = len(erg.members)
+                    break
+
             status = "✓" if completed_reviews >= 3 else ""
 
             # Anonymity — log content keys on first paper to help identify the right field
@@ -554,6 +607,12 @@ class ARRReportGenerator:
                 "Has Confidential":      has_confidential,
                 "Has Low Confidence":    has_low_confidence,
                 "Low Confidence Reviewers": low_conf_reviewers,
+                "Has Emergency Declaration": has_emergency_declaration,
+                "Emergency Declaration Link": emergency_declaration_link,
+                "Emergency Declaration Count": emergency_declaration_count,
+                "Has Emergency Reviewer": has_emergency_reviewer,
+                "Emergency Reviewer Count": emergency_reviewer_count,
+                "Review Issue Count":    review_issue_count,
                 # Scores
                 "Reviewer Confidence":   reviewer_confidence,
                 "Confidence List":       confidence_list,
@@ -591,7 +650,10 @@ class ARRReportGenerator:
             Expected_Reviews=("Expected Reviews", "sum"),
             Papers_Ready=("Completed Reviews", lambda x: (x >= 3).sum()),
             Num_Papers=("Paper #", "count"),
-            Meta_Reviews_Num=("Meta Review Score", lambda x: (x != "").sum())
+            Meta_Reviews_Num=("Meta Review Score", lambda x: (x != "").sum()),
+            Late_Papers=("Completed Reviews", lambda x: (x < df.loc[x.index, "Expected Reviews"]).sum()),
+            Emergency_Declared=("Has Emergency Declaration", "sum"),
+            Emergency_Assigned=("Has Emergency Reviewer", "sum"),
         ).reset_index()
         meta_df["All Reviews Ready"] = meta_df.apply(
             lambda row: "✓" if row["Papers_Ready"] == row["Num_Papers"] else "", axis=1
@@ -602,9 +664,18 @@ class ARRReportGenerator:
         meta_df["Meta_Reviews_Done"] = meta_df.apply(
             lambda row: f"{row['Meta_Reviews_Num']} of {row['Num_Papers']}", axis=1
         )
+        meta_df["Emergency_Unassigned"] = (
+            meta_df["Emergency_Declared"] - meta_df["Emergency_Assigned"]
+        ).clip(lower=0)
         meta_df["Area Chair Email"] = meta_df["Area Chair"].map(
             lambda ac: self.ac_email_cache.get(ac, "")
         )
+        # If PC mode and SAC info available per paper, attach SAC name per AC
+        if "Senior Area Chair" in df.columns:
+            sac_map = df.groupby("Area Chair")["Senior Area Chair"].first().to_dict()
+            meta_df["Senior Area Chair"] = meta_df["Area Chair"].map(sac_map).fillna("")
+        else:
+            meta_df["Senior Area Chair"] = ""
         meta_df.drop(columns=["Meta_Reviews_Num"], inplace=True)
         self.ac_meta_data = meta_df.to_dict(orient='records')
 
@@ -711,7 +782,10 @@ class ARRReportGenerator:
     def process_comments_data(self):
         """Process all relevant comments."""
         base_url = "https://openreview.net/forum"
+        paper_numbers = {p["Paper #"] for p in self.papers_data}
         for submission in self.submissions:
+            if submission.number not in paper_numbers:
+                continue
             for reply in submission.details.get("replies", []):
                 if self.is_relevant_comment(reply):
                     forum_id = reply.get("forum", "")

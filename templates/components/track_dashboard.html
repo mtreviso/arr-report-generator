@@ -1,0 +1,103 @@
+<style>
+  #track-table th, #track-table td {
+    padding: 5px 6px !important;
+    outline: none !important;
+    text-align: left !important;
+  }
+  #track-table thead th {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    font-weight: 400 !important;
+  }
+</style>
+
+<div class="px-2 py-4 sm:p-5">
+    {% if not track_data %}
+    <p class="text-gray-500 text-sm">No track/area data available for this venue (the <code>track</code> or <code>area</code> field may not be set).</p>
+    {% else %}
+    <div class="flex flex-col md:flex-row gap-6">
+        <div class="w-full md:w-2/5">
+            <canvas id="track-chart" style="max-height:320px;"></canvas>
+        </div>
+        <div class="w-full md:w-3/5 overflow-x-auto">
+            <table id="track-table" class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:160px;">Track / Area</th>
+                        <th class="text-xs text-gray-500 uppercase tracking-wider">Papers</th>
+                        <th class="text-xs text-gray-500 uppercase tracking-wider">Meta Done</th>
+                        <th class="text-xs text-gray-500 uppercase tracking-wider">Meta %</th>
+                        <th class="text-xs text-gray-500 uppercase tracking-wider">Avg Overall</th>
+                        <th class="text-xs text-gray-500 uppercase tracking-wider">Avg Meta</th>
+                        <th class="text-xs text-gray-500 uppercase tracking-wider">Issues</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for row in track_data %}
+                    <tr>
+                        <td class="whitespace-nowrap text-gray-900">{{ row["Track"] }}</td>
+                        <td class="whitespace-nowrap text-gray-500">{{ row["Papers"] }}</td>
+                        <td class="whitespace-nowrap text-gray-500">{{ row["Meta Done"] }}</td>
+                        <td class="whitespace-nowrap">
+                            <span class="inline-flex items-center px-2 py-0.5 text-xs rounded-full
+                                {% if row['Meta Pct'] == 100 %}bg-green-100 text-green-800
+                                {% elif row['Meta Pct'] >= 80 %}bg-yellow-100 text-yellow-800
+                                {% else %}bg-red-100 text-red-700{% endif %}">
+                                {{ row["Meta Pct"] }}%
+                            </span>
+                        </td>
+                        <td class="whitespace-nowrap text-gray-500">{{ row["Avg Overall"] if row["Avg Overall"] != "" else "–" }}</td>
+                        <td class="whitespace-nowrap text-gray-500">{{ row["Avg Meta"] if row["Avg Meta"] != "" else "–" }}</td>
+                        <td class="whitespace-nowrap {% if row['Issues'] > 0 %}text-red-600 font-medium{% else %}text-gray-400{% endif %}">
+                            {{ row["Issues"] if row["Issues"] > 0 else "–" }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const initTrackChart = function() {
+        const ctx = document.getElementById('track-chart');
+        if (!ctx) return;
+        const trackData = {{ track_data | tojson }};
+        if (!trackData.length) return;
+        const colors = ['rgba(99,102,241,0.7)','rgba(59,130,246,0.7)','rgba(16,185,129,0.7)',
+            'rgba(245,158,11,0.7)','rgba(239,68,68,0.7)','rgba(168,85,247,0.7)',
+            'rgba(20,184,166,0.7)','rgba(249,115,22,0.7)','rgba(236,72,153,0.7)','rgba(75,85,99,0.7)'];
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: trackData.map(r => r.Track),
+                datasets: [{
+                    data: trackData.map(r => r.Papers),
+                    backgroundColor: colors.slice(0, trackData.length),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: {position:'right', labels:{boxWidth:12, padding:10, font:{size:11}}},
+                    tooltip: {callbacks: {label(ctx) {
+                        const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+                        return `${ctx.label}: ${ctx.raw} (${Math.round(ctx.raw/total*100)}%)`;
+                    }}}
+                }
+            }
+        });
+    };
+    const analyticsBtn = document.querySelector('[data-tab="analytics-tab"]');
+    if (analyticsBtn) analyticsBtn.addEventListener('click', () => setTimeout(initTrackChart, 100));
+    const trackBtn = document.querySelector('[data-tab="track-tab"]');
+    if (trackBtn) trackBtn.addEventListener('click', () => setTimeout(initTrackChart, 100));
+    if (document.getElementById('track-tab') &&
+        document.getElementById('track-tab').classList.contains('active'))
+        setTimeout(initTrackChart, 100);
+});
+</script>

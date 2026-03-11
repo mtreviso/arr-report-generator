@@ -1,0 +1,96 @@
+<style>
+  #sac-dashboard-table th, #sac-dashboard-table td {
+    padding: 5px 6px !important;
+    outline: none !important;
+    text-align: left !important;
+  }
+  #sac-dashboard-table thead th {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    font-weight: 400 !important;
+  }
+</style>
+
+<div class="px-2 py-4 sm:p-5">
+    {% if not sac_meta %}
+    <p class="text-gray-500 text-sm">No Senior Area Chair assignment data available for this venue.</p>
+    {% else %}
+    <div class="overflow-x-auto w-full">
+        <table id="sac-dashboard-table" class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:160px;">Senior Area Chair</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:70px;">Papers</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">Reviews Done</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;">Review %</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:110px;">Meta Reviews</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;">All Meta</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:70px;" title="Papers with fewer reviews than expected">Late Rev.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:70px;">Issues</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Papers with emergency review declared">⚡ Emerg.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;" title="Emergency declared but no reviewer assigned yet">⚡ Unmet</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;">Low Conf</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:70px;">Ethics</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for sac in sac_meta %}
+                <tr>
+                    <td class="whitespace-nowrap text-gray-900">
+                        {% set em = sac.get("Senior Area Chair Email") %}
+                        {% if em and "****" not in em %}
+                            <a href="mailto:{{ em }}" class="text-indigo-600 hover:text-indigo-900">{{ sac["Senior Area Chair"] }}</a>
+                        {% else %}{{ sac["Senior Area Chair"] }}{% endif %}
+                    </td>
+                    <td class="whitespace-nowrap text-gray-500">{{ sac["Num_Papers"] }}</td>
+                    <td class="whitespace-nowrap text-gray-500">{{ sac["Completed_Reviews"] }} / {{ sac["Expected_Reviews"] }}</td>
+                    <td class="whitespace-nowrap">
+                        <span class="inline-flex items-center px-2 py-0.5 text-xs rounded-full
+                            {% if sac['Review_Pct'] == 100 %}bg-green-100 text-green-800
+                            {% elif sac['Review_Pct'] >= 80 %}bg-yellow-100 text-yellow-800
+                            {% else %}bg-red-100 text-red-700{% endif %}">
+                            {{ sac["Review_Pct"] }}%
+                        </span>
+                    </td>
+                    <td class="whitespace-nowrap text-gray-500">{{ sac["Meta_Reviews_Done"] }}</td>
+                    <td class="whitespace-nowrap">
+                        {% if sac["All_Meta_Done"] %}
+                        <span class="inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-800">✓</span>
+                        {% else %}<span class="text-gray-300">–</span>{% endif %}
+                    </td>
+                    <td class="whitespace-nowrap {% if sac.get('Late_Papers',0) > 0 %}text-red-600 font-medium{% else %}text-gray-400{% endif %}">
+                        {{ sac["Late_Papers"] if sac.get("Late_Papers",0) > 0 else "–" }}
+                    </td>
+                    <td class="whitespace-nowrap {% if sac['Review_Issues'] > 0 %}text-red-600 font-medium{% else %}text-gray-400{% endif %}">
+                        {{ sac["Review_Issues"] if sac["Review_Issues"] > 0 else "–" }}
+                    </td>
+                    <td class="whitespace-nowrap {% if sac.get('Emergency_Declared',0) > 0 %}text-blue-600{% else %}text-gray-400{% endif %}">
+                        {% if sac.get("Emergency_Declared",0) > 0 %}⚡ {{ sac["Emergency_Declared"] }}{% else %}–{% endif %}
+                    </td>
+                    <td class="whitespace-nowrap {% if sac.get('Emergency_Unassigned',0) > 0 %}text-orange-600 font-medium{% else %}text-gray-400{% endif %}">
+                        {% if sac.get("Emergency_Unassigned",0) > 0 %}⚠ {{ sac["Emergency_Unassigned"] }}{% else %}–{% endif %}
+                    </td>
+                    <td class="whitespace-nowrap {% if sac['Low_Conf_Papers'] > 0 %}text-yellow-600{% else %}text-gray-400{% endif %}">
+                        {{ sac["Low_Conf_Papers"] if sac["Low_Conf_Papers"] > 0 else "–" }}
+                    </td>
+                    <td class="whitespace-nowrap {% if sac['Ethics_Papers'] > 0 %}text-orange-600 font-medium{% else %}text-gray-400{% endif %}">
+                        {{ sac["Ethics_Papers"] if sac["Ethics_Papers"] > 0 else "–" }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+$(document).ready(function() {
+    if ($('#sac-dashboard-table tbody tr').length > 1) {
+        $('#sac-dashboard-table').DataTable({
+            paging: false, searching: false, info: false, autoWidth: false,
+            order: [[1, 'desc']]
+        });
+    }
+});
+</script>

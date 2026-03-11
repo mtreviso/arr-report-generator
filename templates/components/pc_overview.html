@@ -1,0 +1,46 @@
+<div class="px-4 py-5 sm:p-6">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {% set s = overview_stats %}
+        <div class="bg-indigo-50 rounded-lg p-4 border border-indigo-100">
+            <div class="text-2xl font-bold text-indigo-700">{{ s.total_papers }}</div>
+            <div class="text-xs text-indigo-500 uppercase tracking-wide mt-1">Active Papers</div>
+        </div>
+        <div class="bg-blue-50 rounded-lg p-4 border border-blue-100">
+            <div class="text-2xl font-bold text-blue-700">{{ s.review_pct }}%</div>
+            <div class="text-xs text-blue-500 uppercase tracking-wide mt-1">Reviews Submitted</div>
+            <div class="text-xs text-blue-400 mt-0.5">{{ s.reviews_done }} / {{ s.reviews_expected }}</div>
+        </div>
+        <div class="bg-green-50 rounded-lg p-4 border border-green-100">
+            <div class="text-2xl font-bold text-green-700">{{ s.meta_pct }}%</div>
+            <div class="text-xs text-green-500 uppercase tracking-wide mt-1">Meta Reviews Done</div>
+            <div class="text-xs text-green-400 mt-0.5">{{ s.meta_done }} / {{ s.total_papers }}</div>
+        </div>
+        <div class="bg-emerald-50 rounded-lg p-4 border border-emerald-100">
+            <div class="text-2xl font-bold text-emerald-700">{{ s.papers_all_reviewed_pct }}%</div>
+            <div class="text-xs text-emerald-500 uppercase tracking-wide mt-1">Papers Fully Reviewed</div>
+            <div class="text-xs text-emerald-400 mt-0.5">{{ s.papers_all_reviewed }} / {{ s.total_papers }}</div>
+        </div>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div class="bg-red-50 rounded-lg p-3 border border-red-100 text-center">
+            <div class="text-xl font-bold text-red-600">{{ s.review_issues }}</div>
+            <div class="text-xs text-red-400 uppercase tracking-wide mt-1">Review Issues</div>
+        </div>
+        <div class="bg-orange-50 rounded-lg p-3 border border-orange-100 text-center">
+            <div class="text-xl font-bold text-orange-600">{{ s.ethics_papers }}</div>
+            <div class="text-xs text-orange-400 uppercase tracking-wide mt-1">Ethics Flagged</div>
+        </div>
+        <div class="bg-yellow-50 rounded-lg p-3 border border-yellow-100 text-center">
+            <div class="text-xl font-bold text-yellow-600">{{ s.low_conf_papers }}</div>
+            <div class="text-xs text-yellow-500 uppercase tracking-wide mt-1">Low Confidence</div>
+        </div>
+        <div class="bg-slate-50 rounded-lg p-3 border border-slate-200 text-center">
+            <div class="text-xl font-bold text-slate-600">{{ s.sac_count }}</div>
+            <div class="text-xs text-slate-400 uppercase tracking-wide mt-1">Senior ACs</div>
+        </div>
+        <div class="bg-slate-50 rounded-lg p-3 border border-slate-200 text-center">
+            <div class="text-xl font-bold text-slate-600">{{ s.ac_count }}</div>
+            <div class="text-xs text-slate-400 uppercase tracking-wide mt-1">Area Chairs</div>
+        </div>
+    </div>
+</div>

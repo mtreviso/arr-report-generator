@@ -201,7 +201,8 @@
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Flag legend</p>
                 <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
                     <span><span class="flag-badge flag-nonanon">P</span> Has public preprint</span>
-                    <span><span class="flag-badge flag-issue">!</span> Review issue report (clickable)</span>
+                    <span><span class="flag-badge flag-issue">!</span> Review issue report (clickable, count in tooltip)</span>
+                    <span><span class="flag-badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">⚡</span> Emergency review requested (⚠ = no reviewer yet)</span>
                     <span><span class="flag-badge flag-issue">M</span> Meta-review issue report (clickable)</span>
                     <span><span class="flag-badge flag-info">C</span> Confidential comment</span>
                     <span><span class="flag-badge flag-warn">&#9888;</span> Low-confidence reviewer (conf. &#8804; 2)</span>
@@ -224,7 +225,7 @@
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">Soundness</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">Excitement</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">Overall</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:55px;width:55px;">Meta</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:65px;width:65px;">AC Score</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:70px;width:70px;">Ethics</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:75px;width:75px;">Preprint</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:105px;">Recommendation</th>
@@ -277,7 +278,7 @@
 
                         {% if paper["Has Review Issue"] %}
                             <a href="{{ paper['Review Issue Link'] }}" target="_blank">
-                                <span class="tip flag-badge flag-issue" data-tip="Review Issue Report&#10;Click to open on OpenReview">!</span>
+                                <span class="tip flag-badge flag-issue" data-tip="{{ paper['Review Issue Count'] }} review issue report(s)&#10;Click to open on OpenReview">!</span>
                             </a>
                         {% endif %}
 
@@ -285,6 +286,17 @@
                             <a href="{{ paper['Meta Review Issue Link'] }}" target="_blank">
                                 <span class="tip flag-badge flag-issue" data-tip="Meta-Review Issue Report&#10;Click to open on OpenReview">M</span>
                             </a>
+                        {% endif %}
+
+                        {% if paper["Has Emergency Declaration"] %}
+                            {% if paper["Emergency Declaration Link"] %}
+                            <a href="{{ paper['Emergency Declaration Link'] }}" target="_blank">
+                            {% endif %}
+                                <span class="tip flag-badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;"
+                                      data-tip="Emergency review requested ({{ paper['Emergency Declaration Count'] }}){% if paper['Has Emergency Reviewer'] %}&#10;✓ Emergency reviewer assigned{% else %}&#10;⚠ No emergency reviewer yet{% endif %}">⚡</span>
+                            {% if paper["Emergency Declaration Link"] %}
+                            </a>
+                            {% endif %}
                         {% endif %}
 
                         {% if paper["Has Confidential"] %}
@@ -343,7 +355,7 @@
 
                     {# 10 Meta #}
                     <td class="whitespace-nowrap text-gray-700">
-                        {% if paper["Meta Review Score"] %}<span class="font-semibold">{{ paper["Meta Review Score"] }}</span>{% else %}&#8211;{% endif %}
+                        {% if paper["Meta Review Score"] %}{{ paper["Meta Review Score"] }}{% else %}&#8211;{% endif %}
                     </td>
 
                     {# 11 Ethics #}
@@ -358,7 +370,7 @@
 
                     {# 13 Recommendation #}
                     <td class="whitespace-nowrap text-gray-500">
-                        {% if paper["Recommendation"] %}<span class="font-semibold">{{ paper["Recommendation"] }}</span>{% else %}&#8211;{% endif %}
+                        {% if paper["Recommendation"] %}{{ paper["Recommendation"] }}{% else %}&#8211;{% endif %}
                     </td>
 
                     {# 14 Presentation #}

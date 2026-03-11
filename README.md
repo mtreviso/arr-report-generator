@@ -1,8 +1,8 @@
 # ARR Report Generator
 
-Interactive HTML dashboards for ACL Rolling Review Senior Area Chairs, covering both the **review phase** and the **commitment phase**.
+HTML dashboards for OpenReview ARR/ACL venues for Senior Area Chairs, Area Chairs, and Program Chairs. It covers both the **review phase** and the **commitment phase**.
 
-> Runs entirely on your machine. Your OpenReview credentials are only used to fetch data and are never stored or transmitted elsewhere.
+Important note: Runs entirely on your machine. Your OpenReview credentials are only used to fetch data and are never stored or transmitted elsewhere.
 
 ---
 
@@ -14,29 +14,6 @@ Interactive HTML dashboards for ACL Rolling Review Senior Area Chairs, covering 
 
 ---
 
-## Features
-
-**Both phases**
-- Papers table with sortable columns (score, Ready status, flags)
-- Anonymity indicator per paper (Anon / Non-anon badge, inferred from OpenReview metadata)
-- Low-confidence reviewer flag — highlights papers where any reviewer confidence is ≤ 2
-- Review Issue badge with a direct link to the issue note on OpenReview
-- Threaded comment viewer with per-paper / per-type / per-role filtering
-- Score distribution, paper-type breakdown, and score scatter charts
-
-**Review phase**
-- Area Chair dashboard (review + meta-review completion per AC)
-- Area Chair filter on the papers table
-- AC scoring analysis chart
-
-**Commitment phase**
-- Meta-review Issue badge with direct link to the issue note
-- Linked ARR forum surfaced in the title column
-- SAC recommendation, presentation mode, and award columns
-- Resubmission link when present
-
----
-
 ## Installation
 
 ```bash
@@ -45,66 +22,76 @@ cd arr-report-generator
 pip install -r requirements.txt
 ```
 
----
-
 ## Usage
 
-### Review phase
-
-Run as a Senior Area Chair during the ARR review cycle.
+### Review Phase (ARR venue)
 
 ```bash
 python generate_review_report.py \
-  --username "you@email.com" \
-  --password "••••••••" \
-  --me "~Your_Name1" \
-  --venue_id "aclweb.org/ACL/ARR/2025/February"
+  --username your@email.com \
+  --password yourpassword \
+  --venue_id aclweb.org/ACL/ARR/2025/May \
+  --me ~Your_Name1
+
+# PC / test mode — all papers in the venue:
+python generate_review_report.py ... --role pc
 ```
 
-Output: `./reports/review_report.html`
+`--role` options: `sac` (default), `pc`
 
-### Commitment phase
+Note: `pc` role can take several minutes.
 
-Run as an Area Chair after authors have committed their ARR submissions to a venue.
+
+### Commitment Phase (ACL/EMNLP/etc venue)
 
 ```bash
 python generate_commitment_report.py \
-  --username "you@email.com" \
-  --password "••••••••" \
-  --me "~Your_Name1" \
-  --venue_id "aclweb.org/ACL/2025/Conference"
+  --username your@email.com \
+  --password yourpassword \
+  --venue_id aclweb.org/ACL/2025/Conference \
+  --me ~Your_Name1 \
+  --role sac      # default; also: ac, pc
 ```
 
-Output: `./reports/commitment_report.html`
+`--role` options: `sac` (default) — Senior AC papers, `ac` — Area Chair papers, `pc` — all papers
 
-Open either file in your browser — no server required.
+Note: `pc` role can take several minutes.
 
-### Arguments
 
-| Argument | Description | Default |
-|---|---|---|
-| `--username` | OpenReview username / email | env `OPENREVIEW_USERNAME` |
-| `--password` | OpenReview password | env `OPENREVIEW_PASSWORD` |
-| `--me` | Your OpenReview profile ID, e.g. `~Jane_Doe1` | env `OPENREVIEW_ID` |
-| `--venue_id` | OpenReview venue ID | — |
-| `--output_dir` | Directory for the generated report | `./reports` |
+### PC Dashboard (ARR or ACL venue)
 
-### Environment variables
-
-To avoid repeating credentials on every run, export them once:
+Fetches **all** papers. May take several minutes for large venues (6000+ papers).
 
 ```bash
-export OPENREVIEW_USERNAME="you@email.com"
-export OPENREVIEW_PASSWORD="••••••••"
-export OPENREVIEW_ID="~Your_Name1"
-
-python generate_review_report.py --venue_id "aclweb.org/ACL/ARR/2025/February"
-python generate_commitment_report.py --venue_id "aclweb.org/ACL/2025/Conference"
+python generate_pc_report.py \
+  --username your@email.com \
+  --password yourpassword \
+  --venue_id aclweb.org/ACL/ARR/2025/May \
+  --me ~Your_Name1
 ```
 
-See `run.sh` for a ready-made example.
+
+## Credentials via env vars
+
+```bash
+export OPENREVIEW_USERNAME=your@email.com
+export OPENREVIEW_PASSWORD=yourpassword
+export OPENREVIEW_ID=~Your_Name1
+python generate_review_report.py --venue_id aclweb.org/ACL/ARR/2025/May
+```
+
+## Output files
+
+| Script | Output |
+|--------|--------|
+| `generate_review_report.py` | `reports/review_report.html` |
+| `generate_commitment_report.py` | `reports/commitment_report.html` |
+| `generate_pc_report.py` | `reports/pc_report.html` |
+
+Open in any browser — fully self-contained, no server needed.
 
 ---
+
 
 ## Project structure
 
@@ -135,7 +122,6 @@ arr-report-generator/
 
 Templates are plain Jinja2 HTML files — edit them directly to customise the layout, add columns, or change styling without touching any Python.
 
----
 
 ## Configuring the low-confidence threshold
 
@@ -145,6 +131,35 @@ The low-confidence flag triggers when any reviewer on a paper has a confidence s
 class ARRReportGenerator:
     LOW_CONF_THRESHOLD = 2   # ← change this
 ```
+
+
+## AC Dashboard columns
+
+| Column | Meaning |
+|--------|---------|
+| Late Rev. | Papers where completed reviews < expected (i.e. still missing reviews) |
+| ⚡ Emerg. | Papers where an emergency review has been declared |
+| ⚡ Unmet | Emergency declared but **no emergency reviewer assigned** yet |
+
+The AC dashboard is shared by all three report types. In the PC dashboard it gains a **SAC** column showing which Senior Area Chair is responsible for each AC.
+
+---
+
+## Emergency review detection
+
+The generator checks reply invitations for patterns matching:
+- `/-/Emergency_Review_Request`
+- `/-/Emergency_Reviewer_Recruitment`
+- `/-/Emergency_Reviewer_Request`
+- `/-/Emergency_Review`
+
+And checks for a group with suffix:
+- `/Emergency_Reviewers`
+- `/Emergency_Reviewer`
+- `/Emergency_Review_Assignees`
+
+On first run, invitation types found on the first paper are printed to stdout as `[DEBUG] Reply invitation types`. If emergencies are not being detected, check this output and file an issue with the actual invitation string.
+
 
 ---
 
