@@ -56,15 +56,6 @@
                 </div>
                 {% include 'components/pc_overview.html' %}
             </div>
-
-            <!-- Quick score distribution in overview -->
-            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
-                <div class="px-4 pt-5 sm:px-6">
-                    <h2 class="text-xl font-semibold text-gray-800">Score Distribution</h2>
-                    <p class="mt-1 text-sm text-gray-500">Distribution of overall assessment and meta-review scores across all papers.</p>
-                </div>
-                {% include 'components/score_distribution.html' %}
-            </div>
         </div>
 
         <!-- Papers Tab -->
@@ -135,6 +126,13 @@
 
         <!-- Analytics Tab -->
         <div id="analytics-tab" class="tab-content">
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Score Distribution</h2>
+                    <p class="mt-1 text-sm text-gray-500">Distribution of overall assessment and AC scores across all papers.</p>
+                </div>
+                {% include 'components/score_distribution.html' %}
+            </div>
             <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
                 <div class="px-4 pt-5 sm:px-6">
                     <h2 class="text-xl font-semibold text-gray-800">Score Correlation Matrix</h2>

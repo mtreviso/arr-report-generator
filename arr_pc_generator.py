@@ -504,6 +504,81 @@ class PCReportGenerator(ARRReportGenerator):
         }
 
     # -----------------------------------------------------------------------
+    # Load histograms for AC and SAC
+    # -----------------------------------------------------------------------
+
+    def compute_ac_load_histogram(self):
+        """Histogram of papers-per-AC from ac_meta_data."""
+        if not self.ac_meta_data:
+            return {"labels": [], "counts": [], "total": 0, "avg_load": 0}
+        from collections import Counter
+        loads = [r["Num_Papers"] for r in self.ac_meta_data]
+        freq = Counter(loads)
+        max_load = max(freq.keys())
+        labels = list(range(1, max_load + 1))
+        counts = [freq.get(i, 0) for i in labels]
+        total = len(loads)
+        return {
+            "labels": labels,
+            "counts": counts,
+            "total": total,
+            "avg_load": round(sum(loads) / total, 2) if total else 0,
+        }
+
+    def compute_sac_load_histogram(self):
+        """Histogram of papers-per-SAC from sac_meta_data."""
+        if not self.sac_meta_data:
+            return {"labels": [], "counts": [], "total": 0, "avg_load": 0}
+        from collections import Counter
+        loads = [r["Num_Papers"] for r in self.sac_meta_data]
+        freq = Counter(loads)
+        max_load = max(freq.keys())
+        labels = list(range(1, max_load + 1))
+        counts = [freq.get(i, 0) for i in labels]
+        total = len(loads)
+        return {
+            "labels": labels,
+            "counts": counts,
+            "total": total,
+            "avg_load": round(sum(loads) / total, 2) if total else 0,
+        }
+
+    def compute_sac_scoring_data(self, top_n=15):
+        """Top SACs by avg |AC score - reviewer avg|, aggregated from papers_data."""
+        if not self.papers_data:
+            return []
+        df = pd.DataFrame(self.papers_data)
+        if "Senior Area Chair" not in df.columns:
+            return []
+        results = []
+        for sac_name, group in df.groupby("Senior Area Chair"):
+            if not sac_name:
+                continue
+            overall_vals = group["Overall Assessment"].apply(self.parse_avg).dropna()
+            meta_vals = group["Meta Review Score"].apply(
+                lambda x: float(x) if x and str(x).strip() else np.nan
+            ).dropna()
+            if overall_vals.empty or meta_vals.empty:
+                continue
+            avg_review = round(float(overall_vals.mean()), 2)
+            avg_meta   = round(float(meta_vals.mean()), 2)
+            diff       = round(avg_meta - avg_review, 2)
+            sac_row    = next((r for r in self.sac_meta_data if r["Senior Area Chair"] == sac_name), {})
+            results.append({
+                "name":          sac_name,
+                "email":         sac_row.get("Senior Area Chair Email", ""),
+                "avg_review":    avg_review,
+                "avg_meta":      avg_meta,
+                "difference":    diff,
+                "abs_diff":      abs(diff),
+                "review_count":  int(overall_vals.count()),
+                "meta_count":    int(meta_vals.count()),
+                "num_papers":    len(group),
+            })
+        results.sort(key=lambda x: x["abs_diff"], reverse=True)
+        return results[:top_n]
+
+    # -----------------------------------------------------------------------
     # process_data override
     # -----------------------------------------------------------------------
 
@@ -560,6 +635,10 @@ class PCReportGenerator(ARRReportGenerator):
             "score_outliers":          self.compute_score_outliers(),
             "high_disagreement":       self.compute_high_disagreement_papers(),
             "reviewer_load":           self.compute_reviewer_load_histogram(),
+            "ac_load":                 self.compute_ac_load_histogram(),
+            "sac_load":                self.compute_sac_load_histogram(),
+            "ac_scoring_top":          self.generate_ac_scoring_data()[:15],
+            "sac_scoring_top":         self.compute_sac_scoring_data(),
         }
 
         template_dir = self._resolve_template_dir()
