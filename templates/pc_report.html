@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎛️</text></svg>">
     <title>{{ title }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.datatables.net/2.3.7/css/dataTables.dataTables.min.css">
@@ -137,6 +137,13 @@
         <div id="analytics-tab" class="tab-content">
             <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
                 <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Score Correlation Matrix</h2>
+                    <p class="mt-1 text-sm text-gray-500">Pairwise correlation between reviewer confidence, soundness, excitement, overall assessment, and AC score.</p>
+                </div>
+                {% include 'components/correlation_matrix.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
                     <h2 class="text-xl font-semibold text-gray-800">Paper Type Distribution</h2>
                 </div>
                 {% include 'components/paper_type_distribution.html' %}
@@ -144,26 +151,23 @@
             <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
                 <div class="px-4 pt-5 sm:px-6">
                     <h2 class="text-xl font-semibold text-gray-800">Review Completion by AC</h2>
+                    <p class="mt-1 text-sm text-gray-500">Distribution of review completion rates across all Area Chairs (bucketed).</p>
                 </div>
                 {% include 'components/review_completion.html' %}
             </div>
             <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
                 <div class="px-4 pt-5 sm:px-6">
-                    <h2 class="text-xl font-semibold text-gray-800">Score Comparison: Overall vs Meta</h2>
+                    <h2 class="text-xl font-semibold text-gray-800">Score Comparison: Overall vs AC Score</h2>
+                    <p class="mt-1 text-sm text-gray-500">Density heatmap of reviewer overall score vs AC score, plus score difference distribution.</p>
                 </div>
                 {% include 'components/score_scatter.html' %}
             </div>
             <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
                 <div class="px-4 pt-5 sm:px-6">
                     <h2 class="text-xl font-semibold text-gray-800">Area Chair Scoring Analysis</h2>
+                    <p class="mt-1 text-sm text-gray-500">Per-AC average review score vs AC score, sortable by any column.</p>
                 </div>
                 {% include 'components/ac_scoring.html' %}
-            </div>
-            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
-                <div class="px-4 pt-5 sm:px-6">
-                    <h2 class="text-xl font-semibold text-gray-800">Score Correlation Matrix</h2>
-                </div>
-                {% include 'components/correlation_matrix.html' %}
             </div>
         </div>
 
@@ -177,6 +181,7 @@
 </footer>
 
 {% include 'components/_shared_tab_js.html' %}
+
 
 </body>
 </html>

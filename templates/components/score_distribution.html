@@ -1,15 +1,28 @@
 <div id="score-distribution-container" class="px-4 py-5 sm:p-6">
-    <canvas id="score-distribution-chart" style="max-height: 400px;"></canvas>
+    <!-- Spinner shown until chart renders -->
+    <div id="score-dist-loader" class="flex items-center justify-center py-12">
+        <svg class="animate-spin h-8 w-8 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
+        <span class="ml-3 text-sm text-gray-500">Loading chart…</span>
+    </div>
+    <canvas id="score-distribution-chart" style="max-height:400px; display:none;"></canvas>
 </div>
 
 <script>
 function renderScoreDistributionChart() {
     const ctx = document.getElementById('score-distribution-chart');
-    if (!ctx) return;
-    const overallCounts = {{ histogram_data.overall_assessment.counts | tojson }};
-    const metaCounts   = {{ histogram_data.meta_review.counts | tojson }};
-    const overallLabels = {{ histogram_data.overall_assessment.labels | tojson }};
-    const metaLabels    = {{ histogram_data.meta_review.labels | tojson }};
+    if (!ctx || ctx.dataset.rendered) return;
+    ctx.dataset.rendered = '1';
+
+    const overallCounts  = {{ histogram_data.overall_assessment.counts | tojson }};
+    const metaCounts     = {{ histogram_data.meta_review.counts | tojson }};
+    const overallLabels  = {{ histogram_data.overall_assessment.labels | tojson }};
+    const metaLabels     = {{ histogram_data.meta_review.labels | tojson }};
+
+    document.getElementById('score-dist-loader').style.display = 'none';
+    ctx.style.display = '';
 
     window.scoreChart = new Chart(ctx.getContext('2d'), {
         type: 'line',
@@ -20,19 +33,20 @@ function renderScoreDistributionChart() {
                     label: 'Overall Assessment',
                     data: overallCounts,
                     borderColor: 'rgba(59,130,246,1)', backgroundColor: 'rgba(59,130,246,0.1)',
-                    tension: 0.1, fill: true
+                    tension: 0.3, fill: true, pointRadius: 3
                 },
                 {
-                    label: 'Meta Review Score',
+                    label: 'AC Score (meta)',
                     data: metaLabels.map((lbl,i) => ({x: lbl, y: metaCounts[i]})),
                     borderColor: 'rgba(220,38,38,1)', backgroundColor: 'rgba(220,38,38,0.1)',
-                    tension: 0.1, fill: true,
+                    tension: 0.3, fill: true, pointRadius: 3,
                     parsing: {xAxisKey: 'x', yAxisKey: 'y'}
                 }
             ]
         },
         options: {
             responsive: true, maintainAspectRatio: true, aspectRatio: 2.5,
+            animation: { duration: 400 },
             plugins: {
                 legend: {position: 'top'},
                 tooltip: {
@@ -55,4 +69,10 @@ function renderScoreDistributionChart() {
         }
     });
 }
+
+// Render immediately if overview tab is active, otherwise on first tab switch
+document.addEventListener('DOMContentLoaded', function() {
+    // Small delay so the DOM is ready
+    setTimeout(renderScoreDistributionChart, 80);
+});
 </script>

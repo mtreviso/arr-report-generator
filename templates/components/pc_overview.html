@@ -1,6 +1,8 @@
 <div class="px-4 py-5 sm:p-6">
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {% set s = overview_stats %}
+    {% set s = overview_stats %}
+
+    <!-- Row 1: 4 primary cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         <div class="bg-indigo-50 rounded-lg p-4 border border-indigo-100">
             <div class="text-2xl font-bold text-indigo-700">{{ s.total_papers }}</div>
             <div class="text-xs text-indigo-500 uppercase tracking-wide mt-1">Active Papers</div>
@@ -12,7 +14,7 @@
         </div>
         <div class="bg-green-50 rounded-lg p-4 border border-green-100">
             <div class="text-2xl font-bold text-green-700">{{ s.meta_pct }}%</div>
-            <div class="text-xs text-green-500 uppercase tracking-wide mt-1">Meta Reviews Done</div>
+            <div class="text-xs text-green-500 uppercase tracking-wide mt-1">AC Scores Submitted</div>
             <div class="text-xs text-green-400 mt-0.5">{{ s.meta_done }} / {{ s.total_papers }}</div>
         </div>
         <div class="bg-emerald-50 rounded-lg p-4 border border-emerald-100">
@@ -21,7 +23,31 @@
             <div class="text-xs text-emerald-400 mt-0.5">{{ s.papers_all_reviewed }} / {{ s.total_papers }}</div>
         </div>
     </div>
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+
+    <!-- Row 2: score averages + people counts -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        <div class="bg-violet-50 rounded-lg p-4 border border-violet-100">
+            <div class="text-2xl font-bold text-violet-700">{{ s.avg_overall if s.avg_overall is not none else "–" }}</div>
+            <div class="text-xs text-violet-500 uppercase tracking-wide mt-1">Avg. Overall Score</div>
+            <div class="text-xs text-violet-400 mt-0.5">across all reviewer scores</div>
+        </div>
+        <div class="bg-pink-50 rounded-lg p-4 border border-pink-100">
+            <div class="text-2xl font-bold text-pink-700">{{ s.avg_meta if s.avg_meta is not none else "–" }}</div>
+            <div class="text-xs text-pink-500 uppercase tracking-wide mt-1">Avg. AC Score</div>
+            <div class="text-xs text-pink-400 mt-0.5">across all meta reviews</div>
+        </div>
+        <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+            <div class="text-2xl font-bold text-slate-600">{{ s.sac_count }}</div>
+            <div class="text-xs text-slate-400 uppercase tracking-wide mt-1">Senior Area Chairs</div>
+        </div>
+        <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+            <div class="text-2xl font-bold text-slate-600">{{ s.ac_count }}</div>
+            <div class="text-xs text-slate-400 uppercase tracking-wide mt-1">Area Chairs</div>
+        </div>
+    </div>
+
+    <!-- Row 3: alert / flag counts -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
         <div class="bg-red-50 rounded-lg p-3 border border-red-100 text-center">
             <div class="text-xl font-bold text-red-600">{{ s.review_issues }}</div>
             <div class="text-xs text-red-400 uppercase tracking-wide mt-1">Review Issues</div>
@@ -34,13 +60,27 @@
             <div class="text-xl font-bold text-yellow-600">{{ s.low_conf_papers }}</div>
             <div class="text-xs text-yellow-500 uppercase tracking-wide mt-1">Low Confidence</div>
         </div>
-        <div class="bg-slate-50 rounded-lg p-3 border border-slate-200 text-center">
-            <div class="text-xl font-bold text-slate-600">{{ s.sac_count }}</div>
-            <div class="text-xs text-slate-400 uppercase tracking-wide mt-1">Senior ACs</div>
+        <div class="bg-blue-50 rounded-lg p-3 border border-blue-100 text-center">
+            <div class="text-xl font-bold text-blue-600">{{ s.emergency_declared }}</div>
+            <div class="text-xs text-blue-400 uppercase tracking-wide mt-1">⚡ Emergency Declared</div>
         </div>
-        <div class="bg-slate-50 rounded-lg p-3 border border-slate-200 text-center">
-            <div class="text-xl font-bold text-slate-600">{{ s.ac_count }}</div>
-            <div class="text-xs text-slate-400 uppercase tracking-wide mt-1">Area Chairs</div>
+        <div class="bg-amber-50 rounded-lg p-3 border border-amber-100 text-center">
+            <div class="text-xl font-bold text-amber-600">{{ s.emergency_unmet }}</div>
+            <div class="text-xs text-amber-400 uppercase tracking-wide mt-1">⚡ Emergency Unmet</div>
         </div>
     </div>
+
+    <!-- Row 4: paper type breakdown (if available) -->
+    {% if s.type_counts %}
+    <div class="mt-2">
+        <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Paper Types</p>
+        <div class="flex flex-wrap gap-2">
+            {% for ptype, cnt in s.type_counts.items() %}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                {{ ptype }}: <span class="ml-1 font-semibold">{{ cnt }}</span>
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 </div>

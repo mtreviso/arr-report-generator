@@ -86,8 +86,16 @@ class PCReportGenerator(ARRReportGenerator):
             sac_email = self.get_email_for_user(sac_uid) if sac_uid else ""
 
             paper_type = submission.content.get("paper_type", {}).get("value", "")
-            track      = submission.content.get("track", {}).get("value", "") or \
-                         submission.content.get("area",  {}).get("value", "") or ""
+            # Try multiple field names ARR uses across rounds
+            track = ""
+            for _tf in ("primary_area", "track", "area", "subject_area",
+                        "research_area", "track_name", "submission_track"):
+                _tv = submission.content.get(_tf, {})
+                if isinstance(_tv, dict):
+                    _tv = _tv.get("value", "")
+                if _tv and str(_tv).strip():
+                    track = str(_tv).strip()
+                    break
 
             # Reply scan
             completed_reviews         = 0

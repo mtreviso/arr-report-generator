@@ -1,13 +1,17 @@
 <div class="px-4 py-5 sm:p-6">
+    <p class="text-xs text-gray-500 mb-4">
+        Left: density heatmap of overall review score vs AC score — each cell shows how many papers
+        fall in that score bucket. Right: distribution of the difference (AC score − avg review score).
+    </p>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-            <h3 class="text-base font-medium text-gray-700 mb-2">Overall vs Meta-Review Scatter</h3>
-            <div style="height:300px;"><canvas id="score-scatter-chart"></canvas></div>
+            <h3 class="text-sm font-medium text-gray-700 mb-2">Overall vs AC Score — Density</h3>
+            <div id="score-heatmap-container"></div>
         </div>
         <div>
-            <h3 class="text-base font-medium text-gray-700 mb-2">Score Difference Distribution (Meta − Avg)</h3>
-            <div style="height:300px;"><canvas id="score-difference-chart"></canvas></div>
-            <p class="text-sm text-gray-500 mt-2 text-center">Positive = meta higher than average review.</p>
+            <h3 class="text-sm font-medium text-gray-700 mb-2">Score Difference Distribution (AC − Avg Review)</h3>
+            <div style="height:280px;"><canvas id="score-difference-chart"></canvas></div>
+            <p class="text-xs text-gray-500 mt-2 text-center">Positive = AC scored higher than average reviewer.</p>
         </div>
     </div>
 </div>
@@ -15,49 +19,99 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const initScoreCharts = function() {
-        const scatterCtx = document.getElementById('score-scatter-chart');
-        const diffCtx    = document.getElementById('score-difference-chart');
-        if (!scatterCtx || !diffCtx) return;
+        if (document.getElementById('score-heatmap-container').dataset.rendered) return;
+        document.getElementById('score-heatmap-container').dataset.rendered = '1';
+
         const scatterData = {{ score_scatter_data.scatter | tojson }};
         const diffData    = {{ score_scatter_data.differences | tojson }};
+
         if (!scatterData.length) {
-            scatterCtx.parentNode.innerHTML = '<div class="text-center py-8 text-gray-500">No data.</div>';
-            diffCtx.parentNode.innerHTML = '';
+            document.getElementById('score-heatmap-container').innerHTML =
+                '<div class="text-center py-8 text-gray-500">No data.</div>';
             return;
         }
-        new Chart(scatterCtx, {
-            type: 'scatter',
-            data: {datasets:[{label:'Papers', data: scatterData.map(d=>({x:d.x,y:d.y})),
-                backgroundColor:'rgba(59,130,246,0.7)', borderColor:'rgba(59,130,246,1)', pointRadius:5, pointHoverRadius:7}]},
-            options: {
-                responsive:true, maintainAspectRatio:false,
-                scales: {
-                    x: {title:{display:true,text:'Average Overall Assessment'}, min:1, max:5, ticks:{stepSize:0.5}},
-                    y: {title:{display:true,text:'Meta-Review Score'}, min:1, max:5, ticks:{stepSize:0.5}}
+
+        // --- 2D density heatmap using a grid of divs ---
+        // Score range 1–5, bin size 0.5 → 8 bins per axis
+        const bins = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
+        const n = bins.length;
+        const grid = Array.from({length: n}, () => new Array(n).fill(0));
+        const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+        const toBin = v => {
+            const idx = Math.floor((clamp(v, 1, 5) - 1) / 0.5);
+            return Math.min(idx, n - 1);
+        };
+        let maxCell = 0;
+        scatterData.forEach(d => {
+            const xi = toBin(d.x);
+            const yi = toBin(d.y);
+            grid[yi][xi]++;
+            if (grid[yi][xi] > maxCell) maxCell = grid[yi][xi];
+        });
+
+        const cellSize = 32;
+        let html = `<div style="display:inline-block; font-size:0.65rem; color:#6b7280;">`;
+        // Y axis label
+        html += `<div style="display:flex; align-items:flex-end; gap:4px;">`;
+        html += `<div style="width:24px; writing-mode:vertical-rl; transform:rotate(180deg); text-align:center; font-size:0.6rem; color:#9ca3af;">AC Score</div>`;
+        html += `<div>`;
+        for (let yi = n - 1; yi >= 0; yi--) {
+            html += `<div style="display:flex; align-items:center; height:${cellSize}px;">`;
+            html += `<div style="width:24px; text-align:right; padding-right:4px; color:#9ca3af;">${bins[yi].toFixed(1)}</div>`;
+            for (let xi = 0; xi < n; xi++) {
+                const v = grid[yi][xi];
+                const intensity = maxCell > 0 ? v / maxCell : 0;
+                // Blue scale: low = white, high = indigo
+                const r = Math.round(255 - intensity * (255 - 67));
+                const g = Math.round(255 - intensity * (255 - 56));
+                const b = Math.round(255 - intensity * (255 - 202));
+                const textColor = intensity > 0.5 ? '#fff' : '#374151';
+                html += `<div style="width:${cellSize}px;height:${cellSize}px;background:rgb(${r},${g},${b});display:flex;align-items:center;justify-content:center;border:1px solid #e5e7eb;color:${textColor};font-weight:${v>0?500:400};">`;
+                html += v > 0 ? v : '';
+                html += `</div>`;
+            }
+            html += `</div>`;
+        }
+        // X axis labels
+        html += `<div style="display:flex; padding-left:28px;">`;
+        for (let xi = 0; xi < n; xi++) {
+            html += `<div style="width:${cellSize}px; text-align:center; color:#9ca3af;">${bins[xi].toFixed(1)}</div>`;
+        }
+        html += `</div>`;
+        html += `<div style="text-align:center; padding-left:28px; color:#9ca3af; font-size:0.6rem; margin-top:2px;">Avg Review Score</div>`;
+        html += `</div></div></div>`;
+
+        document.getElementById('score-heatmap-container').innerHTML = html;
+
+        // --- Difference distribution bar chart ---
+        const diffCtx = document.getElementById('score-difference-chart');
+        if (diffCtx && diffData.labels) {
+            new Chart(diffCtx, {
+                type: 'bar',
+                data: {
+                    labels: diffData.labels,
+                    datasets: [{
+                        label: 'Papers', data: diffData.counts,
+                        backgroundColor(ctx) {
+                            const v = parseFloat(ctx.chart.data.labels[ctx.dataIndex]);
+                            return v > 0 ? 'rgba(34,197,94,0.7)' : v < 0 ? 'rgba(239,68,68,0.7)' : 'rgba(107,114,128,0.7)';
+                        },
+                        borderWidth: 1
+                    }]
                 },
-                plugins: {tooltip: {callbacks: {label(ctx) {
-                    const p = scatterData[ctx.dataIndex];
-                    return `Paper ${p.paper}: Review ${p.x.toFixed(1)}, Meta ${p.y.toFixed(1)}`;
-                }}}}
-            }
-        });
-        new Chart(diffCtx, {
-            type: 'bar',
-            data: {labels: diffData.labels, datasets:[{
-                label:'Papers', data: diffData.counts,
-                backgroundColor(ctx) { const v=parseFloat(ctx.chart.data.labels[ctx.dataIndex]); return v>0?'rgba(34,197,94,0.7)':v<0?'rgba(239,68,68,0.7)':'rgba(107,114,128,0.7)'; },
-                borderColor(ctx) { const v=parseFloat(ctx.chart.data.labels[ctx.dataIndex]); return v>0?'rgba(34,197,94,1)':v<0?'rgba(239,68,68,1)':'rgba(107,114,128,1)'; },
-                borderWidth:1
-            }]},
-            options: {
-                responsive:true, maintainAspectRatio:false,
-                scales: {
-                    x: {title:{display:true,text:'Score Difference (Meta − Avg)'}},
-                    y: {beginAtZero:true, title:{display:true,text:'Papers'}, ticks:{stepSize:1}}
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    animation: { duration: 400 },
+                    scales: {
+                        x: { title: { display: true, text: 'Score Difference (AC − Avg)' } },
+                        y: { beginAtZero: true, title: { display: true, text: 'Papers' } }
+                    },
+                    plugins: { legend: { display: false } }
                 }
-            }
-        });
+            });
+        }
     };
+
     const analyticsTab = document.querySelector('[data-tab="analytics-tab"]');
     if (analyticsTab) analyticsTab.addEventListener('click', () => setTimeout(initScoreCharts, 100));
     if (document.getElementById('analytics-tab') && document.getElementById('analytics-tab').classList.contains('active'))
