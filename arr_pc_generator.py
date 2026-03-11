@@ -35,9 +35,10 @@ class PCReportGenerator(ARRReportGenerator):
         super().__init__(username=username, password=password,
                          venue_id=venue_id, me=me, role='pc')
         # Extra data containers
-        self.sac_meta_data  = []
-        self.track_data     = []
+        self.sac_meta_data    = []
+        self.track_data       = []
         self.attention_papers = []
+        self.reviewer_load    = {}  # reviewer_id -> paper count
 
     # -----------------------------------------------------------------------
     # Override process_papers_data to also capture SAC name per paper
@@ -181,6 +182,8 @@ class PCReportGenerator(ARRReportGenerator):
                     rg = None
             if rg and getattr(rg, 'members', None):
                 expected_reviews = len(rg.members)
+                for rev_id in rg.members:
+                    self.reviewer_load[rev_id] = self.reviewer_load.get(rev_id, 0) + 1
 
             # Emergency reviewer group
             has_emergency_reviewer = False
@@ -284,11 +287,9 @@ class PCReportGenerator(ARRReportGenerator):
             ethics           = int((group["Ethics Flag"] != "").sum())
             sac_id    = group["Senior Area Chair ID"].iloc[0]
             sac_email = group["Senior Area Chair Email"].iloc[0]
+            emerg_decl   = int(group["Has Emergency Declaration"].sum()) if "Has Emergency Declaration" in group.columns else 0
             emerg_assign = int(group["Has Emergency Reviewer"].sum()) if "Has Emergency Reviewer" in group.columns else 0
-            emerg_decl  = int(df["Has Emergency Declaration"].sum()) if "Has Emergency Declaration" in df.columns else 0
-            emerg_unmet = int(
-                ((df["Has Emergency Declaration"] == True) & (df["Has Emergency Reviewer"] == False)).sum()
-            ) if "Has Emergency Declaration" in df.columns else 0
+            emerg_unmet  = max(0, emerg_decl - emerg_assign)
             late_papers  = int((group["Completed Reviews"] < group["Expected Reviews"]).sum())
             rows.append({
                 "Senior Area Chair":       sac_name,
@@ -414,6 +415,95 @@ class PCReportGenerator(ARRReportGenerator):
         }
 
     # -----------------------------------------------------------------------
+    # Score outliers: AC score diverges from reviewer consensus
+    # -----------------------------------------------------------------------
+
+    def compute_score_outliers(self, threshold=0.8, top_n=15):
+        """Papers where |meta_score - avg_overall| >= threshold."""
+        results = []
+        for p in self.papers_data:
+            meta = p.get("Meta Review Score", "")
+            if not meta:
+                continue
+            avg = self.parse_avg(p.get("Overall Assessment", ""))
+            if avg is None or np.isnan(avg):
+                continue
+            try:
+                diff = abs(float(meta) - avg)
+            except Exception:
+                continue
+            if diff >= threshold:
+                results.append({
+                    "Paper #":    p["Paper #"],
+                    "Paper ID":   p["Paper ID"],
+                    "Title":      p["Title"],
+                    "SAC":        p.get("Senior Area Chair", ""),
+                    "AC":         p.get("Area Chair", ""),
+                    "Avg Review": round(avg, 2),
+                    "AC Score":   float(meta),
+                    "Diff":       round(float(meta) - avg, 2),
+                    "Divergence": round(diff, 2),
+                })
+        results.sort(key=lambda r: r["Divergence"], reverse=True)
+        return results[:top_n]
+
+    # -----------------------------------------------------------------------
+    # High-disagreement papers: high std dev among reviewer scores
+    # -----------------------------------------------------------------------
+
+    def compute_high_disagreement_papers(self, threshold=0.7, top_n=15):
+        """Papers where std dev of reviewer overall scores >= threshold."""
+        results = []
+        for p in self.papers_data:
+            scores_raw = p.get("Overall List", "")
+            if not scores_raw:
+                continue
+            try:
+                scores = [float(s) for s in scores_raw.split(" / ") if s.strip()]
+            except Exception:
+                continue
+            if len(scores) < 2:
+                continue
+            std = float(np.std(scores))
+            if std >= threshold:
+                results.append({
+                    "Paper #":  p["Paper #"],
+                    "Paper ID": p["Paper ID"],
+                    "Title":    p["Title"],
+                    "SAC":      p.get("Senior Area Chair", ""),
+                    "AC":       p.get("Area Chair", ""),
+                    "Scores":   scores_raw,
+                    "Std Dev":  round(std, 2),
+                    "Avg":      round(float(np.mean(scores)), 2),
+                })
+        results.sort(key=lambda r: r["Std Dev"], reverse=True)
+        return results[:top_n]
+
+    # -----------------------------------------------------------------------
+    # Reviewer load distribution histogram
+    # -----------------------------------------------------------------------
+
+    def compute_reviewer_load_histogram(self):
+        """Histogram of how many reviewers have 1, 2, 3, ... papers assigned."""
+        if not self.reviewer_load:
+            return {"labels": [], "counts": [], "total_reviewers": 0}
+        from collections import Counter
+        freq = Counter(self.reviewer_load.values())
+        max_load = max(freq.keys())
+        labels = list(range(1, max_load + 1))
+        counts = [freq.get(i, 0) for i in labels]
+        zero_count = max(0, len(self.reviewer_load) - sum(c > 0 for c in self.reviewer_load.values()))
+        total = len(self.reviewer_load)
+        avg_load = round(sum(self.reviewer_load.values()) / total, 2) if total else 0
+        return {
+            "labels":          labels,
+            "counts":          counts,
+            "total_reviewers": total,
+            "zero_reviews":    zero_count,
+            "avg_load":        avg_load,
+        }
+
+    # -----------------------------------------------------------------------
     # process_data override
     # -----------------------------------------------------------------------
 
@@ -467,6 +557,9 @@ class PCReportGenerator(ARRReportGenerator):
             "review_completion_data":  self.generate_review_completion_data(),
             "score_scatter_data":      self.generate_score_scatter_data(),
             "ac_scoring_data":         self.generate_ac_scoring_data(),
+            "score_outliers":          self.compute_score_outliers(),
+            "high_disagreement":       self.compute_high_disagreement_papers(),
+            "reviewer_load":           self.compute_reviewer_load_histogram(),
         }
 
         template_dir = self._resolve_template_dir()

@@ -32,20 +32,23 @@ class ARRReportGenerator:
         )
 
         # Get SAC groups for filtering
-        try:
-            self.my_sac_groups = {
-                g.id
-                for g in self.client.get_all_groups(members=me, prefix=f'{venue_id}/{self.submission_name}')
-                if g.id.endswith('Senior_Area_Chairs')
-            }
-        except:
-            # Fix for old API version
+        if role == 'pc':
             self.my_sac_groups = set()
-            all_groups = self.client.get_all_groups(prefix=f'{venue_id}/{self.submission_name}')
-            for g in all_groups:
-                if g.id.endswith('Senior_Area_Chairs'):
-                    if hasattr(g, 'members') and me in g.members:
-                        self.my_sac_groups.add(g.id)
+        else:
+            try:
+                self.my_sac_groups = {
+                    g.id
+                    for g in self.client.get_all_groups(members=me, prefix=f'{venue_id}/{self.submission_name}')
+                    if g.id.endswith('Senior_Area_Chairs')
+                }
+            except:
+                # Fix for old API version
+                self.my_sac_groups = set()
+                all_groups = self.client.get_all_groups(prefix=f'{venue_id}/{self.submission_name}')
+                for g in all_groups:
+                    if g.id.endswith('Senior_Area_Chairs'):
+                        if hasattr(g, 'members') and me in g.members:
+                            self.my_sac_groups.add(g.id)
 
         # Data containers
         self.papers_data = []
@@ -232,11 +235,8 @@ class ARRReportGenerator:
             return None
 
     def _sanitize_tilde_id(self, uid):
-        """~Foo_Bar1 → Foo Bar"""
-        if not uid or not uid.startswith("~"):
-            return uid
-        import re
-        name = uid.lstrip("~")
+        """~Foo_Bar1 -> Foo Bar"""
+        name = uid.strip().lstrip("~")
         name = re.sub(r'\\d+$', '', name)
         name = name.replace("_", " ").strip()
         return name.title()
@@ -274,7 +274,8 @@ class ARRReportGenerator:
             name = profile.name
         if not name and hasattr(profile, "id"):
             name = profile.id
-        return str(name) if name else self._sanitize_tilde_id(str(default))
+        display_name = str(name) if name else str(default)
+        return self._sanitize_tilde_id(display_name)
 
     def get_email_for_user(self, user_id):
         if not user_id:

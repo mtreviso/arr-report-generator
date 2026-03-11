@@ -1,7 +1,7 @@
 <div class="px-4 py-5 sm:p-6">
     {% set s = overview_stats %}
 
-    <!-- Row 1: 4 primary cards -->
+    <!-- Row 1: 4 primary progress cards -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         <div class="bg-indigo-50 rounded-lg p-4 border border-indigo-100">
             <div class="text-2xl font-bold text-indigo-700">{{ s.total_papers }}</div>
@@ -29,12 +29,10 @@
         <div class="bg-violet-50 rounded-lg p-4 border border-violet-100">
             <div class="text-2xl font-bold text-violet-700">{{ s.avg_overall if s.avg_overall is not none else "–" }}</div>
             <div class="text-xs text-violet-500 uppercase tracking-wide mt-1">Avg. Overall Score</div>
-            <div class="text-xs text-violet-400 mt-0.5">across all reviewer scores</div>
         </div>
         <div class="bg-pink-50 rounded-lg p-4 border border-pink-100">
             <div class="text-2xl font-bold text-pink-700">{{ s.avg_meta if s.avg_meta is not none else "–" }}</div>
             <div class="text-xs text-pink-500 uppercase tracking-wide mt-1">Avg. AC Score</div>
-            <div class="text-xs text-pink-400 mt-0.5">across all meta reviews</div>
         </div>
         <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
             <div class="text-2xl font-bold text-slate-600">{{ s.sac_count }}</div>
@@ -46,8 +44,8 @@
         </div>
     </div>
 
-    <!-- Row 3: alert / flag counts -->
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+    <!-- Row 3: alert counts -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         <div class="bg-red-50 rounded-lg p-3 border border-red-100 text-center">
             <div class="text-xl font-bold text-red-600">{{ s.review_issues }}</div>
             <div class="text-xs text-red-400 uppercase tracking-wide mt-1">Review Issues</div>
@@ -61,18 +59,18 @@
             <div class="text-xs text-yellow-500 uppercase tracking-wide mt-1">Low Confidence</div>
         </div>
         <div class="bg-blue-50 rounded-lg p-3 border border-blue-100 text-center">
-            <div class="text-xl font-bold text-blue-600">{{ s.emergency_declared }}</div>
+            <div class="text-xl font-bold text-blue-600">{{ s.emergency_declared | default(0) }}</div>
             <div class="text-xs text-blue-400 uppercase tracking-wide mt-1">⚡ Emergency Declared</div>
         </div>
         <div class="bg-amber-50 rounded-lg p-3 border border-amber-100 text-center">
-            <div class="text-xl font-bold text-amber-600">{{ s.emergency_unmet }}</div>
+            <div class="text-xl font-bold text-amber-600">{{ s.emergency_unmet | default(0) }}</div>
             <div class="text-xs text-amber-400 uppercase tracking-wide mt-1">⚡ Emergency Unmet</div>
         </div>
     </div>
 
-    <!-- Row 4: paper type breakdown (if available) -->
+    <!-- Paper type pills -->
     {% if s.type_counts %}
-    <div class="mt-2">
+    <div class="mb-6">
         <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Paper Types</p>
         <div class="flex flex-wrap gap-2">
             {% for ptype, cnt in s.type_counts.items() %}
@@ -83,4 +81,231 @@
         </div>
     </div>
     {% endif %}
+
+    <!-- Two-column section: SAC mini-leaderboard + per-track progress -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+
+        <!-- SAC mini-leaderboard: bottom 8 by review % -->
+        {% if sac_meta %}
+        <div>
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">SAC Progress — Bottom 8 by Review Completion</p>
+            <table class="min-w-full text-xs">
+                <thead>
+                    <tr class="text-gray-400 uppercase text-left border-b border-gray-100">
+                        <th class="pb-1 pr-3 font-medium">SAC</th>
+                        <th class="pb-1 pr-3 font-medium">Papers</th>
+                        <th class="pb-1 pr-3 font-medium">Review %</th>
+                        <th class="pb-1 font-medium">Late</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sac in sac_meta | sort(attribute='Review_Pct') | list %}
+                    {% if loop.index <= 20 %}
+                    <tr class="border-b border-gray-50">
+                        <td class="py-1 pr-3 text-gray-700 truncate" style="max-width:160px;">{{ sac["Senior Area Chair"] }}</td>
+                        <td class="py-1 pr-3 text-gray-500">{{ sac["Num_Papers"] }}</td>
+                        <td class="py-1 pr-3">
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs
+                                {% if sac['Review_Pct'] == 100 %}bg-green-100 text-green-700
+                                {% elif sac['Review_Pct'] >= 80 %}bg-yellow-100 text-yellow-700
+                                {% else %}bg-red-100 text-red-700{% endif %}">
+                                {{ sac["Review_Pct"] }}%
+                            </span>
+                        </td>
+                        <td class="py-1 {% if sac.get('Late_Papers',0) > 0 %}text-red-600 font-medium{% else %}text-gray-300{% endif %}">
+                            {{ sac.get("Late_Papers", 0) or "–" }}
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Per-track progress -->
+        {% if track_data %}
+        <div>
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Track Progress</p>
+            <table class="min-w-full text-xs">
+                <thead>
+                    <tr class="text-gray-400 uppercase text-left border-b border-gray-100">
+                        <th class="pb-1 pr-3 font-medium">Track</th>
+                        <th class="pb-1 pr-3 font-medium">Papers</th>
+                        <th class="pb-1 pr-3 font-medium">Meta %</th>
+                        <th class="pb-1 font-medium">Avg</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in track_data %}
+                    <tr class="border-b border-gray-50">
+                        <td class="py-1 pr-3 text-gray-700 truncate" style="max-width:180px;" title="{{ t['Track'] }}">{{ t["Track"] }}</td>
+                        <td class="py-1 pr-3 text-gray-500">{{ t["Papers"] }}</td>
+                        <td class="py-1 pr-3">
+                            <!-- Mini progress bar -->
+                            <div class="flex items-center gap-1">
+                                <div class="w-16 bg-gray-100 rounded-full h-1.5">
+                                    <div class="h-1.5 rounded-full
+                                        {% if t['Meta Pct'] == 100 %}bg-green-500
+                                        {% elif t['Meta Pct'] >= 80 %}bg-yellow-400
+                                        {% else %}bg-red-400{% endif %}"
+                                        style="width:{{ t['Meta Pct'] }}%"></div>
+                                </div>
+                                <span class="text-gray-500">{{ t["Meta Pct"] }}%</span>
+                            </div>
+                        </td>
+                        <td class="py-1 text-gray-500">{{ t["Avg Overall"] or "–" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- Reviewer load histogram -->
+    {% if reviewer_load and reviewer_load.labels %}
+    <div class="mb-6">
+        <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Reviewer Load Distribution</p>
+        <p class="text-xs text-gray-400 mb-3">
+            {{ reviewer_load.total_reviewers }} reviewers assigned — avg {{ reviewer_load.avg_load }} papers/reviewer.
+            {% if reviewer_load.zero_reviews is defined and reviewer_load.zero_reviews > 0 %}
+            <span class="text-red-500">{{ reviewer_load.zero_reviews }} reviewers have submitted no reviews.</span>
+            {% endif %}
+        </p>
+        <div style="height:200px;"><canvas id="reviewer-load-chart"></canvas></div>
+    </div>
+    {% endif %}
+
+    <!-- High disagreement papers -->
+    {% if high_disagreement %}
+    <div class="mb-6">
+        <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+            High Reviewer Disagreement
+            <span class="ml-1 normal-case text-gray-400 font-normal">(top {{ high_disagreement|length }} by score std dev — may need AC attention)</span>
+        </p>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-xs">
+                <thead>
+                    <tr class="text-gray-400 uppercase text-left border-b border-gray-100">
+                        <th class="pb-1 pr-3 font-medium">#</th>
+                        <th class="pb-1 pr-3 font-medium" style="min-width:180px;">Title</th>
+                        <th class="pb-1 pr-3 font-medium">AC</th>
+                        <th class="pb-1 pr-3 font-medium">Scores</th>
+                        <th class="pb-1 pr-3 font-medium">Avg</th>
+                        <th class="pb-1 font-medium">Std Dev</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in high_disagreement %}
+                    <tr class="border-b border-gray-50 hover:bg-gray-50">
+                        <td class="py-1 pr-3 text-gray-500">{{ p["Paper #"] }}</td>
+                        <td class="py-1 pr-3" style="max-width:220px;">
+                            <a href="https://openreview.net/forum?id={{ p['Paper ID'] }}" target="_blank"
+                               class="text-indigo-600 hover:text-indigo-900 truncate block" title="{{ p['Title'] }}">
+                               {{ p["Title"] }}
+                            </a>
+                        </td>
+                        <td class="py-1 pr-3 text-gray-500 whitespace-nowrap">{{ p["AC"] }}</td>
+                        <td class="py-1 pr-3 text-gray-500 whitespace-nowrap font-mono">{{ p["Scores"] }}</td>
+                        <td class="py-1 pr-3 text-gray-500">{{ p.get("Avg", "–") }}</td>
+                        <td class="py-1 font-semibold text-orange-600">{{ p["Std Dev"] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Score outliers -->
+    {% if score_outliers %}
+    <div class="mb-2">
+        <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+            AC / Reviewer Divergence
+            <span class="ml-1 normal-case text-gray-400 font-normal">(top {{ score_outliers|length }} where |AC score − avg review| ≥ 0.8)</span>
+        </p>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-xs">
+                <thead>
+                    <tr class="text-gray-400 uppercase text-left border-b border-gray-100">
+                        <th class="pb-1 pr-3 font-medium">#</th>
+                        <th class="pb-1 pr-3 font-medium" style="min-width:180px;">Title</th>
+                        <th class="pb-1 pr-3 font-medium">AC</th>
+                        <th class="pb-1 pr-3 font-medium">Avg Review</th>
+                        <th class="pb-1 pr-3 font-medium">AC Score</th>
+                        <th class="pb-1 font-medium">Diff</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in score_outliers %}
+                    <tr class="border-b border-gray-50 hover:bg-gray-50">
+                        <td class="py-1 pr-3 text-gray-500">{{ p["Paper #"] }}</td>
+                        <td class="py-1 pr-3" style="max-width:220px;">
+                            <a href="https://openreview.net/forum?id={{ p['Paper ID'] }}" target="_blank"
+                               class="text-indigo-600 hover:text-indigo-900 truncate block" title="{{ p['Title'] }}">
+                               {{ p["Title"] }}
+                            </a>
+                        </td>
+                        <td class="py-1 pr-3 text-gray-500 whitespace-nowrap">{{ p["AC"] }}</td>
+                        <td class="py-1 pr-3 text-gray-500">{{ p["Avg Review"] }}</td>
+                        <td class="py-1 pr-3 text-gray-500">{{ p["AC Score"] }}</td>
+                        <td class="py-1 font-semibold whitespace-nowrap
+                            {% if p['Diff'] > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                            {{ "%+.2f"|format(p["Diff"]) }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const reviewerLoadData = {{ reviewer_load | tojson }};
+    if (!reviewerLoadData || !reviewerLoadData.labels || !reviewerLoadData.labels.length) return;
+
+    const ctx = document.getElementById('reviewer-load-chart');
+    if (!ctx) return;
+
+    const maxBin = Math.max(...reviewerLoadData.labels, 4);
+    const extLabels = Array.from({length: maxBin}, (_, i) => (i+1) + ' paper' + (i+1 === 1 ? '' : 's'));
+    const extCounts = extLabels.map((_, i) => reviewerLoadData.counts[i] ?? 0);
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            // labels: reviewerLoadData.labels.map(l => l + ' paper' + (l === 1 ? '' : 's')),
+            labels: extLabels,
+            datasets: [{
+                label: 'Reviewers',
+                data: extCounts,
+                backgroundColor: reviewerLoadData.labels.map((_, i) =>
+                    i === 0 ? 'rgba(239,68,68,0.7)' :   // 1 paper
+                    i <= 2  ? 'rgba(59,130,246,0.7)' :   // 2-3 papers (normal)
+                              'rgba(234,179,8,0.7)'        // 4+ papers (heavy load)
+                ),
+                borderWidth: 1,
+                barPercentage: 0.75,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 400 },
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label(ctx) { return `${ctx.raw} reviewers`; } } }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Assigned Papers' } },
+                y: { beginAtZero: true, title: { display: true, text: 'Reviewers' } }
+            }
+        }
+    });
+});
+</script>
