@@ -177,4 +177,5 @@ env
 reports/
 run_commitment.sh
 run_review.sh
-.dev_cache
+.dev_cache*
+.idea

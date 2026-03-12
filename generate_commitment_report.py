@@ -25,9 +25,49 @@ Usage:
   python generate_commitment_report.py ... --use-cache --cache-dir .cache_sac1
 """
 import os, sys, argparse
+from pathlib import Path
+from datetime import datetime
+import jinja2
+
 from arr_commitment_generator import CommitmentReportGenerator
-from dev_cache import (add_cache_args, add_impersonate_arg, add_append_date_arg,
-                       impersonate_user, save_cache, load_cache, cache_exists, make_filename)
+from args import add_cache_args, add_impersonate_arg, add_append_date_arg, add_comments_level_arg
+from dev_cache import save_cache, load_cache, cache_exists
+from utils import make_filename
+
+
+def _build_template_data(gen):
+    return {
+        "title":                   f"Commitment Phase Report: {gen.venue_id}",
+        "generated_date":          datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "venue_id":                gen.venue_id,
+        "role":                    gen.role,
+        "attention_papers":        gen.attention_papers,
+        **gen.attention_template_flags(),
+        "papers":                  gen.papers_data,
+        "comments_count":          len(gen.comments_data),
+        "comments":                gen.comments_data,
+        "comments_level":          gen.comments_level,
+        "comments_enabled":        gen.comments_level != "none",
+        "histogram_data":          gen.generate_histogram_data(),
+        "correlation_data":        gen.correlation_data,
+        "paper_type_distribution": gen.generate_paper_type_distribution(),
+        "score_scatter_data":      gen.generate_score_scatter_data(),
+    }
+
+
+def _render_report(gen, output_dir, filename):
+    os.makedirs(output_dir, exist_ok=True)
+    if not gen.papers_data:
+        return gen._write_error_report(output_dir, filename, "No papers in cache",
+            "Cache loaded but papers_data is empty. Re-run with --save-cache.")
+    env = jinja2.Environment(
+        loader=jinja2.FileSystemLoader(str(gen._resolve_template_dir())),
+        autoescape=jinja2.select_autoescape(["html", "xml"]),
+    )
+    html = env.get_template("commitment_report.html").render(**_build_template_data(gen))
+    output_path = Path(output_dir) / filename
+    output_path.write_text(html, encoding="utf-8")
+    return output_path
 
 
 def main():
@@ -45,6 +85,7 @@ def main():
     parser.add_argument("--output_dir", default="./reports")
     add_cache_args(parser)
     add_impersonate_arg(parser)
+    add_comments_level_arg(parser, default="basic")
     add_append_date_arg(parser)
     args = parser.parse_args()
 
@@ -60,13 +101,17 @@ def main():
         sys.exit(1)
 
     os.makedirs(args.output_dir, exist_ok=True)
-    print(f"Generating commitment report | venue: {args.venue_id} | role: {args.role} | me: {args.me}")
+    print(f"Generating commitment report | venue: {args.venue_id} | role: {args.role} | comments: {args.comments_level} | me: {args.me}")
 
     try:
         gen = CommitmentReportGenerator(
-            username=args.username, password=args.password,
-            venue_id=args.venue_id, me=args.me, role=args.role,
+            username=args.username,
+            password=args.password,
+            venue_id=args.venue_id,
+            me=args.me,
+            role=args.role,
             impersonate_group=args.impersonate or None,
+            comments_level=args.comments_level,
         )
 
         if args.impersonate:
@@ -92,41 +137,6 @@ def main():
         print(f"Error: {e}")
         import traceback; traceback.print_exc()
         sys.exit(1)
-
-
-def _render_report(gen, output_dir, filename):
-    """Jinja2 rendering only — skips process_data() when using cache."""
-    from pathlib import Path
-    from datetime import datetime
-    import jinja2
-
-    os.makedirs(output_dir, exist_ok=True)
-    if not gen.papers_data:
-        return gen._write_error_report(output_dir, filename, "No papers in cache",
-            "Cache loaded but papers_data is empty. Re-run with --save-cache.")
-
-    template_data = {
-        "title":                   f"Commitment Phase Report: {gen.venue_id}",
-        "generated_date":          datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "venue_id":                gen.venue_id,
-        "role":                    gen.role,
-        "papers":                  gen.papers_data,
-        "comments_count":          len(gen.comments_data),
-        "comments":                gen.comments_data,
-        "comment_trees":           gen.organize_comments_by_paper(),
-        "histogram_data":          gen.generate_histogram_data(),
-        "correlation_data":        gen.correlation_data,
-        "paper_type_distribution": gen.generate_paper_type_distribution(),
-        "score_scatter_data":      gen.generate_score_scatter_data(),
-    }
-    env = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(str(gen._resolve_template_dir())),
-        autoescape=jinja2.select_autoescape(["html", "xml"]),
-    )
-    html = env.get_template("commitment_report.html").render(**template_data)
-    output_path = Path(output_dir) / filename
-    output_path.write_text(html, encoding="utf-8")
-    return output_path
 
 
 if __name__ == "__main__":

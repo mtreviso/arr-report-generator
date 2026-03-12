@@ -21,10 +21,12 @@
 </style>
 
 <div class="px-2 py-4 sm:p-5">
+    {% set has_sac = attention_has_sac | default(false) %}
+    {% set has_ac = attention_has_ac | default(true) %}
     {% if not attention_papers %}
     <div class="flex items-center gap-2 text-green-700 bg-green-50 rounded-lg p-4 border border-green-200">
         <span class="text-lg">✓</span>
-        <span class="text-sm">No papers currently require PC attention.</span>
+        <span class="text-sm">No papers currently require attention.</span>
     </div>
     {% else %}
 
@@ -61,6 +63,7 @@
                 <select id="attn-emergency-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
                     <option value="">All</option>
                     <option value="declared">⚡ Declared</option>
+                    <option value="assigned">✓ Reviewer assigned</option>
                     <option value="unmet">⚡ Unmet</option>
                 </select>
             </div>
@@ -86,10 +89,25 @@
                 </button>
             </div>
         </div>
+
+        <!-- Flag legend -->
+        <div class="lg:col-span-6 mt-6 pt-3 border-t border-gray-200">
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Flag legend</p>
+            <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
+                <span><span class="flag-badge flag-issue">!</span> Review issue report</span>
+                <span><span class="flag-badge flag-emergency">⚡</span> Emergency review requested</span>
+                <span><span class="flag-badge" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;">✓</span> Emergency reviewer assigned</span>
+                <span><span class="flag-badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;">x missing</span> Missing expected reviews</span>
+                <!-- <span><span class="flag-badge" style="background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;">+x emer</span> x Emergency reviewers added</span> -->
+                <span><span class="flag-badge flag-ethics">E</span> Ethics concern</span>
+                <!-- <span><span class="flag-badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;">x missing</span> Missing x expected reviews</span> -->
+            </div>
+        </div>
+
     </div>
 
     <p class="text-xs text-gray-500 mb-3">
-        Papers flagged for one or more of: review issue reported, ethics concern, emergency review requested, or fewer reviews than expected.
+        Papers flagged for one or more of: review issue reported, ethics concern, emergency review workflow, or fewer reviews than expected.
     </p>
 
     <div class="overflow-x-auto w-full">
@@ -98,67 +116,72 @@
                 <tr>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:50px;">#</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:200px;">Title</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:120px;">SAC</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:120px;">AC</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;">Reviews</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:140px;">Flags</th>
+                    {% if has_sac %}<th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:120px;">SAC</th>{% endif %}
+                    {% if has_ac %}<th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:120px;">AC</th>{% endif %}
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:120px;">Reviews</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:150px;">Flags</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
                 {% for p in attention_papers %}
                 <tr
                     data-has-issue="{{ 1 if p['Has Review Issue'] else 0 }}"
-                    data-ethics="{{ 1 if p['Ethics Flag'] else 0 }}"
-                    data-missing="{{ 1 if p['Completed Reviews'] < p['Expected Reviews'] else 0 }}"
+                    data-ethics="{{ 1 if p.get('Ethics Flag') else 0 }}"
+                    data-missing="{{ 1 if p.get('Has Missing Reviews', p['Completed Reviews'] < p['Expected Reviews']) else 0 }}"
                     data-emergency="{{ 1 if p.get('Has Emergency Declaration') else 0 }}"
+                    data-emergency-assigned="{{ 1 if p.get('Has Emergency Reviewer') else 0 }}"
                     data-emergency-unmet="{{ 1 if p.get('Has Emergency Declaration') and not p.get('Has Emergency Reviewer') else 0 }}"
                 >
-                    <td class="whitespace-nowrap text-gray-700">{{ p["Paper #"] }}</td>
+                    <td class="whitespace-nowrap text-gray-700">{{ p['Paper #'] }}</td>
                     <td class="text-gray-700" style="max-width:240px;">
                         <div class="truncate">
                             <a href="https://openreview.net/forum?id={{ p['Paper ID'] }}" target="_blank"
-                               class="text-indigo-600 hover:text-indigo-900" title="{{ p['Title'] }}">
-                               {{ p["Title"] }}
+                               class="text-indigo-600 hover:text-indigo-900 tip tip-left" data-tip="{{ p['Title'] }}">
+                               {{ p['Title'] }}
                             </a>
                         </div>
                     </td>
+                    {% if has_sac %}
                     <td class="whitespace-nowrap text-gray-500">
-                        {% set sac_id = p.get("Senior Area Chair ID") %}
-                        {% if sac_id %}<a href="https://openreview.net/profile?id={{ sac_id }}" target="_blank" class="text-gray-500 hover:underline" style="text-decoration:none;">{{ p.get("Senior Area Chair","") }}</a>
-                        {% else %}{{ p.get("Senior Area Chair","") }}{% endif %}
+                        {% set sac_id = p.get('Senior Area Chair ID') %}
+                        {% if sac_id %}<a href="https://openreview.net/profile?id={{ sac_id }}" target="_blank" class="text-gray-500 hover:underline" style="text-decoration:none;"{% if p.get('Senior Area Chair Affiliation', '') %} title="{{ p.get('Senior Area Chair Affiliation', '') }}"{% endif %}>{{ p.get('Senior Area Chair','') }}</a>
+                        {% else %}<span{% if p.get('Senior Area Chair Affiliation', '') %} title="{{ p.get('Senior Area Chair Affiliation', '') }}"{% endif %}>{{ p.get('Senior Area Chair','') }}</span>{% endif %}
                     </td>
+                    {% endif %}
+                    {% if has_ac %}
                     <td class="whitespace-nowrap text-gray-500">
-                        {% set ac_id = p.get("Area Chair ID") %}
-                        {% if ac_id %}<a href="https://openreview.net/profile?id={{ ac_id }}" target="_blank" class="text-gray-500 hover:underline" style="text-decoration:none;">{{ p.get("Area Chair","") }}</a>
-                        {% else %}{{ p.get("Area Chair","") }}{% endif %}
+                        {% set ac_id = p.get('Area Chair ID') %}
+                        {% if ac_id %}<a href="https://openreview.net/profile?id={{ ac_id }}" target="_blank" class="text-gray-500 hover:underline" style="text-decoration:none;"{% if p.get('Area Chair Affiliation', '') %} title="{{ p.get('Area Chair Affiliation', '') }}"{% endif %}>{{ p.get('Area Chair','') }}</a>
+                        {% else %}<span{% if p.get('Area Chair Affiliation', '') %} title="{{ p.get('Area Chair Affiliation', '') }}"{% endif %}>{{ p.get('Area Chair','') }}</span>{% endif %}
                     </td>
+                    {% endif %}
                     <td class="whitespace-nowrap {% if p['Completed Reviews'] < p['Expected Reviews'] %}text-red-600{% else %}text-gray-500{% endif %}">
-                        {{ p["Completed Reviews"] }}/{{ p["Expected Reviews"] }}
+                        <span>{{ p['Completed Reviews'] }}/{{ p['Expected Reviews'] }}</span>
                     </td>
                     <td class="whitespace-nowrap">
                         <div class="flex gap-1 flex-wrap">
-                        {% if p["Has Review Issue"] %}
+                        {% if p['Has Review Issue'] %}
                             <a href="{{ p['Review Issue Link'] }}" target="_blank">
                                 <span class="flag-badge flag-issue tip" data-tip="{{ p['Review Issue Count'] }} review issue(s) — click to open">!</span>
                             </a>
                         {% endif %}
-                        {% if p.get("Has Emergency Declaration") %}
-                            {% if p.get("Emergency Declaration Link") %}
-                            <a href="{{ p['Emergency Declaration Link'] }}" target="_blank">
-                            {% endif %}
+                        {% if p.get('Has Emergency Declaration') %}
+                            {% if p.get('Emergency Declaration Link') %}<a href="{{ p['Emergency Declaration Link'] }}" target="_blank">{% endif %}
                                 <span class="flag-badge tip" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;"
-                                    data-tip="Emergency requested{% if p.get('Has Emergency Reviewer') %} — ✓ assigned{% else %} — ⚠ no reviewer yet{% endif %}">⚡</span>
-                            {% if p.get("Emergency Declaration Link") %}
-                            </a>
-                            {% endif %}
+                                      data-tip="Emergency requested{% if p.get('Has Emergency Reviewer') %} — ✓ assigned{% else %} — ⚠ no reviewer yet{% endif %}">⚡</span>
+                            {% if p.get('Emergency Declaration Link') %}</a>{% endif %}
                         {% endif %}
-                        {% if p["Ethics Flag"] %}
-                            <span class="flag-badge tip" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;"
+                        {% if p.get('Ethics Flag') %}
+                            <span class="flag-badge flag-ethics tip"
                                   data-tip="Ethics concern: {{ p['Ethics Flag'] }}">E</span>
                         {% endif %}
-                        {% if p["Completed Reviews"] < p["Expected Reviews"] %}
+                        {% if p.get('Has Emergency Reviewer') %}
+                            <span class="flag-badge flag-emergency"
+                                  data-tip="Emergency reviewer assigned">✓</span>
+                        {% endif %}
+                        {% if p.get('Missing Reviews', 0) > 0 %}
                             <span class="flag-badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;">
-                                {{ p["Expected Reviews"] - p["Completed Reviews"] }} missing
+                                {{ p.get('Missing Reviews', p['Expected Reviews'] - p['Completed Reviews']) }} missing
                             </span>
                         {% endif %}
                         </div>
@@ -195,7 +218,8 @@ $(document).ready(function() {
         if (issues  && row.attr('data-has-issue') !== issues)  return false;
         if (ethics  && row.attr('data-ethics')    !== ethics)  return false;
         if (missing && row.attr('data-missing')   !== missing) return false;
-        if (emergency === 'declared' && row.attr('data-emergency') !== '1')       return false;
+        if (emergency === 'declared' && row.attr('data-emergency') !== '1') return false;
+        if (emergency === 'assigned' && row.attr('data-emergency-assigned') !== '1') return false;
         if (emergency === 'unmet'    && row.attr('data-emergency-unmet') !== '1') return false;
         return true;
     });

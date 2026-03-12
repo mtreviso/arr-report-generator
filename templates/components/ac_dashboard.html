@@ -107,7 +107,12 @@
                     data-emergency-unmet="{{ 1 if ac.get('Emergency_Unassigned',0) > 0 else 0 }}"
                 >
                     {% if ac.get("Senior Area Chair") %}
-                    <td class="whitespace-nowrap text-gray-500">{{ ac["Senior Area Chair"] }}</td>
+                    <td class="whitespace-nowrap text-gray-500">
+                        {% set sac_id = ac.get("Senior Area Chair ID") %}
+                        {% set sac_affil = ac.get("Senior Area Chair Affiliation", "") %}
+                        {% if sac_id %}<a href="https://openreview.net/profile?id={{ sac_id }}" target="_blank" class="text-gray-500 hover:underline" style="text-decoration:none;"{% if sac_affil %} title="{{ sac_affil }}"{% endif %}>{{ ac["Senior Area Chair"] }}</a>
+                        {% else %}<span{% if sac_affil %} title="{{ sac_affil }}"{% endif %}>{{ ac["Senior Area Chair"] }}</span>{% endif %}
+                    </td>
                     {% endif %}
                     <td class="whitespace-nowrap text-gray-900">
                         {% set ac_id    = ac.get("Area Chair ID") %}
@@ -118,9 +123,7 @@
                                {% if ac_affil %}title="{{ ac_affil }}"{% endif %}>{{ ac["Area Chair"] }}</a>
                         {% else %}<span {% if ac_affil %}title="{{ ac_affil }}"{% endif %}>{{ ac["Area Chair"] }}</span>{% endif %}
                     </td>
-                    <td class="whitespace-nowrap text-gray-400" style="font-size:0.7rem;">
-                        {{ ac.get("Area Chair Affiliation", "") or "–" }}
-                    </td>
+                    <td class="text-gray-400 affiliation-cell" style="font-size:0.7rem;"><div class="affiliation-cell-inner" title="{{ ac.get("Area Chair Affiliation", "") or "–" }}">{{ ac.get("Area Chair Affiliation", "") or "–" }}</div></td>
                     <td class="whitespace-nowrap text-gray-500">{{ ac["Completed_Reviews"] }}</td>
                     <td class="whitespace-nowrap text-gray-500">{{ ac["Expected_Reviews"] }}</td>
                     <td class="whitespace-nowrap text-gray-500">{{ ac["Papers_Ready"] }}</td>

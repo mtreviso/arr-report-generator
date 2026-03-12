@@ -117,9 +117,7 @@
                                {% if sac_affil %}title="{{ sac_affil }}"{% endif %}>{{ sac["Senior Area Chair"] }}</a>
                         {% else %}<span {% if sac_affil %}title="{{ sac_affil }}"{% endif %}>{{ sac["Senior Area Chair"] }}</span>{% endif %}
                     </td>
-                    <td class="whitespace-nowrap text-gray-400" style="font-size:0.7rem;">
-                        {{ sac.get("Senior Area Chair Affiliation", "") or "–" }}
-                    </td>
+                    <td class="text-gray-400 affiliation-cell" style="font-size:0.7rem;"><div class="affiliation-cell-inner" title="{{ sac.get("Senior Area Chair Affiliation", "") or "–" }}">{{ sac.get("Senior Area Chair Affiliation", "") or "–" }}</div></td>
                     <td class="whitespace-nowrap text-gray-500">{{ sac["Num_Papers"] }}</td>
                     <td class="whitespace-nowrap text-gray-500">{{ sac["Completed_Reviews"] }} / {{ sac["Expected_Reviews"] }}</td>
                     <td class="whitespace-nowrap">

@@ -9,7 +9,7 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+(function() {
     const initReviewCompletionChart = function() {
         const ctx = document.getElementById('review-completion-chart');
         if (!ctx || ctx.dataset.rendered) return;
@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         'rgba(239,68,68,0.75)'         // <50% = red
         );
 
-        new Chart(ctx, {
+        window.ReportCommon.replaceChart(ctx, {
             type: 'bar',
             data: {
                 labels: buckets,
@@ -68,10 +68,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
 
-    const analyticsTab = document.querySelector('[data-tab="analytics-tab"]');
-    if (analyticsTab) analyticsTab.addEventListener('click', () => setTimeout(initReviewCompletionChart, 100));
-    // Also render if tab is already active
-    if (document.getElementById('analytics-tab') && document.getElementById('analytics-tab').classList.contains('active'))
-        setTimeout(initReviewCompletionChart, 100);
-});
+    document.addEventListener('report:tabshown', function(event) {
+        if (event.detail.tabId !== 'analytics-tab') return;
+        window.ReportCommon.initOnce('review-completion-chart', initReviewCompletionChart);
+    });
+})();
 </script>

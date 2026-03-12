@@ -30,10 +30,10 @@ class PCReportGenerator(ARRReportGenerator):
     - Adds attention queue (papers needing PC action)
     """
 
-    def __init__(self, username, password, venue_id, me):
+    def __init__(self, username, password, venue_id, me, comments_level='none'):
         # Call base __init__ with role='pc' so it skips the SAC filter
         super().__init__(username=username, password=password,
-                         venue_id=venue_id, me=me, role='pc')
+                         venue_id=venue_id, me=me, role='pc', comments_level=comments_level)
         # Extra data containers
         self.sac_meta_data    = []
         self.track_data       = []
@@ -117,7 +117,7 @@ class PCReportGenerator(ARRReportGenerator):
             emergency_declaration_link = ""
             emergency_declaration_count = 0
 
-            for reply in submission.details.get("replies", []):
+            for reply in self._get_submission_replies(submission):
                 invitations = reply.get("invitations", [])
 
                 if any("/-/Review_Issue_Report" in inv for inv in invitations):
@@ -612,7 +612,10 @@ class PCReportGenerator(ARRReportGenerator):
             self.compute_track_data()
             self.compute_attention_papers()
             self.compute_correlation_data()
-        self.process_comments_data()
+        if self.comments_level != 'none':
+            self.process_comments_data()
+        else:
+            self.comments_data = []
 
     # -----------------------------------------------------------------------
     # Report generation
@@ -645,9 +648,11 @@ class PCReportGenerator(ARRReportGenerator):
             "sac_meta":                self.sac_meta_data,
             "track_data":              self.track_data,
             "attention_papers":        self.attention_papers,
+            **self.attention_template_flags(),
             "comments_count":          len(self.comments_data),
             "comments":                self.comments_data,
-            "comment_trees":           self.organize_comments_by_paper(),
+            "comments_level":          self.comments_level,
+            "comments_enabled":        self.comments_level != 'none',
             "histogram_data":          self.generate_histogram_data(),
             "correlation_data":        self.correlation_data,
             "paper_type_distribution": self.generate_paper_type_distribution(),

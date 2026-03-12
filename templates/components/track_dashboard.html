@@ -61,7 +61,7 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+(function() {
     const initTrackChart = function() {
         const ctx = document.getElementById('track-chart');
         if (!ctx) return;
@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const colors = ['rgba(99,102,241,0.7)','rgba(59,130,246,0.7)','rgba(16,185,129,0.7)',
             'rgba(245,158,11,0.7)','rgba(239,68,68,0.7)','rgba(168,85,247,0.7)',
             'rgba(20,184,166,0.7)','rgba(249,115,22,0.7)','rgba(236,72,153,0.7)','rgba(75,85,99,0.7)'];
-        new Chart(ctx, {
+        window.ReportCommon.replaceChart(ctx, {
             type: 'doughnut',
             data: {
                 labels: trackData.map(r => r.Track),
@@ -92,12 +92,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     };
-    const analyticsBtn = document.querySelector('[data-tab="analytics-tab"]');
-    if (analyticsBtn) analyticsBtn.addEventListener('click', () => setTimeout(initTrackChart, 100));
-    const trackBtn = document.querySelector('[data-tab="track-tab"]');
-    if (trackBtn) trackBtn.addEventListener('click', () => setTimeout(initTrackChart, 100));
-    if (document.getElementById('track-tab') &&
-        document.getElementById('track-tab').classList.contains('active'))
-        setTimeout(initTrackChart, 100);
-});
+    document.addEventListener('report:tabshown', function(event) {
+        if (event.detail.tabId !== 'track-tab') return;
+        window.ReportCommon.initOnce('track-chart', initTrackChart);
+    });
+})();
 </script>

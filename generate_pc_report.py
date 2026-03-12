@@ -20,8 +20,62 @@ Usage:
   python generate_pc_report.py ... --use-cache
 """
 import os, sys, argparse, getpass
+from pathlib import Path
+from datetime import datetime
+import jinja2
+
 from arr_pc_generator import PCReportGenerator
-from dev_cache import add_cache_args, add_append_date_arg, save_cache, load_cache, cache_exists, make_filename
+from args import add_cache_args, add_append_date_arg, add_comments_level_arg
+from dev_cache import save_cache, load_cache, cache_exists
+from utils import make_filename
+
+
+def _build_template_data(gen):
+    return {
+        "title":                   f"PC Dashboard: {gen.venue_id}",
+        "generated_date":          datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "venue_id":                gen.venue_id,
+        "overview_stats":          gen.compute_overview_stats(),
+        "papers":                  gen.papers_data,
+        "ac_meta":                 gen.ac_meta_data,
+        "sac_meta":                gen.sac_meta_data,
+        "track_data":              gen.track_data,
+        "attention_papers":        gen.attention_papers,
+        **gen.attention_template_flags(),
+        "comments_count":          len(gen.comments_data),
+        "comments":                gen.comments_data,
+        "comments_level":          gen.comments_level,
+        "comments_enabled":        gen.comments_level != "none",
+        "histogram_data":          gen.generate_histogram_data(),
+        "correlation_data":        gen.correlation_data,
+        "paper_type_distribution": gen.generate_paper_type_distribution(),
+        "review_completion_data":  gen.generate_review_completion_data(),
+        "score_scatter_data":      gen.generate_score_scatter_data(),
+        "ac_scoring_data":         gen.generate_ac_scoring_data(),
+        "score_outliers":          gen.compute_score_outliers(),
+        "high_disagreement":       gen.compute_high_disagreement_papers(),
+        "reviewer_load":           gen.compute_reviewer_load_histogram(),
+        "ac_load":                 gen.compute_ac_load_histogram(),
+        "sac_load":                gen.compute_sac_load_histogram(),
+        "ac_scoring_top":          gen.generate_ac_scoring_data()[:15],
+        "sac_scoring_top":         gen.compute_sac_scoring_data(),
+    }
+
+
+def _render_report(gen, output_dir, filename):
+    os.makedirs(output_dir, exist_ok=True)
+    if not gen.papers_data:
+        p = Path(output_dir) / filename
+        p.write_text(f"<html><body><h1>No papers in cache</h1><p>{gen.venue_id}</p></body></html>")
+        return p
+    env = jinja2.Environment(
+        loader=jinja2.FileSystemLoader(str(gen._resolve_template_dir())),
+        autoescape=jinja2.select_autoescape(["html", "xml"]),
+    )
+    html = env.get_template("pc_report.html").render(**_build_template_data(gen))
+    output_path = Path(output_dir) / filename
+    output_path.write_text(html, encoding="utf-8")
+    return output_path
 
 
 def main():
@@ -37,6 +91,7 @@ def main():
                         help="Your OpenReview tilde ID, e.g. ~Your_Name1")
     parser.add_argument("--output_dir", default="./reports")
     add_cache_args(parser)
+    add_comments_level_arg(parser, default="none")
     add_append_date_arg(parser)
     args = parser.parse_args()
 
@@ -55,12 +110,15 @@ def main():
         sys.exit(1)
 
     os.makedirs(args.output_dir, exist_ok=True)
-    print(f"Generating PC dashboard | venue: {args.venue_id}")
+    print(f"Generating PC dashboard | venue: {args.venue_id} | comments: {args.comments_level}")
 
     try:
         gen = PCReportGenerator(
-            username=args.username, password=args.password,
-            venue_id=args.venue_id, me=args.me,
+            username=args.username,
+            password=args.password,
+            venue_id=args.venue_id,
+            me=args.me,
+            comments_level=args.comments_level,
         )
 
         filename = make_filename(args.venue_id, "pc_report", args.append_date)
@@ -85,55 +143,6 @@ def main():
         print(f"Error: {e}")
         import traceback; traceback.print_exc()
         sys.exit(1)
-
-
-def _render_report(gen, output_dir, filename):
-    """Jinja2 rendering only — skips process_data() when using cache."""
-    from pathlib import Path
-    from datetime import datetime
-    import jinja2
-
-    os.makedirs(output_dir, exist_ok=True)
-    if not gen.papers_data:
-        p = Path(output_dir) / filename
-        p.write_text(f"<html><body><h1>No papers in cache</h1><p>{gen.venue_id}</p></body></html>")
-        return p
-
-    template_data = {
-        "title":                   f"PC Dashboard: {gen.venue_id}",
-        "generated_date":          datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "venue_id":                gen.venue_id,
-        "overview_stats":          gen.compute_overview_stats(),
-        "papers":                  gen.papers_data,
-        "ac_meta":                 gen.ac_meta_data,
-        "sac_meta":                gen.sac_meta_data,
-        "track_data":              gen.track_data,
-        "attention_papers":        gen.attention_papers,
-        "comments_count":          len(gen.comments_data),
-        "comments":                gen.comments_data,
-        "comment_trees":           gen.organize_comments_by_paper(),
-        "histogram_data":          gen.generate_histogram_data(),
-        "correlation_data":        gen.correlation_data,
-        "paper_type_distribution": gen.generate_paper_type_distribution(),
-        "review_completion_data":  gen.generate_review_completion_data(),
-        "score_scatter_data":      gen.generate_score_scatter_data(),
-        "ac_scoring_data":         gen.generate_ac_scoring_data(),
-        "score_outliers":          gen.compute_score_outliers(),
-        "high_disagreement":       gen.compute_high_disagreement_papers(),
-        "reviewer_load":           gen.compute_reviewer_load_histogram(),
-        "ac_load":                 gen.compute_ac_load_histogram(),
-        "sac_load":                gen.compute_sac_load_histogram(),
-        "ac_scoring_top":          gen.generate_ac_scoring_data()[:15],
-        "sac_scoring_top":         gen.compute_sac_scoring_data(),
-    }
-    env = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(str(gen._resolve_template_dir())),
-        autoescape=jinja2.select_autoescape(["html", "xml"]),
-    )
-    html = env.get_template("pc_report.html").render(**template_data)
-    output_path = Path(output_dir) / filename
-    output_path.write_text(html, encoding="utf-8")
-    return output_path
 
 
 if __name__ == "__main__":

@@ -72,15 +72,8 @@
   }
   .tip:hover::after,
   .tip:hover::before { opacity: 1; }
-
-  /* Left-anchored tooltip (for wide columns near left edge) */
-  .tip-left::after {
-    transform: translate(0, -100%);
-  }
-  .tip-left::before {
-    transform: translate(0, -100%);
-    left: calc(var(--tx, 0px) + 8px);
-  }
+  .tip-left::after { transform: translate(0, -100%); }
+  .tip-left::before { transform: translate(0, -100%); left: calc(var(--tx, 0px) + 8px); }
 </style>
 
 <div class="px-2 py-4 sm:p-5">
@@ -219,7 +212,9 @@
                     <span><span class="flag-badge flag-issue">!</span> Review issue report (clickable)</span>
                     <span><span class="flag-badge flag-info">C</span> Confidential comment</span>
                     <span><span class="flag-badge flag-warn">&#9888;</span> Low-confidence reviewer (conf. &#8804; 2)</span>
-                    <span><span class="flag-badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">⚡</span> Emergency review requested (⚠ = no reviewer yet)</span>
+                    <span><span class="flag-badge flag-emergency">⚡</span> Emergency review requested (⚠ = no reviewer yet)</span>
+                    <span><span class="flag-badge" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;">✓</span> Emergency reviewer assigned</span>
+                    <span><span class="flag-badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;">x missing</span> Missing expected reviews</span>
                 </div>
             </div>
         </div>
@@ -243,261 +238,178 @@
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:65px;width:65px;">AC Score</th>
                 </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                {% for paper in papers %}
-                {% set has_issue = paper["Has Review Issue"] or paper["Has Confidential"] %}
-                <tr data-ready="{{ 1 if paper['Ready for Rebuttal'] else 0 }}"
-                    data-anon="{{ paper['Is Anonymous'] | lower }}"
-                    data-has-issue="{{ 1 if has_issue else 0 }}"
-                    data-has-confidential="{{ 1 if paper['Has Confidential'] else 0 }}"
-                    data-low-conf="{{ 1 if paper['Has Low Confidence'] else 0 }}"
-                    data-has-meta="{{ 1 if paper['Meta Review Score'] else 0 }}"
-                    data-emergency="{{ 1 if paper['Has Emergency Declaration'] else 0 }}"
-                    data-emergency-unmet="{{ 1 if paper['Has Emergency Declaration'] and not paper['Has Emergency Reviewer'] else 0 }}"
-                    data-overall="{{ paper['Overall Assessment'] }}"
-                    data-excitement="{{ paper['Excitement Score'] }}"
-                    data-confidence="{{ paper['Reviewer Confidence'] }}"
-                    data-type="{{ paper['Paper Type'] }}">
-
-                    {# 0 # #}
-                    <td class="whitespace-nowrap font-medium text-gray-900">{{ paper["Paper #"] }}</td>
-
-                    {# 1 Title #}
-                    <td class="text-gray-500" style="max-width:240px;">
-                        <div class="truncate">
-                            <span class="tip tip-left" data-tip="{{ paper.Title }}">
-                                <a href="https://openreview.net/forum?id={{ paper['Paper ID'] }}" target="_blank" class="text-indigo-600 hover:text-indigo-900">{{ paper.Title }}</a>
-                            </span>
-                        </div>
-                    </td>
-
-                    {# 2 Type #}
-                    <td class="whitespace-nowrap text-gray-500">{{ paper["Paper Type"] }}</td>
-
-                    {# 3 AC #}
-                    <td class="whitespace-nowrap text-gray-500">
-                        {% set ac_id = paper.get("Area Chair ID") %}
-                        {% if ac_id %}
-                            <a href="https://openreview.net/profile?id={{ ac_id }}" target="_blank"
-                               class="text-gray-500 hover:underline" style="text-decoration:none;">{{ paper["Area Chair"] }}</a>
-                        {% else %}{{ paper["Area Chair"] }}{% endif %}
-                    </td>
-
-                    {# 4 Flags: Anon · Review Issue · Confidential · Low Confidence #}
-                    <td class="whitespace-nowrap">
-                        <div class="flex gap-1 items-center justify-start">
-                        {% if paper["Is Anonymous"] == "No" %}
-                            <span class="tip flag-badge flag-nonanon" data-tip="Has public preprint">P</span>
-                        {% endif %}
-
-                        {% if paper["Has Review Issue"] %}
-                            <a href="{{ paper['Review Issue Link'] }}" target="_blank">
-                                <span class="tip flag-badge flag-issue" data-tip="{{ paper['Review Issue Count'] }} review issue report(s)&#10;Click to open on OpenReview">!</span>
-                            </a>
-                        {% endif %}
-
-                        {% if paper["Has Emergency Declaration"] %}
-                            {% if paper["Emergency Declaration Link"] %}
-                            <a href="{{ paper['Emergency Declaration Link'] }}" target="_blank">
-                            {% endif %}
-                                <span class="tip flag-badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;"
-                                      data-tip="Emergency review requested ({{ paper['Emergency Declaration Count'] }}){% if paper['Has Emergency Reviewer'] %}&#10;✓ Emergency reviewer assigned{% else %}&#10;⚠ No emergency reviewer yet{% endif %}">⚡</span>
-                            {% if paper["Emergency Declaration Link"] %}
-                            </a>
-                            {% endif %}
-                        {% endif %}
-
-                        {% if paper["Has Confidential"] %}
-                            <span class="tip flag-badge flag-info" data-tip="Confidential comment present">C</span>
-                        {% endif %}
-
-                        {% if paper["Has Low Confidence"] %}
-                            <span class="tip flag-badge flag-warn" data-tip="Low confidence reviewer(s)&#10;{{ paper['Low Confidence Reviewers'] }}">&#9888;</span>
-                        {% endif %}
-
-                        {% if paper["Is Anonymous"] != "No" and not paper["Has Review Issue"] and not paper["Has Confidential"] and not paper["Has Low Confidence"] %}
-                            <span class="text-gray-300">&#8211;</span>
-                        {% endif %}
-                        </div>
-                    </td>
-
-                    {# 5 Reviews #}
-                    <td class="whitespace-nowrap text-gray-500">{{ paper["Completed Reviews"] }}/{{ paper["Expected Reviews"] }}</td>
-
-                    {# 6 Ready #}
-                    <td class="whitespace-nowrap" data-sort="{{ 1 if paper['Ready for Rebuttal'] else 0 }}">
-                        {% if paper["Ready for Rebuttal"] %}
-                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-medium bg-green-100 text-green-700">&#10003;</span>
-                        {% else %}
-                        <span class="text-gray-300">&#8211;</span>
-                        {% endif %}
-                    </td>
-
-                    {# 7 Confidence #}
-                    <td class="text-gray-500">
-                        {% if paper["Reviewer Confidence"] %}
-                            <span class="tip" data-tip="Individual scores:&#10;{{ paper['Confidence List'] }}">{{ paper["Reviewer Confidence"] }}</span>
-                        {% else %}&#8211;{% endif %}
-                    </td>
-
-                    {# 8 Soundness #}
-                    <td class="text-gray-500">
-                        {% if paper["Soundness Score"] %}
-                            <span class="tip" data-tip="Individual scores:&#10;{{ paper['Soundness List'] }}">{{ paper["Soundness Score"] }}</span>
-                        {% else %}&#8211;{% endif %}
-                    </td>
-
-                    {# 9 Excitement #}
-                    <td class="text-gray-500">
-                        {% if paper["Excitement Score"] %}
-                            <span class="tip" data-tip="Individual scores:&#10;{{ paper['Excitement List'] }}">{{ paper["Excitement Score"] }}</span>
-                        {% else %}&#8211;{% endif %}
-                    </td>
-
-                    {# 10 Overall #}
-                    <td class="text-gray-500">
-                        {% if paper["Overall Assessment"] %}
-                            <span class="tip" data-tip="Individual scores:&#10;{{ paper['Overall List'] }}">{{ paper["Overall Assessment"] }}</span>
-                        {% else %}&#8211;{% endif %}
-                    </td>
-
-                    {# 11 AC Score #}
-                    <td class="whitespace-nowrap text-gray-700">
-                        {% if paper["Meta Review Score"] %}{{ paper["Meta Review Score"] }}{% else %}&#8211;{% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
         </table>
     </div>
 </div>
 
 <script>
-$(document).ready(function() {
-
-    // Position tooltip using fixed coords so it never clips behind headers.
-    $(document).on('mouseenter', '.tip', function() {
-        const el = this;
-        const rect = el.getBoundingClientRect();
-        const isLeft = el.classList.contains('tip-left');
-        const tx = isLeft ? rect.left : rect.left + rect.width / 2;
-        el.style.setProperty('--tx', tx + 'px');
-        el.style.setProperty('--ty', (rect.top - 10) + 'px');
-        el.style.setProperty('--ay', (rect.top - 1) + 'px');
-    });
-
-    function parseAvg(str) {
-        if (!str || str === '–' || str === 'None' || str === '') return null;
-        const m = String(str).match(/^([\d.]+)/);
-        return m ? parseFloat(m[1]) : null;
+(function() {
+    function boolish(v) { return !!(v && v !== '0' && v !== 'false'); }
+    function esc(v) { return window.ReportCommon.escapeHtml(v ?? ''); }
+    function parseAvg(v) { return window.ReportCommon.parseAvg(v); }
+    function selectHtml(id, label, values) {
+        const host = document.getElementById(id);
+        if (!host) return;
+        const opts = Array.from(new Set(values.filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b)));
+        host.innerHTML = '<select class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none"><option value="">'+label+'</option>' +
+            opts.map(v => '<option value="'+esc(v)+'">'+esc(v)+'</option>').join('') + '</select>';
+    }
+    function firstSelectValue(id) {
+        const host = document.getElementById(id);
+        return host && host.querySelector('select') ? host.querySelector('select').value : '';
+    }
+    function personLink(name, id, titleText) {
+        if (!name) return '–';
+        const title = titleText ? ' title="'+esc(titleText)+'"' : '';
+        return id ? '<a class="whitespace-nowrap" href="https://openreview.net/profile?id='+encodeURIComponent(id)+'" target="_blank" class="text-gray-500 hover:underline" style="text-decoration:none;"'+title+'>'+esc(name)+'</a>' : '<span'+title+'>'+esc(name)+'</span>';
+    }
+    function scoreCell(displayValue, listValue) {
+        if (!displayValue) return '&#8211;';
+        const tip = listValue ? ' data-tip="Individual scores:&#10;'+esc(listValue)+'"' : '';
+        return '<span class="tip"'+tip+'>'+esc(displayValue)+'</span>';
+    }
+    function reviewLink(noteId) {
+        return 'https://openreview.net/forum?id=' + encodeURIComponent(noteId || '');
+    }
+    function renderFlags(row) {
+        const parts = [];
+        if ((row['Is Anonymous'] || '').toLowerCase() === 'no') {
+            parts.push('<span class="tip flag-badge flag-nonanon" data-tip="Has public preprint">P</span>');
+        }
+        if (boolish(row['Has Review Issue'])) {
+            const badge = '<span class="tip flag-badge flag-issue" data-tip="'+esc((row['Review Issue Count'] || 0)+' review issue report(s)')+'&#10;Click to open on OpenReview">!</span>';
+            parts.push(row['Review Issue Link'] ? '<a href="'+esc(row['Review Issue Link'])+'" target="_blank">'+badge+'</a>' : badge);
+        }
+        if (boolish(row['Has Emergency Declaration'])) {
+            const tip = 'Emergency review requested ('+esc(row['Emergency Declaration Count'] || 0)+')' + (boolish(row['Has Emergency Reviewer']) ? '&#10;✓ Emergency reviewer assigned' : '&#10;⚠ No emergency reviewer yet');
+            const badge = '<span class="tip flag-badge flag-emergency" data-tip="'+tip+'">⚡</span>';
+            parts.push(row['Emergency Declaration Link'] ? '<a href="'+esc(row['Emergency Declaration Link'])+'" target="_blank">'+badge+'</a>' : badge);
+        }
+        if (boolish(row['Has Emergency Reviewer'])) {
+            parts.push('<span class="tip flag-badge" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;" data-tip="Emergency reviewer assigned">✓</span>');
+        }
+        const expectedReviews = Number(row['Expected Reviews'] || 0);
+        const completedReviews = Number(row['Completed Reviews'] || 0);
+        const missingReviews = Math.max(0, expectedReviews - completedReviews);
+        if (missingReviews > 0) {
+            parts.push('<span class="tip flag-badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;" data-tip="Missing expected reviews">'+esc(String(missingReviews))+' missing</span>');
+        }
+        if (boolish(row['Has Confidential'])) {
+            parts.push('<span class="tip flag-badge flag-info" data-tip="Confidential comment present">C</span>');
+        }
+        if (boolish(row['Has Low Confidence'])) {
+            parts.push('<span class="tip flag-badge flag-warn" data-tip="Low confidence reviewer(s)&#10;'+esc(row['Low Confidence Reviewers'] || '')+'">&#9888;</span>');
+        }
+        if (!parts.length) return '<span class="text-gray-300">&#8211;</span>';
+        return '<div class="flex gap-1 items-center justify-start">'+parts.join('')+'</div>';
     }
 
-    DataTable.ext.search.push(function(settings, data, dataIndex) {
-        if (settings.nTable.id !== 'papers-table') return true;
-        const row = $(settings.aoData[dataIndex].nTr);
+    function initReviewPapers() {
+        const raw = window.ReportCommon.parseJsonScript('papers-json') || [];
+        if (!raw.length) return;
+        const rows = raw.map(row => ({
+            ...row,
+            __ready: boolish(row['Ready for Rebuttal']) ? '1' : '0',
+            __anon: String(row['Is Anonymous'] || '').toLowerCase(),
+            __has_issue: (boolish(row['Has Review Issue']) || boolish(row['Has Confidential'])) ? '1' : '0',
+            __has_confidential: boolish(row['Has Confidential']) ? '1' : '0',
+            __low_conf: boolish(row['Has Low Confidence']) ? '1' : '0',
+            __has_meta: row['Meta Review Score'] ? '1' : '0',
+            __emergency: boolish(row['Has Emergency Declaration']) ? '1' : '0',
+            __emergency_unmet: (boolish(row['Has Emergency Declaration']) && !boolish(row['Has Emergency Reviewer'])) ? '1' : '0',
+            __overall: parseAvg(row['Overall Assessment']),
+            __excitement: parseAvg(row['Excitement Score']),
+            __confidence: parseAvg(row['Reviewer Confidence'])
+        }));
 
-        const ready       = $('#ready-filter').val();
-        const issues      = $('#issues-filter').val();
-        const lconf       = $('#lowconf-filter').val();
-        const meta        = $('#meta-filter').val();
-        const anon        = $('#anon-filter').val();
-        const confComment = $('#conf-comment-filter').val();
-        const overallMin  = $('#overall-min-filter').val();
-        const overallMax  = $('#overall-max-filter').val();
-        const excMin      = $('#exc-min-filter').val();
-        const confMin     = $('#conf-min-filter').val();
+        selectHtml('ac-filter', 'All ACs', rows.map(r => r['Area Chair']));
+        selectHtml('paper-type-filter', 'All Types', rows.map(r => r['Paper Type']));
 
-        const emergency   = $('#emergency-filter').val();
+        $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+            if (settings.nTable.id !== 'papers-table') return true;
+            const row = rows[dataIndex];
+            const ready       = $('#ready-filter').val();
+            const issues      = $('#issues-filter').val();
+            const lconf       = $('#lowconf-filter').val();
+            const meta        = $('#meta-filter').val();
+            const anon        = $('#anon-filter').val();
+            const confComment = $('#conf-comment-filter').val();
+            const overallMin  = $('#overall-min-filter').val();
+            const overallMax  = $('#overall-max-filter').val();
+            const excMin      = $('#exc-min-filter').val();
+            const confMin     = $('#conf-min-filter').val();
+            const emergency   = $('#emergency-filter').val();
+            const ac          = firstSelectValue('ac-filter');
+            const type        = firstSelectValue('paper-type-filter');
 
-        if (ready       && row.attr('data-ready')           !== ready)       return false;
-        if (issues      && row.attr('data-has-issue')        !== issues)      return false;
-        if (lconf       && row.attr('data-low-conf')         !== lconf)       return false;
-        if (meta        && row.attr('data-has-meta')         !== meta)        return false;
-        if (confComment && row.attr('data-has-confidential') !== confComment) return false;
-        if (emergency === 'declared' && row.attr('data-emergency') !== '1')   return false;
-        if (emergency === 'unmet'    && row.attr('data-emergency-unmet') !== '1') return false;
-        if (emergency === '0'        && row.attr('data-emergency') === '1')   return false;
+            if (ac && row['Area Chair'] !== ac) return false;
+            if (type && row['Paper Type'] !== type) return false;
+            if (ready && row.__ready !== ready) return false;
+            if (issues && row.__has_issue !== issues) return false;
+            if (lconf && row.__low_conf !== lconf) return false;
+            if (meta && row.__has_meta !== meta) return false;
+            if (confComment && row.__has_confidential !== confComment) return false;
+            if (emergency === 'declared' && row.__emergency !== '1') return false;
+            if (emergency === 'unmet' && row.__emergency_unmet !== '1') return false;
+            if (emergency === '0' && row.__emergency === '1') return false;
+            if (anon) {
+                if (anon === 'yes' && row.__anon !== 'yes') return false;
+                if (anon === 'no' && row.__anon !== 'no') return false;
+            }
+            if (overallMin && (row.__overall === null || row.__overall < parseFloat(overallMin))) return false;
+            if (overallMax && (row.__overall === null || row.__overall > parseFloat(overallMax))) return false;
+            if (excMin && (row.__excitement === null || row.__excitement < parseFloat(excMin))) return false;
+            if (confMin && (row.__confidence === null || row.__confidence < parseFloat(confMin))) return false;
+            return true;
+        });
 
-        if (anon) {
-            const ra = (row.attr('data-anon') || '').toLowerCase();
-            if (anon === 'yes' && ra !== 'yes') return false;
-            if (anon === 'no'  && ra !== 'no')  return false;
-        }
-        if (overallMin || overallMax) {
-            const v = parseAvg(row.attr('data-overall'));
-            if (v === null) return false;
-            if (overallMin && v < parseFloat(overallMin)) return false;
-            if (overallMax && v > parseFloat(overallMax)) return false;
-        }
-        if (excMin) {
-            const v = parseAvg(row.attr('data-excitement'));
-            if (v === null || v < parseFloat(excMin)) return false;
-        }
-        if (confMin) {
-            const v = parseAvg(row.attr('data-confidence'));
-            if (v === null || v < parseFloat(confMin)) return false;
-        }
-        return true;
+        const dt = $('#papers-table').DataTable({
+            data: rows,
+            deferRender: true,
+            pageLength: 100,
+            autoWidth: false,
+            order: [[0, 'asc']],
+            layout: { topStart: null, topEnd: null, bottomStart: 'info', bottomEnd: 'paging' },
+            columns: [
+                { title: '#', data: 'Paper #', className: 'whitespace-nowrap text-gray-500' },
+                { title: 'Title', data: null, render: function(_, type, row) {
+                    if (type === 'sort' || type === 'type') return row['Title'] || '';
+                    return '<div class="truncate" style="max-width:240px;"><span class="tip tip-left" data-tip="'+esc(row['Title'] || '')+'"><a href="'+reviewLink(row['Paper ID'])+'" target="_blank" class="text-indigo-600 hover:text-indigo-900">'+esc(row['Title'] || '')+'</a></span></div>';
+                }},
+                { title: 'Type', data: 'Paper Type', className: 'whitespace-nowrap text-gray-500' },
+                { title: 'AC', data: null, render: function(_, type, row) { return type === 'sort' || type === 'type' ? (row['Area Chair'] || '') : personLink(row['Area Chair'], row['Area Chair ID'], row['Area Chair Affiliation']); } },
+                { title: 'Flags', data: null, orderable: false, searchable: false, render: function(_, __, row) { return renderFlags(row); } },
+                { title: 'Reviews', data: null, render: function(_, type, row) { const text = (row['Completed Reviews'] || 0) + '/' + (row['Expected Reviews'] || 0); return text; } },
+                { title: 'Ready', data: null, render: function(_, type, row) {
+                    if (type === 'sort' || type === 'type') return row.__ready;
+                    return row.__ready === '1' ? '<span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-medium bg-green-100 text-green-700">&#10003;</span>' : '<span class="text-gray-300">&#8211;</span>';
+                }},
+                { title: 'Confidence', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (row.__confidence ?? -1) : scoreCell(row['Reviewer Confidence'], row['Confidence List']); } },
+                { title: 'Soundness', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (parseAvg(row['Soundness Score']) ?? -1) : scoreCell(row['Soundness Score'], row['Soundness List']); } },
+                { title: 'Excitement', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (row.__excitement ?? -1) : scoreCell(row['Excitement Score'], row['Excitement List']); } },
+                { title: 'Overall', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (row.__overall ?? -1) : scoreCell(row['Overall Assessment'], row['Overall List']); } },
+                { title: 'AC Score', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (parseAvg(row['Meta Review Score']) ?? -1) : (row['Meta Review Score'] ? esc(row['Meta Review Score']) : '&#8211;'); } }
+            ],
+            createdRow: function(row) { row.classList.add('text-gray-500'); },
+            columnDefs: [
+                { type: 'num', targets: [0] },
+                { className: 'overall-assessment', targets: [10] },
+                { className: 'meta-review', targets: [11] }
+            ]
+        });
+
+        const acSel = $('#ac-filter select');
+        const typeSel = $('#paper-type-filter select');
+        $('#papers-search-input').on('input', function() { dt.search(this.value).draw(); });
+        $('#papers-length-select').on('change', function() { dt.page.len(this.value).draw(); });
+        $('#ready-filter, #issues-filter, #lowconf-filter, #meta-filter, #anon-filter, #conf-comment-filter, #overall-min-filter, #overall-max-filter, #exc-min-filter, #conf-min-filter, #emergency-filter').on('change', function() { dt.draw(); });
+        acSel.on('change', function() { dt.draw(); });
+        typeSel.on('change', function() { dt.draw(); });
+    }
+
+    document.addEventListener('report:tabshown', function(event) {
+        if (event.detail.tabId !== 'papers-tab') return;
+        window.ReportCommon.initOnce('review-papers-table', initReviewPapers);
     });
-
-    const dt = $('#papers-table').DataTable({
-        deferRender: true,
-        pageLength: 100,
-        autoWidth: false,
-        order: [[0, 'asc']],
-        layout: {
-            topStart: null,
-            topEnd: null,
-            bottomStart: 'info',
-            bottomEnd: 'paging'
-        },
-        columnDefs: [
-            { type: 'num', targets: [0, 4] },
-            { type: 'num', targets: [5], render: function(d, type, row, meta) {
-                if (type === 'sort')
-                    return parseInt($('#papers-table tbody tr').eq(meta.row).attr('data-ready') || '0');
-                return d;
-            }},
-            { className: 'overall-assessment', targets: [10] },
-            { className: 'meta-review',        targets: [11] }
-        ],
-        initComplete: function() {
-            const api = new DataTable.Api(this);
-
-            api.columns(3).every(function() {
-                const col = this;
-                const sel = $('<select class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none"><option value="">All ACs</option></select>')
-                    .appendTo('#ac-filter')
-                    .on('change', function() {
-                        const v = DataTable.util.escapeRegex($(this).val());
-                        col.search(v ? '^'+v+'$' : '', true, false).draw();
-                    });
-                col.data().unique().sort().each(function(d) {
-                    if (d) sel.append('<option value="'+d+'">'+d+'</option>');
-                });
-            });
-
-            api.columns(2).every(function() {
-                const col = this;
-                const sel = $('<select class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none"><option value="">All Types</option></select>')
-                    .appendTo('#paper-type-filter')
-                    .on('change', function() {
-                        const v = DataTable.util.escapeRegex($(this).val());
-                        col.search(v ? '^'+v+'$' : '', true, false).draw();
-                    });
-                col.data().unique().sort().each(function(d) {
-                    if (d) sel.append('<option value="'+d+'">'+d+'</option>');
-                });
-            });
-        }
-    });
-
-    // Custom search and length inputs
-    $('#papers-search-input').on('input', function() { dt.search(this.value).draw(); });
-    $('#papers-length-select').on('change', function() { dt.page.len(this.value).draw(); });
-
-    $('#ready-filter, #issues-filter, #lowconf-filter, #meta-filter, #anon-filter, #conf-comment-filter, #overall-min-filter, #overall-max-filter, #exc-min-filter, #conf-min-filter, #emergency-filter').on('change', function() {
-        dt.draw();
-    });
-});
+})();
 </script>

@@ -202,7 +202,9 @@
                 <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
                     <span><span class="flag-badge flag-nonanon">P</span> Has public preprint</span>
                     <span><span class="flag-badge flag-issue">!</span> Review issue report (clickable, count in tooltip)</span>
-                    <span><span class="flag-badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">⚡</span> Emergency review requested (⚠ = no reviewer yet)</span>
+                    <span><span class="flag-badge flag-emergency">⚡</span> Emergency review requested (⚠ = no reviewer yet)</span>
+                    <span><span class="flag-badge" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;">✓</span> Emergency reviewer assigned</span>
+                    <span><span class="flag-badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;">x missing</span> Missing expected reviews</span>
                     <span><span class="flag-badge flag-issue">M</span> Meta-review issue report (clickable)</span>
                     <span><span class="flag-badge flag-info">C</span> Confidential comment</span>
                     <span><span class="flag-badge flag-warn">&#9888;</span> Low-confidence reviewer (conf. &#8804; 2)</span>
@@ -233,276 +235,175 @@
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;">Award</th>
                 </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                {% for paper in papers %}
-                <tr data-ready="{{ 1 if paper['Recommendation'] else 0 }}"
-                    data-preprint="{{ 1 if paper['Is Anonymous'] == 'No' else 0 }}"
-                    data-rev-issue="{{ 1 if paper['Has Review Issue'] else 0 }}"
-                    data-meta-issue="{{ 1 if paper['Has Meta Review Issue'] else 0 }}"
-                    data-low-conf="{{ 1 if paper['Has Low Confidence'] else 0 }}"
-                    data-has-confidential="{{ 1 if paper['Has Confidential'] else 0 }}"
-                    data-overall="{{ paper['Overall Assessment'] }}"
-                    data-excitement="{{ paper['Excitement Score'] }}"
-                    data-confidence="{{ paper['Reviewer Confidence'] }}"
-                    data-type="{{ paper['Paper Type'] }}">
-
-                    {# 0 # #}
-                    <td class="whitespace-nowrap font-medium text-gray-900">{{ paper["Paper #"] }}</td>
-
-                    {# 1 Title #}
-                    <td class="text-gray-500" style="max-width:240px;">
-                        <div class="truncate">
-                            <span class="tip" data-tip="{{ paper.Title }}">
-                                <a href="{{ paper['Submission Link'] }}" target="_blank" class="text-indigo-600 hover:text-indigo-900">{{ paper.Title }}</a>
-                            </span>
-                            {% if paper.get("Linked Forum") %}
-                            <a href="{{ paper['Linked Forum'] }}" target="_blank" class="ml-1 text-gray-400 hover:text-gray-600 tip" data-tip="Open ARR submission">&#8599;</a>
-                            {% endif %}
-                        </div>
-                        {% if paper.get("Resubmission") %}
-                        <div class="text-xs text-gray-400 mt-0.5 truncate">
-                            <a href="{{ paper['Resubmission'] }}" target="_blank" class="hover:text-gray-600 tip" data-tip="Previous submission">&#8617; resubmission</a>
-                        </div>
-                        {% endif %}
-                    </td>
-
-                    {# 2 Type #}
-                    <td class="whitespace-nowrap text-gray-500">{{ paper["Paper Type"] }}</td>
-
-                    {# 3 Flags: Preprint · Rev.Issue · Meta Issue · Confidential · Low Confidence #}
-                    <td class="whitespace-nowrap">
-                        <div class="flex gap-1 items-center justify-start">
-                        {% if paper["Is Anonymous"] == "No" %}
-                            <span class="tip flag-badge flag-nonanon" data-tip="Has public preprint">P</span>
-                        {% endif %}
-
-                        {% if paper["Has Review Issue"] %}
-                            <a href="{{ paper['Review Issue Link'] }}" target="_blank">
-                                <span class="tip flag-badge flag-issue" data-tip="{{ paper['Review Issue Count'] }} review issue report(s)&#10;Click to open on OpenReview">!</span>
-                            </a>
-                        {% endif %}
-
-                        {% if paper["Has Meta Review Issue"] %}
-                            <a href="{{ paper['Meta Review Issue Link'] }}" target="_blank">
-                                <span class="tip flag-badge flag-issue" data-tip="Meta-Review Issue Report&#10;Click to open on OpenReview">M</span>
-                            </a>
-                        {% endif %}
-
-                        {% if paper["Has Emergency Declaration"] %}
-                            {% if paper["Emergency Declaration Link"] %}
-                            <a href="{{ paper['Emergency Declaration Link'] }}" target="_blank">
-                            {% endif %}
-                                <span class="tip flag-badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;"
-                                      data-tip="Emergency review requested ({{ paper['Emergency Declaration Count'] }}){% if paper['Has Emergency Reviewer'] %}&#10;✓ Emergency reviewer assigned{% else %}&#10;⚠ No emergency reviewer yet{% endif %}">⚡</span>
-                            {% if paper["Emergency Declaration Link"] %}
-                            </a>
-                            {% endif %}
-                        {% endif %}
-
-                        {% if paper["Has Confidential"] %}
-                            <span class="tip flag-badge flag-info" data-tip="Confidential comment present">C</span>
-                        {% endif %}
-
-                        {% if paper["Has Low Confidence"] %}
-                            <span class="tip flag-badge flag-warn" data-tip="Low confidence reviewer(s)&#10;{{ paper['Low Confidence Reviewers'] }}">&#9888;</span>
-                        {% endif %}
-
-                        {% if paper["Is Anonymous"] != "No" and not paper["Has Review Issue"] and not paper["Has Meta Review Issue"] and not paper["Has Confidential"] and not paper["Has Low Confidence"] %}
-                            <span class="text-gray-300">&#8211;</span>
-                        {% endif %}
-                        </div>
-                    </td>
-
-                    {# 4 Reviews #}
-                    <td class="whitespace-nowrap text-gray-500">{{ paper["Completed Reviews"] }}/{{ paper["Expected Reviews"] }}</td>
-
-                    {# 5 Ready #}
-                    <td class="whitespace-nowrap" data-sort="{{ 1 if paper['Recommendation'] else 0 }}">
-                        {% if paper["Recommendation"] %}
-                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-medium bg-green-100 text-green-700">&#10003;</span>
-                        {% else %}
-                        <span class="text-gray-300">&#8211;</span>
-                        {% endif %}
-                    </td>
-
-                    {# 6 Confidence #}
-                    <td class="text-gray-500">
-                        {% if paper["Reviewer Confidence"] %}
-                            <span class="tip" data-tip="Individual scores:&#10;{{ paper['Confidence List'] }}">{{ paper["Reviewer Confidence"] }}</span>
-                        {% else %}&#8211;{% endif %}
-                    </td>
-
-                    {# 7 Soundness #}
-                    <td class="text-gray-500">
-                        {% if paper["Soundness Score"] %}
-                            <span class="tip" data-tip="Individual scores:&#10;{{ paper['Soundness List'] }}">{{ paper["Soundness Score"] }}</span>
-                        {% else %}&#8211;{% endif %}
-                    </td>
-
-                    {# 8 Excitement #}
-                    <td class="text-gray-500">
-                        {% if paper["Excitement Score"] %}
-                            <span class="tip" data-tip="Individual scores:&#10;{{ paper['Excitement List'] }}">{{ paper["Excitement Score"] }}</span>
-                        {% else %}&#8211;{% endif %}
-                    </td>
-
-                    {# 9 Overall #}
-                    <td class="text-gray-500">
-                        {% if paper["Overall Assessment"] %}
-                            <span class="tip" data-tip="Individual scores:&#10;{{ paper['Overall List'] }}">{{ paper["Overall Assessment"] }}</span>
-                        {% else %}&#8211;{% endif %}
-                    </td>
-
-                    {# 10 Meta #}
-                    <td class="whitespace-nowrap text-gray-700">
-                        {% if paper["Meta Review Score"] %}{{ paper["Meta Review Score"] }}{% else %}&#8211;{% endif %}
-                    </td>
-
-                    {# 11 Ethics #}
-                    <td class="whitespace-nowrap text-gray-500">
-                        {% if paper["Ethics Flag"] %}<span class="text-red-600">{{ paper["Ethics Flag"] }}</span>{% else %}&#8211;{% endif %}
-                    </td>
-
-                    {# 12 Preprint #}
-                    <td class="whitespace-nowrap text-gray-500">
-                        {% if paper["Preprint Flag"] %}<span class="text-amber-600">{{ paper["Preprint Flag"] }}</span>{% else %}&#8211;{% endif %}
-                    </td>
-
-                    {# 13 Recommendation #}
-                    <td class="whitespace-nowrap text-gray-500">
-                        {% if paper["Recommendation"] %}{{ paper["Recommendation"] }}{% else %}&#8211;{% endif %}
-                    </td>
-
-                    {# 14 Presentation #}
-                    <td class="whitespace-nowrap text-gray-500">{{ paper["Presentation Mode"] or "–" }}</td>
-
-                    {# 15 Award #}
-                    <td class="whitespace-nowrap text-gray-500">
-                        {% if paper["Award"] %}<span class="text-yellow-600 font-semibold">{{ paper["Award"] }}</span>{% else %}&#8211;{% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
         </table>
     </div>
 </div>
 
 <script>
-$(document).ready(function() {
-
-    $(document).on('mouseenter', '.tip', function() {
-        const rect = this.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2;
-        this.style.setProperty('--tx', cx + 'px');
-        this.style.setProperty('--ty', (rect.top - 10) + 'px');
-        this.style.setProperty('--ay', (rect.top - 1) + 'px');
-    });
-
-    function parseAvg(str) {
-        if (!str || str === '–' || str === 'None' || str === '') return null;
-        const m = String(str).match(/^([\d.]+)/);
-        return m ? parseFloat(m[1]) : null;
+(function() {
+    function boolish(v) { return !!(v && v !== '0' && v !== 'false'); }
+    function esc(v) { return window.ReportCommon.escapeHtml(v ?? ''); }
+    function parseAvg(v) { return window.ReportCommon.parseAvg(v); }
+    function selectHtml(id, label, values) {
+        const host = document.getElementById(id);
+        if (!host) return;
+        const opts = Array.from(new Set(values.filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b)));
+        host.innerHTML = '<select class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none"><option value="">'+label+'</option>' +
+            opts.map(v => '<option value="'+esc(v)+'">'+esc(v)+'</option>').join('') + '</select>';
+    }
+    function firstSelectValue(id) {
+        const host = document.getElementById(id);
+        return host && host.querySelector('select') ? host.querySelector('select').value : '';
+    }
+    function scoreCell(displayValue, listValue) {
+        if (!displayValue) return '&#8211;';
+        const tip = listValue ? ' data-tip="Individual scores:&#10;'+esc(listValue)+'"' : '';
+        return '<span class="tip"'+tip+'>'+esc(displayValue)+'</span>';
+    }
+    function titleCell(row) {
+        let html = '<div class="truncate" style="max-width:240px;">' +
+            '<span class="tip tip-left" data-tip="'+esc(row['Title'] || '')+'"><a href="'+esc(row['Submission Link'] || '#')+'" target="_blank" class="text-indigo-600 hover:text-indigo-900">'+esc(row['Title'] || '')+'</a></span>';
+        if (row['Linked Forum']) {
+            html += ' <a href="'+esc(row['Linked Forum'])+'" target="_blank" class="ml-1 text-gray-400 hover:text-gray-600 tip" data-tip="Open ARR submission">&#8599;</a>';
+        }
+        html += '</div>';
+        if (row['Resubmission']) {
+            html += '<div class="text-xs text-gray-400 mt-0.5 truncate"><a href="'+esc(row['Resubmission'])+'" target="_blank" class="hover:text-gray-600 tip" data-tip="Previous submission">&#8617; resubmission</a></div>';
+        }
+        return html;
+    }
+    function flagsCell(row) {
+        const parts = [];
+        if ((row['Is Anonymous'] || '').toLowerCase() === 'no') {
+            parts.push('<span class="tip flag-badge flag-nonanon" data-tip="Has public preprint">P</span>');
+        }
+        if (boolish(row['Has Review Issue'])) {
+            const badge = '<span class="tip flag-badge flag-issue" data-tip="'+esc((row['Review Issue Count'] || 0)+' review issue report(s)')+'&#10;Click to open on OpenReview">!</span>';
+            parts.push(row['Review Issue Link'] ? '<a href="'+esc(row['Review Issue Link'])+'" target="_blank">'+badge+'</a>' : badge);
+        }
+        if (boolish(row['Has Meta Review Issue'])) {
+            const badge = '<span class="tip flag-badge flag-issue" data-tip="Meta-Review Issue Report&#10;Click to open on OpenReview">M</span>';
+            parts.push(row['Meta Review Issue Link'] ? '<a href="'+esc(row['Meta Review Issue Link'])+'" target="_blank">'+badge+'</a>' : badge);
+        }
+        if (boolish(row['Has Emergency Declaration'])) {
+            const tip = 'Emergency review requested ('+esc(row['Emergency Declaration Count'] || 0)+')' + (boolish(row['Has Emergency Reviewer']) ? '&#10;✓ Emergency reviewer assigned' : '&#10;⚠ No emergency reviewer yet');
+            const badge = '<span class="tip flag-badge flag-emergency"  data-tip="'+tip+'">⚡</span>';
+            parts.push(row['Emergency Declaration Link'] ? '<a href="'+esc(row['Emergency Declaration Link'])+'" target="_blank">'+badge+'</a>' : badge);
+        }
+        if (boolish(row['Has Emergency Reviewer'])) {
+            parts.push('<span class="tip flag-badge" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;" data-tip="Emergency reviewer assigned">✓</span>');
+        }
+        const expectedReviews = Number(row['Expected Reviews'] || 0);
+        const completedReviews = Number(row['Completed Reviews'] || 0);
+        const missingReviews = Math.max(0, expectedReviews - completedReviews);
+        if (missingReviews > 0) {
+            parts.push('<span class="tip flag-badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;" data-tip="Missing expected reviews">'+esc(String(missingReviews))+' missing</span>');
+        }
+        if (boolish(row['Has Confidential'])) {
+            parts.push('<span class="tip flag-badge flag-info" data-tip="Confidential comment present">C</span>');
+        }
+        if (boolish(row['Has Low Confidence'])) {
+            parts.push('<span class="tip flag-badge flag-warn" data-tip="Low confidence reviewer(s)&#10;'+esc(row['Low Confidence Reviewers'] || '')+'">&#9888;</span>');
+        }
+        if (!parts.length) return '<span class="text-gray-300">&#8211;</span>';
+        return '<div class="flex gap-1 items-center justify-start">'+parts.join('')+'</div>';
     }
 
-    DataTable.ext.search.push(function(settings, data, dataIndex) {
-        if (settings.nTable.id !== 'papers-table') return true;
-        const row = $(settings.aoData[dataIndex].nTr);
+    function initCommitmentPapers() {
+        const raw = window.ReportCommon.parseJsonScript('papers-json') || [];
+        if (!raw.length) return;
+        const rows = raw.map(row => ({
+            ...row,
+            __ready: row['Recommendation'] ? '1' : '0',
+            __preprint: ((row['Is Anonymous'] || '').toLowerCase() === 'no') ? '1' : '0',
+            __rev_issue: boolish(row['Has Review Issue']) ? '1' : '0',
+            __meta_issue: boolish(row['Has Meta Review Issue']) ? '1' : '0',
+            __low_conf: boolish(row['Has Low Confidence']) ? '1' : '0',
+            __has_confidential: boolish(row['Has Confidential']) ? '1' : '0',
+            __overall: parseAvg(row['Overall Assessment']),
+            __excitement: parseAvg(row['Excitement Score']),
+            __confidence: parseAvg(row['Reviewer Confidence'])
+        }));
 
-        const ready       = $('#ready-filter').val();
-        const preprint    = $('#preprint-filter').val();
-        const revIssue    = $('#rev-issue-filter').val();
-        const metaIssue   = $('#meta-issue-filter').val();
-        const lconf       = $('#lowconf-filter').val();
-        const confComment = $('#conf-comment-filter').val();
-        const overallMin  = $('#overall-min-filter').val();
-        const overallMax  = $('#overall-max-filter').val();
-        const excMin      = $('#exc-min-filter').val();
-        const confMin     = $('#conf-min-filter').val();
+        selectHtml('paper-type-filter', 'All Types', rows.map(r => r['Paper Type']));
+        selectHtml('recommendation-filter', 'All', rows.map(r => r['Recommendation']).filter(v => v && v !== '–'));
 
-        if (ready       && row.attr('data-ready')            !== ready)      return false;
-        if (preprint    && row.attr('data-preprint')          !== preprint)   return false;
-        if (revIssue    && row.attr('data-rev-issue')         !== revIssue)   return false;
-        if (metaIssue   && row.attr('data-meta-issue')        !== metaIssue)  return false;
-        if (lconf       && row.attr('data-low-conf')          !== lconf)      return false;
-        if (confComment && row.attr('data-has-confidential')  !== confComment) return false;
+        $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+            if (settings.nTable.id !== 'papers-table') return true;
+            const row = rows[dataIndex];
+            const ready       = $('#ready-filter').val();
+            const preprint    = $('#preprint-filter').val();
+            const revIssue    = $('#rev-issue-filter').val();
+            const metaIssue   = $('#meta-issue-filter').val();
+            const lconf       = $('#lowconf-filter').val();
+            const confComment = $('#conf-comment-filter').val();
+            const overallMin  = $('#overall-min-filter').val();
+            const overallMax  = $('#overall-max-filter').val();
+            const excMin      = $('#exc-min-filter').val();
+            const confMin     = $('#conf-min-filter').val();
+            const type        = firstSelectValue('paper-type-filter');
+            const rec         = firstSelectValue('recommendation-filter');
 
-        if (overallMin || overallMax) {
-            const v = parseAvg(row.attr('data-overall'));
-            if (v === null) return false;
-            if (overallMin && v < parseFloat(overallMin)) return false;
-            if (overallMax && v > parseFloat(overallMax)) return false;
-        }
-        if (excMin) {
-            const v = parseAvg(row.attr('data-excitement'));
-            if (v === null || v < parseFloat(excMin)) return false;
-        }
-        if (confMin) {
-            const v = parseAvg(row.attr('data-confidence'));
-            if (v === null || v < parseFloat(confMin)) return false;
-        }
-        return true;
+            if (type && row['Paper Type'] !== type) return false;
+            if (rec && row['Recommendation'] !== rec) return false;
+            if (ready && row.__ready !== ready) return false;
+            if (preprint && row.__preprint !== preprint) return false;
+            if (revIssue && row.__rev_issue !== revIssue) return false;
+            if (metaIssue && row.__meta_issue !== metaIssue) return false;
+            if (lconf && row.__low_conf !== lconf) return false;
+            if (confComment && row.__has_confidential !== confComment) return false;
+            if (overallMin && (row.__overall === null || row.__overall < parseFloat(overallMin))) return false;
+            if (overallMax && (row.__overall === null || row.__overall > parseFloat(overallMax))) return false;
+            if (excMin && (row.__excitement === null || row.__excitement < parseFloat(excMin))) return false;
+            if (confMin && (row.__confidence === null || row.__confidence < parseFloat(confMin))) return false;
+            return true;
+        });
+
+        const dt = $('#papers-table').DataTable({
+            data: rows,
+            deferRender: true,
+            pageLength: 100,
+            autoWidth: false,
+            order: [[0, 'asc']],
+            layout: { topStart: null, topEnd: null, bottomStart: 'info', bottomEnd: 'paging' },
+            columns: [
+                { title: '#', data: 'Paper #', className: 'whitespace-nowrap text-gray-500' },
+                { title: 'Title', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (row['Title'] || '') : titleCell(row); } },
+                { title: 'Type', data: 'Paper Type', className: 'whitespace-nowrap text-gray-500' },
+                { title: 'Flags', data: null, orderable: false, searchable: false, render: function(_, __, row) { return flagsCell(row); } },
+                { title: 'Reviews', data: null, render: function(_, __, row) { return (row['Completed Reviews'] || 0) + '/' + (row['Expected Reviews'] || 0); } },
+                { title: 'Ready', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? row.__ready : (row.__ready === '1' ? '<span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-medium bg-green-100 text-green-700">&#10003;</span>' : '<span class="text-gray-300">&#8211;</span>'); } },
+                { title: 'Confidence', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (row.__confidence ?? -1) : scoreCell(row['Reviewer Confidence'], row['Confidence List']); } },
+                { title: 'Soundness', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (parseAvg(row['Soundness Score']) ?? -1) : scoreCell(row['Soundness Score'], row['Soundness List']); } },
+                { title: 'Excitement', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (row.__excitement ?? -1) : scoreCell(row['Excitement Score'], row['Excitement List']); } },
+                { title: 'Overall', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (row.__overall ?? -1) : scoreCell(row['Overall Assessment'], row['Overall List']); } },
+                { title: 'Meta', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (parseAvg(row['Meta Review Score']) ?? -1) : (row['Meta Review Score'] ? esc(row['Meta Review Score']) : '&#8211;'); } },
+                { title: 'Ethics', data: null, render: function(_, type, row) { return type === 'sort' || type === 'type' ? (row['Ethics Flag'] || '') : (row['Ethics Flag'] ? '<span class="text-red-600">'+esc(row['Ethics Flag'])+'</span>' : '&#8211;'); } },
+                { title: 'Preprint', data: null, render: function(_, type, row) { return type === 'sort' || type === 'type' ? (row['Preprint Flag'] || '') : (row['Preprint Flag'] ? '<span class="text-amber-600">'+esc(row['Preprint Flag'])+'</span>' : '&#8211;'); } },
+                { title: 'Recommendation', data: null, render: function(_, type, row) { return type === 'sort' || type === 'type' ? (row['Recommendation'] || '') : (row['Recommendation'] ? esc(row['Recommendation']) : '&#8211;'); } },
+                { title: 'Presentation', data: null, render: function(_, type, row) { return type === 'sort' || type === 'type' ? (row['Presentation Mode'] || '') : esc(row['Presentation Mode'] || '–'); } },
+                { title: 'Award', data: null, render: function(_, type, row) { return type === 'sort' || type === 'type' ? (row['Award'] || '') : (row['Award'] ? '<span class="text-yellow-600 font-semibold">'+esc(row['Award'])+'</span>' : '&#8211;'); } }
+            ],
+            createdRow: function(row) { row.classList.add('text-gray-500'); },
+            columnDefs: [
+                { type: 'num', targets: [0] },
+                { className: 'overall-assessment', targets: [9] },
+                { className: 'meta-review', targets: [10] }
+            ]
+        });
+
+        const typeSel = $('#paper-type-filter select');
+        const recSel = $('#recommendation-filter select');
+        $('#papers-search-input').on('input', function() { dt.search(this.value).draw(); });
+        $('#papers-length-select').on('change', function() { dt.page.len(this.value).draw(); });
+        $('#ready-filter, #preprint-filter, #rev-issue-filter, #meta-issue-filter, #lowconf-filter, #conf-comment-filter, #overall-min-filter, #overall-max-filter, #exc-min-filter, #conf-min-filter').on('change', function() { dt.draw(); });
+        typeSel.on('change', function() { dt.draw(); });
+        recSel.on('change', function() { dt.draw(); });
+    }
+
+    document.addEventListener('report:tabshown', function(event) {
+        if (event.detail.tabId !== 'papers-tab') return;
+        window.ReportCommon.initOnce('commitment-papers-table', initCommitmentPapers);
     });
-
-    const dt = $('#papers-table').DataTable({
-        deferRender: true,
-        pageLength: 100,
-        autoWidth: false,
-        order: [[0, 'asc']],
-        layout: {
-            topStart: null,
-            topEnd: null,
-            bottomStart: 'info',
-            bottomEnd: 'paging'
-        },
-        columnDefs: [
-            { type: 'num', targets: [0, 4] },
-            { type: 'num', targets: [5], render: function(d, type, row, meta) {
-                if (type === 'sort')
-                    return parseInt($('#papers-table tbody tr').eq(meta.row).attr('data-ready') || '0');
-                return d;
-            }},
-            { className: 'overall-assessment', targets: [9] },
-            { className: 'meta-review',        targets: [10] }
-        ],
-        initComplete: function() {
-            const api = new DataTable.Api(this);
-
-            // Paper type dropdown (col 2)
-            api.columns(2).every(function() {
-                const col = this;
-                const sel = $('<select class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none"><option value="">All Types</option></select>')
-                    .appendTo('#paper-type-filter')
-                    .on('change', function() {
-                        const v = DataTable.util.escapeRegex($(this).val());
-                        col.search(v ? '^'+v+'$' : '', true, false).draw();
-                    });
-                col.data().unique().sort().each(function(d) {
-                    if (d) sel.append('<option value="'+d+'">'+d+'</option>');
-                });
-            });
-
-            // Recommendation dropdown (col 13)
-            api.columns(13).every(function() {
-                const col = this;
-                const sel = $('<select class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none"><option value="">All</option></select>')
-                    .appendTo('#recommendation-filter')
-                    .on('change', function() {
-                        const v = DataTable.util.escapeRegex($(this).val());
-                        col.search(v ? '^'+v+'$' : '', true, false).draw();
-                    });
-                col.data().unique().sort().each(function(d) {
-                    if (d && d !== '–') sel.append('<option value="'+d+'">'+d+'</option>');
-                });
-            });
-        }
-    });
-
-    // Custom search and length inputs
-    $('#papers-search-input').on('input', function() { dt.search(this.value).draw(); });
-    $('#papers-length-select').on('change', function() { dt.page.len(this.value).draw(); });
-
-    $('#ready-filter, #preprint-filter, #rev-issue-filter, #meta-issue-filter, #lowconf-filter, #conf-comment-filter, #overall-min-filter, #overall-max-filter, #exc-min-filter, #conf-min-filter').on('change', function() {
-        dt.draw();
-    });
-});
+})();
 </script>

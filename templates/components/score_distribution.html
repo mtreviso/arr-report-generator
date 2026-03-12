@@ -13,8 +13,7 @@
 <script>
 function renderScoreDistributionChart() {
     const ctx = document.getElementById('score-distribution-chart');
-    if (!ctx || ctx.dataset.rendered) return;
-    ctx.dataset.rendered = '1';
+    if (!ctx) return;
 
     const overallCounts  = {{ histogram_data.overall_assessment.counts | tojson }};
     const metaCounts     = {{ histogram_data.meta_review.counts | tojson }};
@@ -24,7 +23,7 @@ function renderScoreDistributionChart() {
     document.getElementById('score-dist-loader').style.display = 'none';
     ctx.style.display = '';
 
-    window.scoreChart = new Chart(ctx.getContext('2d'), {
+    window.ReportCommon.replaceChart(ctx, {
         type: 'line',
         data: {
             labels: overallLabels,
@@ -71,8 +70,9 @@ function renderScoreDistributionChart() {
 }
 
 // Render immediately if overview tab is active, otherwise on first tab switch
-document.addEventListener('DOMContentLoaded', function() {
-    // Small delay so the DOM is ready
-    setTimeout(renderScoreDistributionChart, 80);
+document.addEventListener('report:tabshown', function(event) {
+    if (event.detail.tabId === 'analytics-tab') {
+        window.ReportCommon.initOnce('score-distribution-chart', function() { setTimeout(renderScoreDistributionChart, 80); });
+    }
 });
 </script>

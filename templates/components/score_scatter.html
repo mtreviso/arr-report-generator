@@ -17,19 +17,20 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+(function() {
     const initScoreCharts = function() {
-        if (document.getElementById('score-heatmap-container').dataset.rendered) return;
-        document.getElementById('score-heatmap-container').dataset.rendered = '1';
+        const heatmapEl = document.getElementById('score-heatmap-container');
+        if (!heatmapEl) return;
+        if (heatmapEl.dataset.rendered) return;
+        heatmapEl.dataset.rendered = '1';
 
         const scatterData = {{ score_scatter_data.scatter | tojson }};
         const diffData    = {{ score_scatter_data.differences | tojson }};
 
         if (!scatterData.length) {
-            document.getElementById('score-heatmap-container').innerHTML =
+            heatmapEl.innerHTML =
                 '<div class="text-center py-8 text-gray-500">No data.</div>';
-            return;
-        }
+        } else {
 
         // --- 2D density heatmap using a grid of divs ---
         // Score range 1–5, bin size 0.5 → 8 bins per axis
@@ -81,12 +82,13 @@ document.addEventListener('DOMContentLoaded', function() {
         html += `<div style="text-align:center; padding-left:28px; color:#9ca3af; font-size:0.6rem; margin-top:2px;">Avg Review Score</div>`;
         html += `</div></div></div>`;
 
-        document.getElementById('score-heatmap-container').innerHTML = html;
+        heatmapEl.innerHTML = html;
+        }
 
         // --- Difference distribution bar chart ---
         const diffCtx = document.getElementById('score-difference-chart');
-        if (diffCtx && diffData.labels) {
-            new Chart(diffCtx, {
+        if (diffCtx && diffData.labels && diffData.labels.length) {
+            window.ReportCommon.replaceChart(diffCtx, {
                 type: 'bar',
                 data: {
                     labels: diffData.labels,
@@ -109,12 +111,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     plugins: { legend: { display: false } }
                 }
             });
+        } else if (diffCtx) {
+            diffCtx.parentNode.innerHTML = '<div class="text-center py-8 text-gray-500">No data.</div>';
         }
     };
 
-    const analyticsTab = document.querySelector('[data-tab="analytics-tab"]');
-    if (analyticsTab) analyticsTab.addEventListener('click', () => setTimeout(initScoreCharts, 100));
-    if (document.getElementById('analytics-tab') && document.getElementById('analytics-tab').classList.contains('active'))
-        setTimeout(initScoreCharts, 100);
-});
+    document.addEventListener('report:tabshown', function(event) {
+        if (event.detail.tabId !== 'analytics-tab') return;
+        window.ReportCommon.initOnce('score-scatter-charts', initScoreCharts);
+    });
+})();
 </script>

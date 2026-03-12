@@ -16,12 +16,16 @@ class ARRReportGenerator:
     LOW_CONF_THRESHOLD = 2
 
     def __init__(self, username, password, venue_id, me, role='sac',
-                 impersonate_group=None):
+                 impersonate_group=None, comments_level='basic'):
         self.username = username
         self.password = password
         self.venue_id = venue_id
         self.me = me
         self.role = role
+        self.comments_level = (comments_level or 'basic').lower()
+        if self.comments_level not in {'none', 'basic', 'full'}:
+            raise ValueError(f"comments_level must be one of ('none', 'basic', 'full'), got {comments_level!r}")
+        self.reply_details = 'replies' if self.comments_level == 'full' else 'directReplies'
         self.client = openreview.api.OpenReviewClient(baseurl='https://api2.openreview.net',
                                                      username=username,
                                                      password=password)
@@ -38,7 +42,7 @@ class ARRReportGenerator:
         self.submission_name = self.venue_group.content['submission_name']['value']
         self.submissions = self.client.get_all_notes(
             invitation=f'{venue_id}/-/{self.submission_name}',
-            details='replies'
+            details=self.reply_details
         )
 
         # Get SAC groups for filtering
@@ -65,7 +69,8 @@ class ARRReportGenerator:
         self.ac_meta_data = []
         self.comments_data = []
         self.correlation_data = None
-        
+        self.attention_papers = []
+
         # Score distributions for visualization
         self.score_distributions = {
             'overall_assessment': [],
@@ -141,15 +146,25 @@ class ARRReportGenerator:
         return ""
 
     def parse_avg(self, s):
-        """Extract the average score from a formatted string."""
+        """Extract the first numeric score from a formatted string."""
         try:
-            return float(s.split()[0])
+            if s is None:
+                return float('nan')
+            if isinstance(s, (int, float)):
+                return float(s)
+            match = re.search(r'-?\d+(?:\.\d+)?', str(s))
+            return float(match.group(0)) if match else float('nan')
         except Exception:
             return float('nan')
 
     def parse_meta_review(self, s):
         try:
-            return float(s)
+            if s is None:
+                return float('nan')
+            if isinstance(s, (int, float)):
+                return float(s)
+            match = re.search(r'-?\d+(?:\.\d+)?', str(s))
+            return float(match.group(0)) if match else float('nan')
         except Exception:
             return float('nan')
 
@@ -472,6 +487,16 @@ class ARRReportGenerator:
 
         return ""
 
+    def _get_submission_replies(self, submission):
+        details = getattr(submission, 'details', None) or {}
+        replies = details.get('replies')
+        if replies is not None:
+            return replies
+        replies = details.get('directReplies')
+        if replies is not None:
+            return replies
+        return []
+
     def process_papers_data(self):
         """Process all papers data."""
         base_url = "https://openreview.net/forum?id="
@@ -526,7 +551,7 @@ class ARRReportGenerator:
             emergency_declaration_link = ""
             emergency_declaration_count = 0
 
-            replies = submission.details.get("replies", [])
+            replies = self._get_submission_replies(submission)
 
             # On first paper, surface all invitation patterns to help identify emergency fields
             if not self.papers_data and replies:
@@ -764,12 +789,24 @@ class ARRReportGenerator:
         meta_df["Area Chair Email"] = meta_df["Area Chair ID"].map(
             lambda uid: self.ac_email_cache.get(uid, "")
         )
-        # If PC mode and SAC info available per paper, attach SAC name per AC
+        # If PC mode and SAC info available per paper, attach SAC name / profile / affiliation per AC
         if "Senior Area Chair" in df.columns:
             sac_map = df.groupby("Area Chair")["Senior Area Chair"].first().to_dict()
             meta_df["Senior Area Chair"] = meta_df["Area Chair"].map(sac_map).fillna("")
+            if "Senior Area Chair ID" in df.columns:
+                sac_id_map = df.groupby("Area Chair")["Senior Area Chair ID"].first().to_dict()
+                meta_df["Senior Area Chair ID"] = meta_df["Area Chair"].map(sac_id_map).fillna("")
+            else:
+                meta_df["Senior Area Chair ID"] = ""
+            if "Senior Area Chair Affiliation" in df.columns:
+                sac_aff_map = df.groupby("Area Chair")["Senior Area Chair Affiliation"].first().to_dict()
+                meta_df["Senior Area Chair Affiliation"] = meta_df["Area Chair"].map(sac_aff_map).fillna("")
+            else:
+                meta_df["Senior Area Chair Affiliation"] = ""
         else:
             meta_df["Senior Area Chair"] = ""
+            meta_df["Senior Area Chair ID"] = ""
+            meta_df["Senior Area Chair Affiliation"] = ""
         meta_df.drop(columns=["Meta_Reviews_Num"], inplace=True)
         self.ac_meta_data = meta_df.to_dict(orient='records')
 
@@ -783,9 +820,7 @@ class ARRReportGenerator:
             "Reviewer_Confidence_Avg": df["Reviewer Confidence"].apply(self.parse_avg),
             "Soundness_Score_Avg":     df["Soundness Score"].apply(self.parse_avg),
             "Excitement_Score_Avg":    df["Excitement Score"].apply(self.parse_avg),
-            "Meta_Review_Score":       df["Meta Review Score"].apply(
-                lambda x: float(x) if isinstance(x, (int, float)) or (isinstance(x, str) and x.strip()) else np.nan
-            )
+            "Meta_Review_Score":       df["Meta Review Score"].apply(self.parse_meta_review)
         })
         corr_table = corr_data.corr().fillna(0).round(2)
         self.score_correlation_data = corr_data
@@ -856,32 +891,43 @@ class ARRReportGenerator:
         return result
 
     def generate_score_scatter_data(self):
-        if not hasattr(self, 'score_correlation_data') or self.score_correlation_data is None:
+        if not self.papers_data:
             return {'scatter': [], 'differences': {'labels': [], 'counts': []}}
-        df = self.score_correlation_data
+
         scatter_data = []
-        for i, row in df.iterrows():
-            if not np.isnan(row["Overall_Assessment_Avg"]) and not np.isnan(row["Meta_Review_Score"]):
-                paper_number = self.papers_data[i]["Paper #"] if i < len(self.papers_data) else i
-                scatter_data.append({'x': float(row["Overall_Assessment_Avg"]), 'y': float(row["Meta_Review_Score"]), 'paper': paper_number})
         diff_counts = {}
-        for pt in scatter_data:
-            rd = round((pt['y'] - pt['x']) * 2) / 2
+
+        for paper in self.papers_data:
+            overall = self.parse_avg(paper.get("Overall Assessment"))
+            meta_val = paper.get("Meta Review Score") or paper.get("AC Score", "")
+            meta = self.parse_meta_review(meta_val)
+            if np.isnan(overall) or np.isnan(meta):
+                continue
+            paper_number = paper.get("Paper #", len(scatter_data) + 1)
+            scatter_data.append({'x': float(overall), 'y': float(meta), 'paper': paper_number})
+            rd = round((float(meta) - float(overall)) * 2) / 2
             diff_counts[rd] = diff_counts.get(rd, 0) + 1
+
         diff_data = sorted(diff_counts.items())
         return {
             'scatter': scatter_data,
-            'differences': {'labels': [str(d[0]) for d in diff_data], 'counts': [d[1] for d in diff_data]}
+            'differences': {
+                'labels': [str(d[0]) for d in diff_data],
+                'counts': [d[1] for d in diff_data],
+            },
         }
 
     def process_comments_data(self):
         """Process all relevant comments."""
+        self.comments_data = []
+        if self.comments_level == 'none' or not self.papers_data:
+            return
         base_url = "https://openreview.net/forum"
         paper_numbers = {p["Paper #"] for p in self.papers_data}
         for submission in self.submissions:
             if submission.number not in paper_numbers:
                 continue
-            for reply in submission.details.get("replies", []):
+            for reply in self._get_submission_replies(submission):
                 if self.is_relevant_comment(reply):
                     forum_id = reply.get("forum", "")
                     note_id  = reply.get("id", "")
@@ -912,7 +958,11 @@ class ARRReportGenerator:
         self.process_papers_data()
         self.compute_ac_meta_data()
         self.compute_correlation_data()
-        self.process_comments_data()
+        self.compute_attention_papers()
+        if self.comments_level != 'none':
+            self.process_comments_data()
+        else:
+            self.comments_data = []
 
     def generate_histogram_data(self):
         bins_overall = [1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0, 3.25, 3.5, 3.75,
@@ -950,6 +1000,58 @@ class ARRReportGenerator:
         children = [self._build_comment_tree(c, all_comments) for c in all_comments if c["ReplyTo"] == root_id]
         return {"comment": root_comment, "children": children}
 
+
+    def _get_emergency_reviewer_count(self, paper):
+        try:
+            return max(0, int(paper.get('Emergency Reviewer Count') or 0))
+        except Exception:
+            return 0
+
+    def _derive_attention_paper(self, paper):
+        expected_reviews = int(paper.get('Expected Reviews') or 0)
+        completed_reviews = int(paper.get('Completed Reviews') or 0)
+        emergency_added = self._get_emergency_reviewer_count(paper)
+        initial_expected = max(0, expected_reviews - emergency_added)
+        missing_reviews = max(0, expected_reviews - completed_reviews)
+        has_issue = bool(paper.get('Has Review Issue'))
+        has_ethics = bool((paper.get('Ethics Flag') or '').strip())
+        has_missing = expected_reviews > 0 and completed_reviews < expected_reviews
+        has_emergency_decl = bool(paper.get('Has Emergency Declaration'))
+
+        if not (has_issue or has_ethics or has_missing or has_emergency_decl):
+            return None
+
+        enriched = dict(paper)
+        enriched['Missing Reviews'] = missing_reviews
+        enriched['Initial Expected Reviews'] = initial_expected
+        enriched['Emergency Assigned Later'] = emergency_added
+        enriched['Has Missing Reviews'] = has_missing
+        return enriched
+
+    def compute_attention_papers(self):
+        if not self.papers_data:
+            self.attention_papers = []
+            return
+        rows = []
+        for paper in self.papers_data:
+            enriched = self._derive_attention_paper(paper)
+            if enriched is not None:
+                rows.append(enriched)
+        rows.sort(key=lambda p: (
+            0 if p.get('Has Review Issue') else 1,
+            0 if p.get('Missing Reviews', 0) else 1,
+            0 if p.get('Has Emergency Declaration') else 1,
+            -int(p.get('Missing Reviews', 0) or 0),
+            p.get('Paper #', 0),
+        ))
+        self.attention_papers = rows
+
+    def attention_template_flags(self):
+        return {
+            'attention_has_sac': any(str(p.get('Senior Area Chair') or '').strip() for p in self.attention_papers),
+            'attention_has_ac': any(str(p.get('Area Chair') or '').strip() for p in self.attention_papers),
+        }
+
     # -------------------------------------------------------------------------
     # Report generation
     # -------------------------------------------------------------------------
@@ -986,9 +1088,12 @@ class ARRReportGenerator:
             "venue_id":              self.venue_id,
             "papers":                self.papers_data,
             "ac_meta":               self.ac_meta_data,
+            "attention_papers":      self.attention_papers,
+            **self.attention_template_flags(),
             "comments_count":        len(self.comments_data),
             "comments":              self.comments_data,
-            "comment_trees":         self.organize_comments_by_paper(),
+            "comments_level":        self.comments_level,
+            "comments_enabled":      self.comments_level != "none",
             "histogram_data":        self.generate_histogram_data(),
             "correlation_data":      self.correlation_data,
             "paper_type_distribution": paper_type_distribution,

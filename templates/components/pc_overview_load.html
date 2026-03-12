@@ -1,0 +1,88 @@
+<div class="px-4 py-5 sm:p-6">
+
+    <div id="load-charts-loader" class="flex items-center justify-center gap-2 py-8 text-gray-400 text-xs">
+        <svg class="animate-spin h-4 w-4 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+        </svg>
+        Loading charts…
+    </div>
+
+    <div id="load-charts-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6" style="display:none!important;">
+        <div>
+            <p class="text-xs text-gray-500 font-medium mb-1 text-center">Reviewer Load</p>
+            <p class="text-xs text-gray-400 text-center mb-2" id="reviewer-load-meta"></p>
+            <div style="height:200px;"><canvas id="reviewer-load-chart"></canvas></div>
+        </div>
+        <div>
+            <p class="text-xs text-gray-500 font-medium mb-1 text-center">AC Load</p>
+            <p class="text-xs text-gray-400 text-center mb-2" id="ac-load-meta"></p>
+            <div style="height:200px;"><canvas id="ac-load-chart"></canvas></div>
+        </div>
+        <div>
+            <p class="text-xs text-gray-500 font-medium mb-1 text-center">SAC Load</p>
+            <p class="text-xs text-gray-400 text-center mb-2" id="sac-load-meta"></p>
+            <div style="height:200px;"><canvas id="sac-load-chart"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const reviewerLoadData = {{ reviewer_load | tojson }};
+    const acLoadData = {{ ac_load | tojson }};
+    const sacLoadData = {{ sac_load | tojson }};
+
+    function makeLoadChart(canvasId, loadData, color, metaId) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx || !loadData || !loadData.labels || !loadData.labels.length || !window.ReportCommon) return;
+
+        const maxBin = Math.max(...loadData.labels, 1);
+        const extLabels = Array.from({ length: maxBin }, (_, i) => String(i + 1));
+        const extCounts = extLabels.map((_, i) => loadData.counts[i] ?? 0);
+
+        if (metaId) {
+            const meta = document.getElementById(metaId);
+            if (meta) meta.textContent = loadData.total + ' assigned — avg ' + loadData.avg_load + ' papers each';
+        }
+
+        window.ReportCommon.replaceChart(ctx, {
+            type: 'bar',
+            data: {
+                labels: extLabels,
+                datasets: [{ label: 'Count', data: extCounts, backgroundColor: color, borderWidth: 1, barPercentage: 0.75 }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 300 },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label(ctx) { return ctx.raw + ' assigned'; } } }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Papers' } },
+                    y: { beginAtZero: true, title: { display: true, text: 'Count' } }
+                }
+            }
+        });
+    }
+
+    function initLoadCharts() {
+        const loader = document.getElementById('load-charts-loader');
+        const grid = document.getElementById('load-charts-grid');
+        if (!loader || !grid || !window.ReportCommon) return;
+        makeLoadChart('reviewer-load-chart', reviewerLoadData, 'rgba(99,102,241,0.65)', 'reviewer-load-meta');
+        makeLoadChart('ac-load-chart', acLoadData, 'rgba(59,130,246,0.65)', 'ac-load-meta');
+        makeLoadChart('sac-load-chart', sacLoadData, 'rgba(16,185,129,0.65)', 'sac-load-meta');
+        loader.style.display = 'none';
+        grid.style.removeProperty('display');
+    }
+
+    document.addEventListener('report:tabshown', function(event) {
+        if (event.detail.tabId !== 'overview-tab') return;
+        if (!window.ReportCommon) { setTimeout(initLoadCharts, 0); return; }
+        window.ReportCommon.initOnce('pc-load-charts', initLoadCharts);
+    });
+})();
+</script>

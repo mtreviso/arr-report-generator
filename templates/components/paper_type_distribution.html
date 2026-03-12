@@ -28,7 +28,7 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+(function() {
     const initPaperTypeChart = function() {
         const ctx = document.getElementById('paper-type-chart');
         if (!ctx) return;
@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!labels.length) { ctx.parentNode.innerHTML = '<div class="text-center py-8 text-gray-500">No data.</div>'; return; }
         const colors = ['rgba(54,162,235,0.7)','rgba(255,99,132,0.7)','rgba(75,192,192,0.7)','rgba(255,206,86,0.7)','rgba(153,102,255,0.7)','rgba(255,159,64,0.7)'];
         const borders = colors.map(c => c.replace('0.7','1'));
-        new Chart(ctx, {
+        window.ReportCommon.replaceChart(ctx, {
             type: 'doughnut',
             data: {labels, datasets:[{data: counts, backgroundColor: colors.slice(0,labels.length), borderColor: borders.slice(0,labels.length), borderWidth:1}]},
             options: {
@@ -52,9 +52,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     };
-    const analyticsTab = document.querySelector('[data-tab="analytics-tab"]');
-    if (analyticsTab) analyticsTab.addEventListener('click', () => setTimeout(initPaperTypeChart, 100));
-    if (document.getElementById('analytics-tab') && document.getElementById('analytics-tab').classList.contains('active'))
-        setTimeout(initPaperTypeChart, 100);
-});
+    document.addEventListener('report:tabshown', function(event) {
+        if (event.detail.tabId !== 'analytics-tab') return;
+        window.ReportCommon.initOnce('paper-type-chart', initPaperTypeChart);
+    });
+})();
 </script>

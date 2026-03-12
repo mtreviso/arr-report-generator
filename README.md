@@ -134,6 +134,16 @@ This is useful for verifying exactly what a SAC sees without asking them to run 
 
 ---
 
+## Comments levels
+
+All report scripts support `--comments-level none|basic|full`.
+
+- `none`: omit comments tab and skip comment processing
+- `basic`: direct replies only (default)
+- `full`: full reply threads --- slowest / largest output
+
+---
+
 ## Report Contents
 
 ### Review Report (`review_report.html`)

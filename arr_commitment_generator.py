@@ -23,10 +23,14 @@ VALID_ROLES = ('sac', 'ac', 'pc')
 class CommitmentReportGenerator(ARRReportGenerator):
 
     def __init__(self, username, password, venue_id, me, role='sac',
-                 impersonate_group=None):
+                 impersonate_group=None, comments_level='basic'):
         if role not in VALID_ROLES:
             raise ValueError(f"role must be one of {VALID_ROLES}, got {role!r}")
         self.role = role
+        self.comments_level = (comments_level or 'basic').lower()
+        if self.comments_level not in {'none', 'basic', 'full'}:
+            raise ValueError(f"comments_level must be one of ('none', 'basic', 'full'), got {comments_level!r}")
+        self.reply_details = 'replies' if self.comments_level == 'full' else 'directReplies'
 
         # Direct init — different flow from ARRReportGenerator.__init__
         self.username  = username
@@ -96,7 +100,7 @@ class CommitmentReportGenerator(ARRReportGenerator):
         try:
             all_subs = self.client.get_all_notes(
                 invitation=f'{self.venue_id}/-/{self.submission_name}',
-                details='replies'
+                details=self.reply_details
             )
             print(f"Retrieved {len(all_subs)} total submissions")
         except Exception as e:
@@ -464,7 +468,8 @@ class CommitmentReportGenerator(ARRReportGenerator):
         self.ac_meta_data = []
 
     def process_comments_data(self):
-        if not self.papers_data:
+        self.comments_data = []
+        if self.comments_level == 'none' or not self.papers_data:
             return
         paper_numbers = {p["Paper #"] for p in self.papers_data}
         base_url = "https://openreview.net/forum"
@@ -473,7 +478,7 @@ class CommitmentReportGenerator(ARRReportGenerator):
         for sub in tqdm(self.submissions, desc="Checking for comments"):
             if sub.number not in paper_numbers:
                 continue
-            for reply in (getattr(sub, 'details', None) or {}).get('replies', []):
+            for reply in self._get_submission_replies(sub):
                 if self.is_relevant_comment(reply):
                     self.comments_data.append({
                         "Paper #":  sub.number, "Paper ID": sub.id,
@@ -486,22 +491,23 @@ class CommitmentReportGenerator(ARRReportGenerator):
                         "NoteId":   getattr(reply, 'id', ''),
                     })
                     count += 1
-            paper_link   = sub.content.get('paper_link', {}).get('value', '')
-            linked_forum = self._parse_linked_forum_id(paper_link)
-            if linked_forum:
-                for reply in self._get_linked_replies(linked_forum):
-                    if self.is_relevant_comment(reply):
-                        self.comments_data.append({
-                            "Paper #":  sub.number, "Paper ID": sub.id,
-                            "Type":     self.classify_comment_type(reply),
-                            "Role":     self.infer_role_from_signature(getattr(reply, 'signatures', [])),
-                            "Date":     self.format_timestamp(getattr(reply, 'tcdate', None)),
-                            "Content":  self.extract_comment_text(reply),
-                            "Link":     f"{base_url}?id={getattr(reply,'forum','')}&noteId={getattr(reply,'id','')}",
-                            "ReplyTo":  getattr(reply, 'replyto', None),
-                            "NoteId":   getattr(reply, 'id', ''),
-                        })
-                        count += 1
+            if self.comments_level == 'full':
+                paper_link   = sub.content.get('paper_link', {}).get('value', '')
+                linked_forum = self._parse_linked_forum_id(paper_link)
+                if linked_forum:
+                    for reply in self._get_linked_replies(linked_forum):
+                        if self.is_relevant_comment(reply):
+                            self.comments_data.append({
+                                "Paper #":  sub.number, "Paper ID": sub.id,
+                                "Type":     self.classify_comment_type(reply),
+                                "Role":     self.infer_role_from_signature(getattr(reply, 'signatures', [])),
+                                "Date":     self.format_timestamp(getattr(reply, 'tcdate', None)),
+                                "Content":  self.extract_comment_text(reply),
+                                "Link":     f"{base_url}?id={getattr(reply,'forum','')}&noteId={getattr(reply,'id','')}",
+                                "ReplyTo":  getattr(reply, 'replyto', None),
+                                "NoteId":   getattr(reply, 'id', ''),
+                            })
+                            count += 1
         print(f"Found {count} comments.")
 
     def process_data(self):
@@ -509,7 +515,10 @@ class CommitmentReportGenerator(ARRReportGenerator):
             self.process_papers_data()
             if self.papers_data:
                 self.compute_correlation_data()
-            self.process_comments_data()
+            if self.comments_level != 'none':
+                self.process_comments_data()
+            else:
+                self.comments_data = []
         except Exception as e:
             print(f"Error in process_data: {e}")
             import traceback; traceback.print_exc()
@@ -552,9 +561,12 @@ class CommitmentReportGenerator(ARRReportGenerator):
             "venue_id":                self.venue_id,
             "role":                    self.role,
             "papers":                  self.papers_data,
+            "attention_papers":        self.attention_papers,
+            **self.attention_template_flags(),
             "comments_count":          len(self.comments_data),
             "comments":                self.comments_data,
-            "comment_trees":           self.organize_comments_by_paper(),
+            "comments_level":          self.comments_level,
+            "comments_enabled":        self.comments_level != 'none',
             "histogram_data":          self.generate_histogram_data(),
             "correlation_data":        self.correlation_data,
             "paper_type_distribution": self.generate_paper_type_distribution(),
