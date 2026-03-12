@@ -69,6 +69,19 @@
         if (!ctx) return;
         const trackData = {{ track_data | tojson }};
         if (!trackData.length) return;
+        const palette = [
+            '#4F46E5', '#0EA5E9', '#14B8A6', '#10B981', '#84CC16',
+            '#EAB308', '#F59E0B', '#F97316', '#EF4444', '#EC4899',
+            '#D946EF', '#A855F7', '#8B5CF6', '#6366F1', '#3B82F6',
+            '#06B6D4', '#22C55E', '#65A30D', '#CA8A04', '#DC2626',
+            '#FB7185', '#F472B6', '#C084FC', '#818CF8', '#60A5FA',
+            '#38BDF8', '#2DD4BF', '#34D399', '#A3E635', '#FACC15',
+            '#FDBA74', '#F87171', '#E879F9', '#A78BFA', '#93C5FD',
+            '#67E8F9', '#5EEAD4', '#86EFAC', '#BEF264', '#FDE047',
+            '#FDBA74', '#FDA4AF', '#F9A8D4', '#D8B4FE', '#C4B5FD',
+            '#BFDBFE', '#BAE6FD', '#99F6E4', '#BBF7D0', '#D9F99D'
+        ];
+        const colors = trackData.map((_, i) => palette[i % palette.length]);
         window.ReportCommon.replaceChart(ctx, {
             type: 'bar',
             data: {
@@ -76,9 +89,9 @@
                 datasets: [{
                     label: 'Papers',
                     data: trackData.map(r => r.Papers),
-                    backgroundColor: 'rgba(99, 102, 241, 0.72)',
-                    hoverBackgroundColor: 'rgba(79, 70, 229, 0.86)',
-                    borderColor: 'rgba(79, 70, 229, 0.95)',
+                    backgroundColor: colors,
+                    borderColor: colors,
+                    hoverBackgroundColor: colors,
                     borderWidth: 1,
                     borderRadius: 6,
                     maxBarThickness: 36
