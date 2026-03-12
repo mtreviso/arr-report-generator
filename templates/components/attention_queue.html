@@ -96,8 +96,6 @@
             <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
                 <span><span class="flag-badge flag-issue">!</span> Review issue report</span>
                 <span><span class="flag-badge flag-emergency">⚡</span> Emergency review requested</span>
-                <span><span class="flag-badge" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;">✓</span> Emergency reviewer assigned</span>
-                <span><span class="flag-badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;">x missing</span> Missing expected reviews</span>
                 <!-- <span><span class="flag-badge" style="background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;">+x emer</span> x Emergency reviewers added</span> -->
                 <span><span class="flag-badge flag-ethics">E</span> Ethics concern</span>
                 <!-- <span><span class="flag-badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;">x missing</span> Missing x expected reviews</span> -->
@@ -107,19 +105,19 @@
     </div>
 
     <p class="text-xs text-gray-500 mb-3">
-        Papers flagged for one or more of: review issue reported, ethics concern, emergency review workflow, or fewer reviews than expected.
+        Papers flagged for one or more of: review issue reported, ethics concern, emergency review requested, or fewer reviews than expected. The emergency badges indicate whether emergency review was requested and whether an emergency reviewer is currently assigned.
     </p>
 
     <div class="overflow-x-auto w-full">
         <table id="attention-table" class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:50px;">#</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:50px;" title="Paper number">#</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:200px;">Title</th>
                     {% if has_sac %}<th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:120px;">SAC</th>{% endif %}
                     {% if has_ac %}<th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:120px;">AC</th>{% endif %}
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:120px;">Reviews</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:150px;">Flags</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:120px;" title="Completed reviews divided by expected reviews for this paper">Reviews</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:150px;" title="Issue, ethics, emergency, and missing-review flags for this paper">Flags</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -177,7 +175,7 @@
                         {% endif %}
                         {% if p.get('Has Emergency Reviewer') %}
                             <span class="flag-badge flag-emergency"
-                                  data-tip="Emergency reviewer assigned">✓</span>
+                                  title="Emergency reviewer assigned">✓</span>
                         {% endif %}
                         {% if p.get('Missing Reviews', 0) > 0 %}
                             <span class="flag-badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;">

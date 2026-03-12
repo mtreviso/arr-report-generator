@@ -39,7 +39,7 @@
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Late Reviews</label>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Late Papers</label>
                 <select id="ac-late-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
                     <option value="">All</option>
                     <option value="1">Has late papers</option>
@@ -85,16 +85,13 @@
                     {% endif %}
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:130px;">Area Chair</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:160px;">Affiliation</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;">Completed</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;">Expected</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;">Papers Ready</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:60px;">Total</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:75px;">All Ready</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:90px;">Meta Reviews</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:90px;">All Meta Done</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:70px;" title="Papers with fewer reviews than expected">Late Rev.</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Papers with emergency review declared">⚡ Emerg.</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;" title="Emergency declared but no reviewer assigned">⚡ Unmet</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;" title="Completed reviewer assignments divided by expected reviewer assignments across this AC's papers">Reviews</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Percentage of expected reviews that have been completed across this AC's papers">Review %</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:95px;" title="Meta-reviews completed by this AC, divided by total papers handled by this AC">Meta Reviews</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:85px;" title="Whether every paper handled by this AC already has a meta-review">Meta Ready</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:85px;" title="Number of papers with fewer completed reviews than expected">Late Papers</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Number of papers with an emergency review request or declaration">⚡ Emerg.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;" title="Number of papers where emergency review was requested but no emergency reviewer is currently assigned">⚡ Unmet</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -124,18 +121,20 @@
                         {% else %}<span {% if ac_affil %}title="{{ ac_affil }}"{% endif %}>{{ ac["Area Chair"] }}</span>{% endif %}
                     </td>
                     <td class="text-gray-400 affiliation-cell" style="font-size:0.7rem;"><div class="affiliation-cell-inner" title="{{ ac.get("Area Chair Affiliation", "") or "–" }}">{{ ac.get("Area Chair Affiliation", "") or "–" }}</div></td>
-                    <td class="whitespace-nowrap text-gray-500">{{ ac["Completed_Reviews"] }}</td>
-                    <td class="whitespace-nowrap text-gray-500">{{ ac["Expected_Reviews"] }}</td>
-                    <td class="whitespace-nowrap text-gray-500">{{ ac["Papers_Ready"] }}</td>
-                    <td class="whitespace-nowrap text-gray-500">{{ ac["Num_Papers"] }}</td>
+                    <td class="whitespace-nowrap text-gray-500">{{ ac["Completed_Reviews"] }} / {{ ac["Expected_Reviews"] }}</td>
+                    {% set review_pct = (100.0 * ac["Completed_Reviews"] / ac["Expected_Reviews"]) if ac["Expected_Reviews"] else 100.0 %}
                     <td class="whitespace-nowrap">
-                        <span class="inline-flex items-center px-2 py-0.5 text-xs rounded-full {% if ac['All Reviews Ready'] %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-500{% endif %}">
-                            {{ ac["All Reviews Ready"] or "–" }}
+                        <span class="inline-flex items-center px-2 py-0.5 text-xs rounded-full
+                            {% if review_pct >= 99.95 %}bg-green-100 text-green-800
+                            {% elif review_pct >= 80 %}bg-yellow-100 text-yellow-800
+                            {% else %}bg-red-100 text-red-700{% endif %}"
+                            title="{{ ac['Completed_Reviews'] }} of {{ ac['Expected_Reviews'] }} expected reviews completed across this AC's papers">
+                            {{ review_pct | round(0, 'common') | int }}%
                         </span>
                     </td>
                     <td class="whitespace-nowrap text-gray-500">{{ ac["Meta_Reviews_Done"] }}</td>
                     <td class="whitespace-nowrap">
-                        <span class="inline-flex items-center px-2 py-0.5 text-xs rounded-full {% if ac['All Meta-reviews Ready'] %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-500{% endif %}">
+                        <span class="inline-flex items-center px-2 py-0.5 text-xs rounded-full {% if ac['All Meta-reviews Ready'] %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-500{% endif %}" title="{{ 'All papers have a meta-review' if ac['All Meta-reviews Ready'] else 'Still missing one or more meta-reviews' }}">
                             {{ ac["All Meta-reviews Ready"] or "–" }}
                         </span>
                     </td>

@@ -168,8 +168,6 @@
                     <span><span class="flag-badge flag-warn">&#9888;</span> Low-confidence reviewer (conf. &#8804; 2)</span>
                     <span><span class="flag-badge flag-ethics" >E</span> Ethics concern</span>
                     <span><span class="flag-badge flag-emergency">⚡</span> Emergency review requested (⚠ = no reviewer yet)</span>
-                    <span><span class="flag-badge" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;">✓</span> Emergency reviewer assigned</span>
-                    <span><span class="flag-badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;">x missing</span> Missing expected reviews</span>
                 </div>
             </div>
         </div>
@@ -179,19 +177,19 @@
         <table id="pc-papers-table" class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:36px;width:36px;">#</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:36px;width:36px;" title="Paper number">#</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:200px;">Title</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:48px;width:48px;">Type</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:110px;">SAC</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:110px;">AC</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:72px;width:72px;">Flags</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:60px;width:60px;">Reviews</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:42px;width:42px;">Ready</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:110px;">Confidence</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">Soundness</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">Excitement</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">Overall</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:55px;width:55px;">Meta</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:72px;width:72px;" title="Issue, ethics, emergency, and other paper flags">Flags</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:60px;width:60px;" title="Completed reviews divided by expected reviews for this paper">Reviews</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:42px;width:42px;" title="Whether this paper already has all expected reviews">Ready</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:110px;" title="Average reviewer confidence score">Confidence</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;" title="Average reviewer soundness score">Soundness</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;" title="Average reviewer excitement or significance score">Excitement</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;" title="Average reviewer overall assessment score">Overall</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:55px;width:55px;" title="Area Chair or meta-review score for this paper">Meta</th>
                 </tr>
             </thead>
         </table>
@@ -249,15 +247,6 @@
             const tip = 'Emergency review requested ('+esc(row['Emergency Declaration Count'] || 0)+')' + (boolish(row['Has Emergency Reviewer']) ? '&#10;✓ Emergency reviewer assigned' : '&#10;⚠ No emergency reviewer yet');
             const badge = '<span class="tip flag-badge flag-emergency" data-tip="'+tip+'">⚡</span>';
             parts.push(row['Emergency Declaration Link'] ? '<a href="'+esc(row['Emergency Declaration Link'])+'" target="_blank">'+badge+'</a>' : badge);
-        }
-        if (boolish(row['Has Emergency Reviewer'])) {
-            parts.push('<span class="tip flag-badge" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;" data-tip="Emergency reviewer assigned">✓</span>');
-        }
-        const expectedReviews = Number(row['Expected Reviews'] || 0);
-        const completedReviews = Number(row['Completed Reviews'] || 0);
-        const missingReviews = Math.max(0, expectedReviews - completedReviews);
-        if (missingReviews > 0) {
-            parts.push('<span class="tip flag-badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;" data-tip="Missing expected reviews">'+esc(String(missingReviews))+' missing</span>');
         }
         if (!parts.length) return '<span class="text-gray-300">&#8211;</span>';
         return '<div class="flex gap-1 items-center justify-start">'+parts.join('')+'</div>';

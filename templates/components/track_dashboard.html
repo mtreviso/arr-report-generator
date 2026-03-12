@@ -15,21 +15,23 @@
     {% if not track_data %}
     <p class="text-gray-500 text-sm">No track/area data available for this venue (the <code>track</code> or <code>area</code> field may not be set).</p>
     {% else %}
-    <div class="flex flex-col md:flex-row gap-6">
-        <div class="w-full md:w-2/5">
-            <canvas id="track-chart" style="max-height:320px;"></canvas>
+    <div class="space-y-6">
+        <div class="w-full rounded-lg border border-gray-200 bg-white p-4">
+            <div style="height:420px;">
+                <canvas id="track-chart"></canvas>
+            </div>
         </div>
-        <div class="w-full md:w-3/5 overflow-x-auto">
+        <div class="w-full overflow-x-auto">
             <table id="track-table" class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:160px;">Track / Area</th>
-                        <th class="text-xs text-gray-500 uppercase tracking-wider">Papers</th>
-                        <th class="text-xs text-gray-500 uppercase tracking-wider">Meta Done</th>
-                        <th class="text-xs text-gray-500 uppercase tracking-wider">Meta %</th>
-                        <th class="text-xs text-gray-500 uppercase tracking-wider">Avg Overall</th>
-                        <th class="text-xs text-gray-500 uppercase tracking-wider">Avg Meta</th>
-                        <th class="text-xs text-gray-500 uppercase tracking-wider">Issues</th>
+                        <th class="text-xs text-gray-500 uppercase tracking-wider" title="Total papers in this track or area">Papers</th>
+                        <th class="text-xs text-gray-500 uppercase tracking-wider" title="Completed meta-reviews divided by total papers in this track or area">Meta Done</th>
+                        <th class="text-xs text-gray-500 uppercase tracking-wider" title="Percentage of papers in this track or area that already have a meta-review">Meta %</th>
+                        <th class="text-xs text-gray-500 uppercase tracking-wider" title="Average reviewer overall score for papers in this track or area">Avg Overall</th>
+                        <th class="text-xs text-gray-500 uppercase tracking-wider" title="Average AC/meta-review score for papers in this track or area">Avg Meta</th>
+                        <th class="text-xs text-gray-500 uppercase tracking-wider" title="Papers in this track or area with at least one review issue report">Issues</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -67,26 +69,39 @@
         if (!ctx) return;
         const trackData = {{ track_data | tojson }};
         if (!trackData.length) return;
-        const colors = ['rgba(99,102,241,0.7)','rgba(59,130,246,0.7)','rgba(16,185,129,0.7)',
-            'rgba(245,158,11,0.7)','rgba(239,68,68,0.7)','rgba(168,85,247,0.7)',
-            'rgba(20,184,166,0.7)','rgba(249,115,22,0.7)','rgba(236,72,153,0.7)','rgba(75,85,99,0.7)'];
         window.ReportCommon.replaceChart(ctx, {
-            type: 'doughnut',
+            type: 'bar',
             data: {
                 labels: trackData.map(r => r.Track),
                 datasets: [{
+                    label: 'Papers',
                     data: trackData.map(r => r.Papers),
-                    backgroundColor: colors.slice(0, trackData.length),
-                    borderWidth: 1
+                    backgroundColor: 'rgba(99, 102, 241, 0.72)',
+                    hoverBackgroundColor: 'rgba(79, 70, 229, 0.86)',
+                    borderColor: 'rgba(79, 70, 229, 0.95)',
+                    borderWidth: 1,
+                    borderRadius: 6,
+                    maxBarThickness: 36
                 }]
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, ticks: { precision: 0 } },
+                    x: {
+                        ticks: {
+                            autoSkip: false,
+                            maxRotation: 90,
+                            minRotation: 90,
+                            font: { size: 10 }
+                        }
+                    }
+                },
                 plugins: {
-                    legend: {position:'right', labels:{boxWidth:12, padding:10, font:{size:11}}},
+                    legend: { display: false },
                     tooltip: {callbacks: {label(ctx) {
                         const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
-                        return `${ctx.label}: ${ctx.raw} (${Math.round(ctx.raw/total*100)}%)`;
+                        return `${ctx.label}: ${ctx.raw} papers (${Math.round(ctx.raw/total*100)}%)`;
                     }}}
                 }
             }
