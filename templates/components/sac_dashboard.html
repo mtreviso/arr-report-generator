@@ -1,0 +1,201 @@
+<style>
+  #sac-dashboard-table th, #sac-dashboard-table td {
+    padding: 5px 6px !important;
+    outline: none !important;
+    text-align: left !important;
+  }
+  #sac-dashboard-table thead th {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    font-weight: 400 !important;
+  }
+  .dt-column-order { display: none !important; }
+  #sac-dashboard-table thead th::after {
+    content: ' ↕'; font-size: 0.65rem; color: #9ca3af; opacity: 0.6;
+  }
+  #sac-dashboard-table thead th.dt-ordering-asc::after  { content: ' ↑'; color: #4f46e5; opacity: 1; }
+  #sac-dashboard-table thead th.dt-ordering-desc::after { content: ' ↓'; color: #4f46e5; opacity: 1; }
+</style>
+
+<div class="px-2 py-4 sm:p-5">
+    {% if not sac_meta %}
+    <p class="text-gray-500 text-sm">No Senior Area Chair assignment data available for this venue.</p>
+    {% else %}
+
+    <!-- Filters -->
+    <div class="bg-gray-50 rounded-lg border border-gray-200 p-4 mb-4">
+        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Filters</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">All Meta Done</label>
+                <select id="sac-meta-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="">All</option>
+                    <option value="1">✓ All done</option>
+                    <option value="0">Pending</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Late Papers</label>
+                <select id="sac-late-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="">All</option>
+                    <option value="1">Has late papers</option>
+                    <option value="0">None late</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Issues</label>
+                <select id="sac-issues-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="">All</option>
+                    <option value="1">Has issues</option>
+                    <option value="0">No issues</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Emergency</label>
+                <select id="sac-emergency-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="">All</option>
+                    <option value="declared">⚡ Declared</option>
+                    <option value="unmet">⚡ Unmet</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Per page</label>
+                <select id="sac-length-select" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="25" selected>25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="-1">All</option>
+                </select>
+            </div>
+        </div>
+        <div class="mt-3 flex items-center gap-3">
+            <div class="flex-1" style="max-width:360px;">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Search</label>
+                <input id="sac-search-input" type="text" placeholder="SAC name…"
+                    class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+            </div>
+            <div class="mt-4">
+                <button id="sac-reset-btn" class="py-2 px-3 text-xs bg-white border border-gray-300 rounded-md text-gray-600 hover:bg-gray-100">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="overflow-x-auto w-full">
+        <table id="sac-dashboard-table" class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:160px;">Senior Area Chair</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:160px;">Affiliation</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:70px;" title="Total papers handled by this Senior Area Chair">Papers</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;" title="Completed reviewer assignments divided by expected reviewer assignments across this SAC's papers">Reviews</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Percentage of expected reviews that have been completed">Review %</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:110px;" title="Meta-reviews completed divided by total papers handled by this SAC">Meta Reviews</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Whether every paper handled by this SAC already has a meta-review">Meta Ready</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:85px;" title="Number of papers with fewer completed reviews than expected">Late Papers</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:70px;" title="Papers with at least one review issue report">Issues</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Number of papers with an emergency review request or declaration">⚡ Emerg.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;" title="Number of papers where emergency review was requested but no emergency reviewer is currently assigned">⚡ Unmet</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Papers containing at least one low-confidence review">Low Conf</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:70px;" title="Papers with an ethics concern flag">Ethics</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for sac in sac_meta %}
+                <tr
+                    data-all-meta="{{ 1 if sac['All_Meta_Done'] else 0 }}"
+                    data-late="{{ 1 if sac.get('Late_Papers',0) > 0 else 0 }}"
+                    data-issues="{{ 1 if sac['Review_Issues'] > 0 else 0 }}"
+                    data-emergency="{{ 1 if sac.get('Emergency_Declared',0) > 0 else 0 }}"
+                    data-emergency-unmet="{{ 1 if sac.get('Emergency_Unassigned',0) > 0 else 0 }}"
+                >
+                    <td class="whitespace-nowrap text-gray-900">
+                        {% set sac_id    = sac.get("Senior Area Chair ID") %}
+                        {% set sac_affil = sac.get("Senior Area Chair Affiliation", "") %}
+                        {% if sac_id %}
+                            <a href="https://openreview.net/profile?id={{ sac_id }}" target="_blank"
+                               class="text-gray-900 hover:underline" style="text-decoration:none;"
+                               {% if sac_affil %}title="{{ sac_affil }}"{% endif %}>{{ sac["Senior Area Chair"] }}</a>
+                        {% else %}<span {% if sac_affil %}title="{{ sac_affil }}"{% endif %}>{{ sac["Senior Area Chair"] }}</span>{% endif %}
+                    </td>
+                    <td class="text-gray-400 affiliation-cell" style="font-size:0.7rem;"><div class="affiliation-cell-inner" title="{{ sac.get("Senior Area Chair Affiliation", "") or "–" }}">{{ sac.get("Senior Area Chair Affiliation", "") or "–" }}</div></td>
+                    <td class="whitespace-nowrap text-gray-500">{{ sac["Num_Papers"] }}</td>
+                    <td class="whitespace-nowrap text-gray-500">{{ sac["Completed_Reviews"] }} / {{ sac["Expected_Reviews"] }}</td>
+                    <td class="whitespace-nowrap">
+                        <span class="inline-flex items-center px-2 py-0.5 text-xs rounded-full
+                            {% if sac['Review_Pct'] == 100 %}bg-green-100 text-green-800
+                            {% elif sac['Review_Pct'] >= 80 %}bg-yellow-100 text-yellow-800
+                            {% else %}bg-red-100 text-red-700{% endif %}">
+                            {{ sac["Review_Pct"] }}%
+                        </span>
+                    </td>
+                    <td class="whitespace-nowrap text-gray-500">{{ sac["Meta_Reviews_Done"] }}</td>
+                    <td class="whitespace-nowrap">
+                        {% if sac["All_Meta_Done"] %}
+                        <span class="inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-800">✓</span>
+                        {% else %}<span class="text-gray-300">–</span>{% endif %}
+                    </td>
+                    <td class="whitespace-nowrap {% if sac.get('Late_Papers',0) > 0 %}text-red-600 font-medium{% else %}text-gray-400{% endif %}">
+                        {{ sac["Late_Papers"] if sac.get("Late_Papers",0) > 0 else "–" }}
+                    </td>
+                    <td class="whitespace-nowrap {% if sac['Review_Issues'] > 0 %}text-red-600 font-medium{% else %}text-gray-400{% endif %}">
+                        {{ sac["Review_Issues"] if sac["Review_Issues"] > 0 else "–" }}
+                    </td>
+                    <td class="whitespace-nowrap {% if sac.get('Emergency_Declared',0) > 0 %}text-blue-600{% else %}text-gray-400{% endif %}">
+                        {% if sac.get("Emergency_Declared",0) > 0 %}⚡ {{ sac["Emergency_Declared"] }}{% else %}–{% endif %}
+                    </td>
+                    <td class="whitespace-nowrap {% if sac.get('Emergency_Unassigned',0) > 0 %}text-orange-600 font-medium{% else %}text-gray-400{% endif %}">
+                        {% if sac.get("Emergency_Unassigned",0) > 0 %}⚠ {{ sac["Emergency_Unassigned"] }}{% else %}–{% endif %}
+                    </td>
+                    <td class="whitespace-nowrap {% if sac['Low_Conf_Papers'] > 0 %}text-yellow-600{% else %}text-gray-400{% endif %}">
+                        {{ sac["Low_Conf_Papers"] if sac["Low_Conf_Papers"] > 0 else "–" }}
+                    </td>
+                    <td class="whitespace-nowrap {% if sac['Ethics_Papers'] > 0 %}text-orange-600 font-medium{% else %}text-gray-400{% endif %}">
+                        {{ sac["Ethics_Papers"] if sac["Ethics_Papers"] > 0 else "–" }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+$(document).ready(function() {
+    if (!$('#sac-dashboard-table tbody tr').length) return;
+
+    const sacDt = $('#sac-dashboard-table').DataTable({
+        deferRender: true,
+        pageLength: 25,
+        autoWidth: false,
+        order: [[1, 'desc']],
+        layout: { topStart: null, topEnd: null, bottomStart: 'info', bottomEnd: 'paging' }
+    });
+
+    $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+        if (settings.nTable.id !== 'sac-dashboard-table') return true;
+        const row       = $(settings.aoData[dataIndex].nTr);
+        const metaF     = $('#sac-meta-filter').val();
+        const lateF     = $('#sac-late-filter').val();
+        const issuesF   = $('#sac-issues-filter').val();
+        const emergF    = $('#sac-emergency-filter').val();
+
+        if (metaF   && row.attr('data-all-meta') !== metaF) return false;
+        if (lateF   && row.attr('data-late')     !== lateF) return false;
+        if (issuesF && row.attr('data-issues')   !== issuesF) return false;
+        if (emergF === 'declared' && row.attr('data-emergency')       !== '1') return false;
+        if (emergF === 'unmet'    && row.attr('data-emergency-unmet') !== '1') return false;
+        return true;
+    });
+
+    $('#sac-meta-filter, #sac-late-filter, #sac-issues-filter, #sac-emergency-filter').on('change', function() { sacDt.draw(); });
+    $('#sac-search-input').on('input', function() { sacDt.search(this.value).draw(); });
+    $('#sac-length-select').on('change', function() { sacDt.page.len(this.value).draw(); });
+    $('#sac-reset-btn').on('click', function() {
+        $('#sac-meta-filter, #sac-late-filter, #sac-issues-filter, #sac-emergency-filter').val('');
+        $('#sac-search-input').val('');
+        $('#sac-length-select').val('25');
+        sacDt.search('').page.len(25).draw();
+    });
+});
+</script>

@@ -1,0 +1,151 @@
+<script>
+window.ReportCommon = (function() {
+    const initRegistry = {};
+    const chartRegistry = {};
+
+    function parseJsonScript(id) {
+        const el = document.getElementById(id);
+        if (!el) return [];
+        try {
+            return JSON.parse(el.textContent || '[]');
+        } catch (err) {
+            console.error('Failed to parse JSON script', id, err);
+            return [];
+        }
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function parseAvg(value) {
+        if (value === null || value === undefined) return null;
+        if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+        const match = String(value).match(/-?\d+(?:\.\d+)?/);
+        if (!match) return null;
+        const parsed = parseFloat(match[0]);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    function markdownToHtml(text) {
+        if (!text) return '';
+        if (window.marked && typeof window.marked.parse === 'function') {
+            return window.marked.parse(String(text));
+        }
+        return '<pre class="whitespace-pre-wrap">' + escapeHtml(text) + '</pre>';
+    }
+
+    function initOnce(key, fn) {
+        if (initRegistry[key]) return false;
+        initRegistry[key] = true;
+        fn();
+        return true;
+    }
+
+    function replaceChart(canvasOrId, config) {
+        if (!window.Chart) return null;
+        const canvas = typeof canvasOrId === 'string' ? document.getElementById(canvasOrId) : canvasOrId;
+        if (!canvas) return null;
+        const key = canvas.id || String(canvasOrId);
+        try {
+            const existing = chartRegistry[key] || (typeof Chart.getChart === 'function' ? Chart.getChart(canvas) : null);
+            if (existing) {
+                existing.destroy();
+                delete chartRegistry[key];
+            }
+        } catch (err) {
+            console.warn('Could not destroy existing chart for', key, err);
+        }
+        const instance = new Chart(canvas.getContext('2d'), config);
+        chartRegistry[key] = instance;
+        return instance;
+    }
+
+    function destroyChart(canvasOrId) {
+        const canvas = typeof canvasOrId === 'string' ? document.getElementById(canvasOrId) : canvasOrId;
+        const key = typeof canvasOrId === 'string' ? canvasOrId : canvasOrId && canvasOrId.id;
+        const existing = key && chartRegistry[key] ? chartRegistry[key] : (canvas && typeof Chart !== 'undefined' && typeof Chart.getChart === 'function' ? Chart.getChart(canvas) : null);
+        if (!existing) return;
+        existing.destroy();
+        if (key) delete chartRegistry[key];
+    }
+
+    function positionTip(el, ev) {
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        const baseX = ev && Number.isFinite(ev.clientX) ? ev.clientX : (r.left + r.width / 2);
+        const baseY = ev && Number.isFinite(ev.clientY) ? ev.clientY : r.top;
+        const x = Math.max(18, Math.min(window.innerWidth - 18, baseX));
+        const y = Math.max(18, baseY - 14);
+        el.style.setProperty('--tx', `${x}px`);
+        el.style.setProperty('--ty', `${y}px`);
+        el.style.setProperty('--ay', `${y + 10}px`);
+        if (x < 140 || r.left < 40) {
+            el.classList.add('tip-left');
+        } else {
+            el.classList.remove('tip-left');
+        }
+    }
+
+    document.addEventListener('mouseenter', function(ev) {
+        const target = ev.target && ev.target.closest ? ev.target : (ev.target && ev.target.parentElement ? ev.target.parentElement : null);
+        const tip = target && target.closest ? target.closest('.tip') : null;
+        if (tip) positionTip(tip, ev);
+    }, true);
+    document.addEventListener('mousemove', function(ev) {
+        const target = ev.target && ev.target.closest ? ev.target : (ev.target && ev.target.parentElement ? ev.target.parentElement : null);
+        const tip = target && target.closest ? target.closest('.tip') : null;
+        if (tip) positionTip(tip, ev);
+    }, true);
+
+    return { parseJsonScript, escapeHtml, parseAvg, markdownToHtml, initOnce, replaceChart, destroyChart, positionTip };
+})();
+
+document.addEventListener('DOMContentLoaded', function() {
+    const buttons = Array.from(document.querySelectorAll('.tab-button'));
+    const contents = Array.from(document.querySelectorAll('.tab-content'));
+
+    function showTab(tabId) {
+        buttons.forEach(btn => {
+            const active = btn.dataset.tab === tabId;
+            btn.classList.toggle('active', active);
+            btn.classList.toggle('border-indigo-500', active);
+            btn.classList.toggle('text-indigo-600', active);
+            btn.classList.toggle('border-transparent', !active);
+            btn.classList.toggle('text-gray-500', !active);
+        });
+        contents.forEach(el => el.classList.toggle('active', el.id === tabId));
+        document.dispatchEvent(new CustomEvent('report:tabshown', { detail: { tabId } }));
+    }
+
+    buttons.forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
+
+    const firstActive = document.querySelector('.tab-button.active');
+    if (firstActive) {
+        showTab(firstActive.dataset.tab);
+    }
+
+    document.addEventListener('report:tabshown', function(event) {
+        if (event.detail.tabId !== 'analytics-tab') return;
+        window.ReportCommon.initOnce('analytics-tab', function() {
+            const fns = [
+                'renderScoreDistributionChart',
+                'initPaperTypeChart',
+                'initReviewCompletionChart',
+                'initScoreCharts',
+                'initACScoringTable',
+            ];
+            fns.forEach((name, idx) => {
+                if (typeof window[name] === 'function') {
+                    setTimeout(() => window[name](), idx * 60);
+                }
+            });
+        });
+    });
+});
+</script>

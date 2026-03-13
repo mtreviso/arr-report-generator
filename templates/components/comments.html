@@ -1,182 +1,48 @@
-
-<!-- Template function for rendering comment threads -->
-{% macro render_comment_thread(thread, level) %}
-    {% set comment = thread.comment %}
-    {% set bg_color = "bg-gray-50" if level % 2 == 0 else "bg-white" %}
-    {% set indent = level * 20 %}
-    
-    <div class="comment-thread mb-3 ml-{{ indent }} {{ bg_color }} border-l-4 border-gray-200 rounded-lg shadow-sm overflow-hidden comment-item"
-         data-paper="{{ comment['Paper #'] }}" 
-         data-type="{{ comment.Type }}" 
-         data-role="{{ comment.Role }}">
-        <div class="px-4 py-3">
-            <div class="flex justify-between items-start">
-                <div>
-                    <!-- <span class="inline-block mr-2 text-xs font-medium text-gray-500">Paper #{{ comment['Paper #'] }}</span> -->
-                    {% if comment.Type == "Review Issue" %}
-                        <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 mr-2">{{ comment.Type }}</span>
-                    {% elif comment.Type == "Author-Editor Confidential" %}
-                        <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 mr-2">{{ comment.Type }}</span>
-                    {% else %}
-                        <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 mr-2">{{ comment.Type }}</span>
-                    {% endif %}
-                    <span class="font-medium">{{ comment.Role }}</span>
-                    <span class="text-sm text-gray-500 ml-2">{{ comment.Date }}</span>
-                </div>
-                <a href="{{ comment.Link }}" target="_blank" class="text-indigo-600 hover:text-indigo-900 text-sm">View on OpenReview</a>
-            </div>
-            <div class="mt-2 markdown-content comment-content" id="comment-{{ comment.NoteId }}">
-                <!-- Content will be rendered here -->
-            </div>
-        </div>
-    </div>
-    
-    {% if thread.children %}
-        {% for child in thread.children %}
-            {{ render_comment_thread(child, level + 1) }}
-        {% endfor %}
-    {% endif %}
-{% endmacro %}
+<style>
+    .markdown-content { font-size: 0.75rem; line-height: 1.6; word-wrap: break-word; overflow-wrap: break-word; }
+    .markdown-content p { margin-top: 0.5em; margin-bottom: 0.5em; }
+    .markdown-content h1,.markdown-content h2,.markdown-content h3 { margin-top:1.5em; margin-bottom:0.5em; font-weight:600; }
+    .markdown-content h1{font-size:1.5em;}.markdown-content h2{font-size:1.25em;}.markdown-content h3{font-size:1.125em;}
+    .markdown-content ul,.markdown-content ol { margin-top:0.5em; margin-bottom:0.5em; padding-left:1.5em; }
+    .markdown-content ul{list-style-type:disc;}.markdown-content ol{list-style-type:decimal;}
+    .markdown-content li{margin-top:0.25em;margin-bottom:0.25em;}
+    .markdown-content code { font-family:monospace; padding:0.2em 0.4em; background:rgba(175,184,193,0.2); border-radius:0.25em; font-size:0.9em; white-space:pre-wrap; }
+    .markdown-content pre { padding:1em; margin:0.5em 0; background:#f6f8fa; border-radius:0.375em; overflow-x:auto; white-space:pre; }
+    .markdown-content pre code { background:transparent; padding:0; }
+    .markdown-content blockquote { padding-left:1em; border-left:0.25em solid #d1d5db; color:#6b7280; margin:0.5em 0; }
+    .markdown-content a { color:#3b82f6; text-decoration:underline; }
+    .markdown-content table { border-collapse:collapse; width:100%; margin:1em 0; }
+    .markdown-content table th,.markdown-content table td { border:1px solid #d1d5db; padding:0.5em; }
+    .markdown-content table th { background:#f3f4f6; }
+    .comments-page-btn { transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease; }
+    .comments-page-btn:hover:not(:disabled) { background:#f5f7ff !important; color:#4338ca !important; border-color:#c7d2fe !important; box-shadow:0 1px 3px rgba(79,70,229,0.12); }
+    .comments-page-btn:active:not(:disabled) { transform:translateY(1px); }
+    .comments-page-btn:focus-visible { outline:none; box-shadow:0 0 0 3px rgba(99,102,241,0.18); }
+</style>
 
 <div class="px-4 py-5 sm:p-6">
-    <!-- Additional styles for markdown content -->
-    <style>
-        .markdown-content {
-            line-height: 1.6;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-        }
-        
-        .markdown-content p {
-            margin-top: 0.5em;
-            margin-bottom: 0.5em;
-        }
-        
-        .markdown-content h1,
-        .markdown-content h2,
-        .markdown-content h3,
-        .markdown-content h4,
-        .markdown-content h5,
-        .markdown-content h6 {
-            margin-top: 1.5em;
-            margin-bottom: 0.5em;
-            font-weight: 600;
-            line-height: 1.25;
-        }
-        
-        .markdown-content h1 { font-size: 1.5em; }
-        .markdown-content h2 { font-size: 1.25em; }
-        .markdown-content h3 { font-size: 1.125em; }
-        
-        .markdown-content ul, 
-        .markdown-content ol {
-            margin-top: 0.5em;
-            margin-bottom: 0.5em;
-            padding-left: 1.5em;
-        }
-        
-        .markdown-content ul { list-style-type: disc; }
-        .markdown-content ol { list-style-type: decimal; }
-        
-        .markdown-content li {
-            margin-top: 0.25em;
-            margin-bottom: 0.25em;
-        }
-        
-        .markdown-content code {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-            padding: 0.2em 0.4em;
-            background-color: rgba(175, 184, 193, 0.2);
-            border-radius: 0.25em;
-            font-size: 0.9em;
-            white-space: pre-wrap;
-        }
-        
-        .markdown-content pre {
-            padding: 1em;
-            margin: 0.5em 0;
-            background-color: #f6f8fa;
-            border-radius: 0.375em;
-            overflow-x: auto;
-            white-space: pre;
-        }
-        
-        .markdown-content pre code {
-            background-color: transparent;
-            padding: 0;
-            font-size: 0.9em;
-            white-space: pre;
-        }
-        
-        .markdown-content blockquote {
-            padding-left: 1em;
-            border-left: 0.25em solid #d1d5db;
-            color: #6b7280;
-            margin: 0.5em 0;
-        }
-        
-        .markdown-content a {
-            color: #3b82f6;
-            text-decoration: underline;
-        }
-        
-        .markdown-content a:hover {
-            color: #2563eb;
-        }
-        
-        .markdown-content img {
-            max-width: 100%;
-            height: auto;
-        }
-        
-        .markdown-content table {
-            border-collapse: collapse;
-            width: 100%;
-            margin: 1em 0;
-        }
-        
-        .markdown-content table th,
-        .markdown-content table td {
-            border: 1px solid #d1d5db;
-            padding: 0.5em;
-        }
-        
-        .markdown-content table th {
-            background-color: #f3f4f6;
-        }
-        
-        .markdown-content hr {
-            height: 0.25em;
-            padding: 0;
-            margin: 1.5em 0;
-            background-color: #e5e7eb;
-            border: 0;
-        }
-    </style>
-
-    <!-- Filters for comments -->
     <div class="mb-6 bg-gray-50 p-4 rounded-lg">
-        <h3 class="text-lg font-medium text-gray-900 mb-3">Filter Comments</h3>
+        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Filters</h3>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-                <label for="paper-filter" class="block text-sm font-medium text-gray-700 mb-1">Paper #</label>
-                <select id="paper-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm w-full">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Paper #</label>
+                <select id="paper-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
                     <option value="all">All Papers</option>
-                    <!-- Paper options will be populated by JavaScript -->
                 </select>
             </div>
             <div>
-                <label for="type-filter" class="block text-sm font-medium text-gray-700 mb-1">Comment Type</label>
-                <select id="type-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm w-full">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Comment Type</label>
+                <select id="type-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
                     <option value="all">All Types</option>
                     <option value="Review Issue">Review Issues</option>
+                    <option value="Meta Review Issue">Meta Review Issues</option>
                     <option value="Author-Editor Confidential">Author-Editor Confidential</option>
                     <option value="Confidential Comment">Confidential Comments</option>
                 </select>
             </div>
             <div>
-                <label for="role-filter" class="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                <select id="role-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm w-full">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Role</label>
+                <select id="role-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
                     <option value="all">All Roles</option>
                     <option value="Author">Author</option>
                     <option value="Reviewer">Reviewer</option>
@@ -186,8 +52,8 @@
                 </select>
             </div>
             <div>
-                <label for="comments-per-page" class="block text-sm font-medium text-gray-700 mb-1">Comments per page</label>
-                <select id="comments-per-page" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm w-full">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Per page</label>
+                <select id="comments-per-page" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
                     <option value="10">10</option>
                     <option value="20">20</option>
                     <option value="30" selected>30</option>
@@ -198,287 +64,223 @@
         </div>
     </div>
 
-
-    <!-- Threaded view -->
     <div id="comments-threaded">
-        {% if comment_trees %}
-            <div id="no-comments-message" class="hidden text-center py-8 text-gray-500">No comments match the selected filters.</div>
-            
-            {% for paper in comment_trees %}
-                <div class="paper-section border-t border-gray-200 pt-4 mt-4 first:border-t-0 first:pt-0 first:mt-0" data-paper="{{ paper.paper_num }}">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Paper #{{ paper.paper_num }}</h3>
-                    {% for thread in paper.threads %}
-                        {{ render_comment_thread(thread, 0) }}
-                    {% endfor %}
-                </div>
-            {% endfor %}
-        {% else %}
-            <div class="text-center py-8 text-gray-500">No comments found.</div>
-        {% endif %}
+        <div id="no-comments-message" class="hidden text-center py-8 text-gray-500">No comments match the selected filters.</div>
     </div>
 
-
-    <!-- Pagination navigation -->
     <div id="pagination-container" class="mt-6 flex justify-center">
         <div class="inline-flex rounded-md shadow-sm">
-            <button id="prev-page" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                Previous
-            </button>
-            <div id="page-numbers" class="flex">
-                <!-- Page numbers will be inserted here by JavaScript -->
-            </div>
-            <button id="next-page" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-r-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                Next
-            </button>
+            <button id="prev-page" class="comments-page-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-l-md">Previous</button>
+            <div id="page-numbers" class="flex"></div>
+            <button id="next-page" class="comments-page-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-r-md">Next</button>
         </div>
     </div>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Pagination variables
+(function() {
+    function esc(v) { return window.ReportCommon.escapeHtml(v ?? ''); }
+    function typeBadge(type) {
+        if (type === 'Review Issue') return '<span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 mr-2">'+esc(type)+'</span>';
+        if (type === 'Meta Review Issue') return '<span class="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800 mr-2">'+esc(type)+'</span>';
+        if (type === 'Author-Editor Confidential') return '<span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 mr-2">'+esc(type)+'</span>';
+        return '<span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 mr-2">'+esc(type || 'Comment')+'</span>';
+    }
+    function authorHtml(comment) {
+        if (comment.AuthorName && comment.AuthorID) {
+            return '<a href="https://openreview.net/profile?id='+encodeURIComponent(comment.AuthorID)+'" target="_blank" class="text-gray-700 hover:underline" style="text-decoration:none;">'+esc(comment.AuthorName)+'</a><span class="text-gray-400"> ('+esc(comment.Role || '')+')</span>';
+        }
+        if (comment.AuthorName) {
+            return esc(comment.AuthorName) + ' <span class="text-gray-400">('+esc(comment.Role || '')+')</span>';
+        }
+        return esc(comment.Role || '');
+    }
+    function renderCommentItem(item) {
+        const c = item.comment;
+        const bgColor = item.level % 2 === 0 ? 'bg-gray-50' : 'bg-white';
+        return '<div class="comment-thread mb-3 '+bgColor+' border-l-4 border-gray-200 rounded-lg shadow-sm overflow-hidden comment-item" style="margin-left: '+(item.level * 20)+'px" data-paper="'+esc(c['Paper #'])+'" data-type="'+esc(c.Type)+'" data-role="'+esc(c.Role)+'">' +
+            '<div class="px-4 py-3">' +
+                '<div class="flex justify-between items-start">' +
+                    '<div>' +
+                        typeBadge(c.Type) +
+                        '<span class="text-xs font-medium text-gray-700">'+authorHtml(c)+'</span>' +
+                        '<span class="text-xs text-gray-400 ml-2">'+esc(c.Date || '')+'</span>' +
+                    '</div>' +
+                    '<a href="'+esc(c.Link || '#')+'" target="_blank" class="text-indigo-600 hover:text-indigo-900 text-xs flex-shrink-0 ml-4">View on OpenReview ↗</a>' +
+                '</div>' +
+                '<div class="mt-2 markdown-content comment-content">'+window.ReportCommon.markdownToHtml(c.Content || '')+'</div>' +
+            '</div>' +
+        '</div>';
+    }
+    function buildPaperTrees(comments) {
+        const papers = new Map();
+        comments.forEach((comment, idx) => {
+            const paperKey = String(comment['Paper #']);
+            if (!papers.has(paperKey)) papers.set(paperKey, []);
+            papers.get(paperKey).push({ ...comment, __index: idx });
+        });
+        const result = [];
+        Array.from(papers.keys()).sort((a,b)=>Number(a)-Number(b)).forEach(paperKey => {
+            const list = papers.get(paperKey);
+            const byId = new Map();
+            list.forEach(c => byId.set(c.NoteId, { comment: c, children: [] }));
+            const roots = [];
+            list.forEach(c => {
+                const node = byId.get(c.NoteId);
+                const parent = c.ReplyTo && byId.get(c.ReplyTo);
+                if (parent) parent.children.push(node);
+                else roots.push(node);
+            });
+            const flat = [];
+            const walk = (node, level) => {
+                flat.push({ comment: node.comment, level });
+                node.children.forEach(child => walk(child, level + 1));
+            };
+            roots.forEach(root => walk(root, 0));
+            result.push({ paper_num: paperKey, flat });
+        });
+        return result;
+    }
+
+    function initComments() {
+        const comments = window.ReportCommon.parseJsonScript('comments-json') || [];
+        const paperFilter   = document.getElementById('paper-filter');
+        const typeFilter    = document.getElementById('type-filter');
+        const roleFilter    = document.getElementById('role-filter');
+        const perPageSelect = document.getElementById('comments-per-page');
+        const threaded      = document.getElementById('comments-threaded');
+        const noMsg         = document.getElementById('no-comments-message');
+        const pageNumbers   = document.getElementById('page-numbers');
+        const prevBtn       = document.getElementById('prev-page');
+        const nextBtn       = document.getElementById('next-page');
+        const pagDiv        = document.getElementById('pagination-container');
+
         let currentPage = 1;
-        let commentsPerPage = 30;
+        let commentsPerPage = parseInt(perPageSelect.value, 10) || 30;
         let totalPages = 1;
         let visibleComments = [];
+        let grouped = [];
 
-        // Populate paper filter dropdown with comment counts
-        const paperFilter = document.getElementById('paper-filter');
-        const paperSections = document.querySelectorAll('.paper-section');
-        const commentItems = document.querySelectorAll('.comment-item');
-        const noCommentsMessage = document.getElementById('no-comments-message');
-        
-        // Count comments per paper
         const paperCounts = {};
-        commentItems.forEach(item => {
-            const paperNum = item.getAttribute('data-paper');
-            paperCounts[paperNum] = (paperCounts[paperNum] || 0) + 1;
+        comments.forEach(item => {
+            const p = String(item['Paper #']);
+            paperCounts[p] = (paperCounts[p] || 0) + 1;
         });
-        
-        // Build unique paper numbers set
-        const papers = new Set();
-        paperSections.forEach(section => {
-            papers.add(section.getAttribute('data-paper'));
+        Array.from(new Set(comments.map(c => String(c['Paper #'])))).sort((a,b)=>Number(a)-Number(b)).forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p;
+            opt.textContent = `Paper #${p} (${paperCounts[p] || 0})`;
+            paperFilter.appendChild(opt);
         });
-        
-        // Add paper options to dropdown with comment counts
-        const paperArray = Array.from(papers).sort((a, b) => parseInt(a) - parseInt(b));
-        paperArray.forEach(paper => {
-            const option = document.createElement('option');
-            option.value = paper;
-            option.textContent = `Paper #${paper} (${paperCounts[paper] || 0})`;
-            paperFilter.appendChild(option);
+
+        const knownTypes = new Set(['all', 'Review Issue', 'Meta Review Issue', 'Author-Editor Confidential', 'Confidential Comment']);
+        Array.from(new Set(comments.map(c => c.Type).filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b))).forEach(t => {
+            if (knownTypes.has(t)) return;
+            const opt = document.createElement('option');
+            opt.value = t;
+            opt.textContent = t;
+            typeFilter.appendChild(opt);
         });
-        
-        // Build unique role set
-        const roles = new Set();
-        commentItems.forEach(item => {
-            roles.add(item.getAttribute('data-role'));
+
+        const knownRoles = new Set(['all', 'Author', 'Reviewer', 'Area Chair', 'Senior Area Chair', 'Program Chair']);
+        Array.from(new Set(comments.map(c => c.Role).filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b))).forEach(r => {
+            if (knownRoles.has(r)) return;
+            const opt = document.createElement('option');
+            opt.value = r;
+            opt.textContent = r;
+            roleFilter.appendChild(opt);
         });
-        
-        // Add role options to dropdown (if not already defined in template)
-        const roleFilter = document.getElementById('role-filter');
-        if (roleFilter.children.length <= 1) {
-            const rolesArray = Array.from(roles).sort();
-            rolesArray.forEach(role => {
-                if (role && role !== 'all') {
-                    const option = document.createElement('option');
-                    option.value = role;
-                    option.textContent = role;
-                    roleFilter.appendChild(option);
-                }
-            });
-        }
-        
-        // Generate page number buttons
+
         function updatePageNumbers() {
-            const pageNumbersContainer = document.getElementById('page-numbers');
-            pageNumbersContainer.innerHTML = '';
-            
-            // Determine range of page numbers to show (max 5)
-            let startPage = Math.max(1, currentPage - 2);
-            let endPage = Math.min(totalPages, startPage + 4);
-            
-            // Adjust startPage if we're near the end
-            if (endPage - startPage < 4 && startPage > 1) {
-                startPage = Math.max(1, endPage - 4);
+            pageNumbers.innerHTML = '';
+            const start = Math.max(1, currentPage - 2);
+            const end = Math.min(totalPages, start + 4);
+            for (let i = start; i <= end; i++) {
+                const btn = document.createElement('button');
+                btn.textContent = i;
+                btn.className = 'comments-page-btn px-4 py-2 text-sm font-medium border border-gray-300 ' +
+                    (i === currentPage ? 'bg-indigo-600 text-white z-10 border-indigo-600 shadow-sm shadow-indigo-200/60' : 'bg-white text-gray-700');
+                btn.addEventListener('click', () => { currentPage = i; renderPage(); });
+                pageNumbers.appendChild(btn);
             }
-            
-            // Create page number buttons
-            for (let i = startPage; i <= endPage; i++) {
-                const pageButton = document.createElement('button');
-                pageButton.textContent = i;
-                pageButton.classList.add('px-4', 'py-2', 'text-sm', 'font-medium', 'border', 'border-gray-300');
-                
-                // Highlight current page
-                if (i === currentPage) {
-                    pageButton.classList.add('bg-indigo-600', 'text-white', 'z-10');
-                } else {
-                    pageButton.classList.add('bg-white', 'text-gray-700', 'hover:bg-gray-50');
-                }
-                
-                // Add border styling (except for first and last)
-                if (i === startPage) {
-                    pageButton.classList.add('border-r-0');
-                } else if (i === endPage) {
-                    pageButton.classList.add('border-l-0');
-                } else {
-                    pageButton.classList.add('border-l-0', 'border-r-0');
-                }
-                
-                pageButton.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    currentPage = i;
-                    showCurrentPageComments();
-                });
-                
-                pageNumbersContainer.appendChild(pageButton);
-            }
-            
-            // Update buttons state
-            document.getElementById('prev-page').disabled = currentPage === 1;
-            document.getElementById('next-page').disabled = currentPage === totalPages;
         }
-        
-        // Show comments for current page
-        function showCurrentPageComments() {
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
+
+        function renderPage() {
+            threaded.innerHTML = '';
+            threaded.appendChild(noMsg);
+
+            const start = (currentPage - 1) * commentsPerPage;
+            const end = Math.min(start + commentsPerPage, visibleComments.length);
+            const pageSlice = visibleComments.slice(start, end);
+            const byPaper = new Map();
+            pageSlice.forEach(item => {
+                const p = String(item.comment['Paper #']);
+                if (!byPaper.has(p)) byPaper.set(p, []);
+                byPaper.get(p).push(item);
             });
 
-            // Hide all visible comments first
-            visibleComments.forEach(item => {
-                item.classList.add('hidden');
+            Array.from(byPaper.keys()).sort((a,b)=>Number(a)-Number(b)).forEach(paperNum => {
+                const section = document.createElement('div');
+                section.className = 'paper-section border-t border-gray-200 pt-4 mt-4 first:border-t-0 first:pt-0 first:mt-0';
+                section.setAttribute('data-paper', paperNum);
+                section.innerHTML = '<h3 class="text-lg font-semibold text-gray-800 mb-2">Paper #'+esc(paperNum)+'</h3>' + byPaper.get(paperNum).map(renderCommentItem).join('');
+                threaded.appendChild(section);
             });
-            
-            // Show only comments for current page
-            const startIndex = (currentPage - 1) * commentsPerPage;
-            const endIndex = Math.min(startIndex + commentsPerPage, visibleComments.length);
-            
-            for (let i = startIndex; i < endIndex; i++) {
-                visibleComments[i].classList.remove('hidden');
-            }
-            
-            // Make sure parent sections are visible
-            const visibleSections = new Set();
-            visibleComments.slice(startIndex, endIndex).forEach(item => {
-                const parentSection = item.closest('.paper-section');
-                if (parentSection) {
-                    visibleSections.add(parentSection);
-                }
-            });
-            
-            // Show only relevant paper sections
-            paperSections.forEach(section => {
-                if (visibleSections.has(section)) {
-                    section.classList.remove('hidden');
-                } else {
-                    section.classList.add('hidden');
-                }
-            });
-            
-            // Update page numbers
+
+            prevBtn.disabled = currentPage <= 1;
+            nextBtn.disabled = currentPage >= totalPages;
             updatePageNumbers();
         }
-        
-        // Filter comments
+
         function filterComments() {
-            const selectedPaper = paperFilter.value;
-            const selectedType = document.getElementById('type-filter').value;
-            const selectedRole = roleFilter.value;
-            
-            // Reset visible comments
+            const selPaper = paperFilter.value;
+            const selType  = typeFilter.value;
+            const selRole  = roleFilter.value;
+            grouped = buildPaperTrees(comments);
             visibleComments = [];
-            
-            // Hide all paper sections initially
-            paperSections.forEach(section => {
-                section.classList.add('hidden');
+            grouped.forEach(paper => {
+                paper.flat.forEach(item => {
+                    const pm = selPaper === 'all' || String(item.comment['Paper #']) === selPaper;
+                    const tm = selType === 'all' || String(item.comment.Type || '') === selType;
+                    const rm = selRole === 'all' || String(item.comment.Role || '') === selRole;
+                    if (pm && tm && rm) visibleComments.push(item);
+                });
             });
-            
-            // Filter comments
-            commentItems.forEach(item => {
-                const paperMatch = selectedPaper === 'all' || item.getAttribute('data-paper') === selectedPaper;
-                const typeMatch = selectedType === 'all' || item.getAttribute('data-type') === selectedType;
-                const roleMatch = selectedRole === 'all' || item.getAttribute('data-role') === selectedRole;
-                
-                if (paperMatch && typeMatch && roleMatch) {
-                    item.classList.add('hidden'); // Initially hide all, we'll show page items later
-                    visibleComments.push(item);
-                } else {
-                    item.classList.add('hidden');
-                }
-            });
-            
-            // Calculate total pages
             totalPages = Math.max(1, Math.ceil(visibleComments.length / commentsPerPage));
-            
-            // Reset to page 1 when filter changes
             currentPage = 1;
-            
-            // Show "no comments" message if no matches
             if (visibleComments.length === 0) {
-                noCommentsMessage.classList.remove('hidden');
-                document.getElementById('pagination-container').classList.add('hidden');
+                noMsg.classList.remove('hidden');
+                threaded.innerHTML = '';
+                threaded.appendChild(noMsg);
+                pagDiv.classList.add('hidden');
             } else {
-                noCommentsMessage.classList.add('hidden');
-                document.getElementById('pagination-container').classList.remove('hidden');
-                showCurrentPageComments();
+                noMsg.classList.add('hidden');
+                pagDiv.classList.remove('hidden');
+                renderPage();
             }
         }
-        
-        // Add event listeners to filters
-        paperFilter.addEventListener('change', filterComments);
-        document.getElementById('type-filter').addEventListener('change', filterComments);
-        roleFilter.addEventListener('change', filterComments);
-        document.getElementById('comments-per-page').addEventListener('change', function() {
-            commentsPerPage = parseInt(this.value);
-            totalPages = Math.max(1, Math.ceil(visibleComments.length / commentsPerPage));
-            currentPage = 1; // Reset to first page
-            showCurrentPageComments();
-        });
-        
-        // Page navigation handlers
-        document.getElementById('prev-page').addEventListener('click', function(e) {
-            e.preventDefault();
-            if (currentPage > 1) {
-                currentPage--;
-                showCurrentPageComments();
-            }
-        });
-        
-        document.getElementById('next-page').addEventListener('click', function(e) {
-            e.preventDefault();
-            if (currentPage < totalPages) {
-                currentPage++;
-                showCurrentPageComments();
-            }
-        });
-        
-        // Render comment content - we'll use a simple approach to avoid markdown issues
-        const commentData = {{ comments | tojson }};
-        
-        // For each comment, find its container element and render paragraphs
-        commentData.forEach(comment => {
-            const container = document.getElementById(`comment-${comment.NoteId}`);
-            if (container) {
-                // Split by double newlines to get paragraphs
-                const paragraphs = comment.Content.split('/\n\s*\n/').filter(p => p.trim());
-                
-                // Create HTML content
-                let html = '';
-                paragraphs.forEach(paragraph => {
-                    // Replace single newlines with <br>
-                    const formattedParagraph = paragraph.trim().replace('/\n/g', '<br>');
-                    html += `<p>${formattedParagraph}</p>`;
-                });
-                
-                container.innerHTML = html;
-            }
-        });
-        
-        // Initialize the comments display
-        filterComments();
-    });
 
+        paperFilter.addEventListener('change', filterComments);
+        typeFilter.addEventListener('change', filterComments);
+        roleFilter.addEventListener('change', filterComments);
+        perPageSelect.addEventListener('change', function() {
+            commentsPerPage = parseInt(this.value, 10) || 30;
+            totalPages = Math.max(1, Math.ceil(visibleComments.length / commentsPerPage));
+            currentPage = 1;
+            if (visibleComments.length) renderPage();
+        });
+        prevBtn.addEventListener('click', () => { if (currentPage > 1) { currentPage--; renderPage(); } });
+        nextBtn.addEventListener('click', () => { if (currentPage < totalPages) { currentPage++; renderPage(); } });
+
+        if (!comments.length) {
+            noMsg.textContent = 'No comments found.';
+        }
+        filterComments();
+    }
+
+    document.addEventListener('report:tabshown', function(event) {
+        if (event.detail.tabId !== 'comments-tab') return;
+        window.ReportCommon.initOnce('comments-tab-render', initComments);
+    });
+})();
 </script>

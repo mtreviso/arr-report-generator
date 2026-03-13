@@ -1,76 +1,151 @@
-<div class="px-4 py-5 sm:p-6">
-    <div>
+<style>
+  #ac-dashboard-table th, #ac-dashboard-table td {
+    padding: 5px 6px !important;
+    outline: none !important;
+    text-align: left !important;
+  }
+  #ac-dashboard-table thead th {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    font-weight: 400 !important;
+  }
+  .dt-column-order { display: none !important; }
+  #ac-dashboard-table thead th::after {
+    content: ' ↕'; font-size: 0.65rem; color: #9ca3af; opacity: 0.6;
+  }
+  #ac-dashboard-table thead th.dt-ordering-asc::after  { content: ' ↑'; color: #4f46e5; opacity: 1; }
+  #ac-dashboard-table thead th.dt-ordering-desc::after { content: ' ↓'; color: #4f46e5; opacity: 1; }
+</style>
+
+<div class="px-2 py-4 sm:p-5">
+    <!-- Filters -->
+    <div class="bg-gray-50 rounded-lg border border-gray-200 p-4 mb-4">
+        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Filters</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">All Reviews Ready</label>
+                <select id="ac-allready-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="">All</option>
+                    <option value="1">✓ All ready</option>
+                    <option value="0">Pending</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">All Meta Done</label>
+                <select id="ac-meta-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="">All</option>
+                    <option value="1">✓ All done</option>
+                    <option value="0">Pending</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Late Papers</label>
+                <select id="ac-late-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="">All</option>
+                    <option value="1">Has late papers</option>
+                    <option value="0">None late</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Emergency</label>
+                <select id="ac-emergency-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="">All</option>
+                    <option value="declared">⚡ Declared</option>
+                    <option value="unmet">⚡ Unmet</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Per page</label>
+                <select id="ac-length-select" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="25" selected>25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="-1">All</option>
+                </select>
+            </div>
+        </div>
+        <div class="mt-3 flex items-center gap-3">
+            <div class="flex-1" style="max-width:360px;">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Search</label>
+                <input id="ac-search-input" type="text" placeholder="AC name…"
+                    class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+            </div>
+            <div class="mt-4">
+                <button id="ac-reset-btn" class="py-2 px-3 text-xs bg-white border border-gray-300 rounded-md text-gray-600 hover:bg-gray-100">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="overflow-x-auto w-full">
         <table id="ac-dashboard-table" class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Area Chair
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Completed Reviews
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Expected Reviews
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Papers Ready
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Total Papers
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        All Reviews Ready
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Meta Reviews
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        All Meta-reviews Ready
-                    </th>
+                    {% if ac_meta and ac_meta[0].get("Senior Area Chair") %}
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:130px;">SAC</th>
+                    {% endif %}
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:130px;">Area Chair</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:160px;">Affiliation</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;" title="Completed reviewer assignments divided by expected reviewer assignments across this AC's papers">Reviews</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Percentage of expected reviews that have been completed across this AC's papers">Review %</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:95px;" title="Meta-reviews completed by this AC, divided by total papers handled by this AC">Meta Reviews</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:85px;" title="Whether every paper handled by this AC already has a meta-review">Meta Ready</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:85px;" title="Number of papers with fewer completed reviews than expected">Late Papers</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Number of papers with an emergency review request or declaration">⚡ Emerg.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;" title="Number of papers where emergency review was requested but no emergency reviewer is currently assigned">⚡ Unmet</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
                 {% for ac in ac_meta %}
-                <tr>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {{ ac["Area Chair"] }}
+                <tr
+                    data-all-ready="{{ 1 if ac['All Reviews Ready'] else 0 }}"
+                    data-all-meta="{{ 1 if ac['All Meta-reviews Ready'] else 0 }}"
+                    data-late="{{ 1 if ac['Late_Papers'] > 0 else 0 }}"
+                    data-emergency="{{ 1 if ac.get('Emergency_Declared',0) > 0 else 0 }}"
+                    data-emergency-unmet="{{ 1 if ac.get('Emergency_Unassigned',0) > 0 else 0 }}"
+                >
+                    {% if ac.get("Senior Area Chair") %}
+                    <td class="whitespace-nowrap text-gray-500">
+                        {% set sac_id = ac.get("Senior Area Chair ID") %}
+                        {% set sac_affil = ac.get("Senior Area Chair Affiliation", "") %}
+                        {% if sac_id %}<a href="https://openreview.net/profile?id={{ sac_id }}" target="_blank" class="text-gray-500 hover:underline" style="text-decoration:none;"{% if sac_affil %} title="{{ sac_affil }}"{% endif %}>{{ ac["Senior Area Chair"] }}</a>
+                        {% else %}<span{% if sac_affil %} title="{{ sac_affil }}"{% endif %}>{{ ac["Senior Area Chair"] }}</span>{% endif %}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ ac["Completed_Reviews"] }}
+                    {% endif %}
+                    <td class="whitespace-nowrap text-gray-900">
+                        {% set ac_id    = ac.get("Area Chair ID") %}
+                        {% set ac_affil = ac.get("Area Chair Affiliation", "") %}
+                        {% if ac_id %}
+                            <a href="https://openreview.net/profile?id={{ ac_id }}" target="_blank"
+                               class="text-gray-900 hover:underline" style="text-decoration:none;"
+                               {% if ac_affil %}title="{{ ac_affil }}"{% endif %}>{{ ac["Area Chair"] }}</a>
+                        {% else %}<span {% if ac_affil %}title="{{ ac_affil }}"{% endif %}>{{ ac["Area Chair"] }}</span>{% endif %}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ ac["Expected_Reviews"] }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ ac["Papers_Ready"] }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ ac["Num_Papers"] }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                        {% if ac["All Reviews Ready"] %}
-                        <span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800">
-                            {{ ac["All Reviews Ready"] }}
+                    <td class="text-gray-400 affiliation-cell" style="font-size:0.7rem;"><div class="affiliation-cell-inner" title="{{ ac.get("Area Chair Affiliation", "") or "–" }}">{{ ac.get("Area Chair Affiliation", "") or "–" }}</div></td>
+                    <td class="whitespace-nowrap text-gray-500">{{ ac["Completed_Reviews"] }} / {{ ac["Expected_Reviews"] }}</td>
+                    {% set review_pct = (100.0 * ac["Completed_Reviews"] / ac["Expected_Reviews"]) if ac["Expected_Reviews"] else 100.0 %}
+                    <td class="whitespace-nowrap">
+                        <span class="inline-flex items-center px-2 py-0.5 text-xs rounded-full
+                            {% if review_pct >= 99.95 %}bg-green-100 text-green-800
+                            {% elif review_pct >= 80 %}bg-yellow-100 text-yellow-800
+                            {% else %}bg-red-100 text-red-700{% endif %}"
+                            title="{{ ac['Completed_Reviews'] }} of {{ ac['Expected_Reviews'] }} expected reviews completed across this AC's papers">
+                            {{ review_pct | round(0, 'common') | int }}%
                         </span>
-                        {% else %}
-                        <span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold rounded-full bg-gray-100 text-gray-800">
-                            -
-                        </span>
-                        {% endif %}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ ac["Meta_Reviews_Done"] }}
+                    <td class="whitespace-nowrap text-gray-500">{{ ac["Meta_Reviews_Done"] }}</td>
+                    <td class="whitespace-nowrap">
+                        <span class="inline-flex items-center px-2 py-0.5 text-xs rounded-full {% if ac['All Meta-reviews Ready'] %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-500{% endif %}" title="{{ 'All papers have a meta-review' if ac['All Meta-reviews Ready'] else 'Still missing one or more meta-reviews' }}">
+                            {{ ac["All Meta-reviews Ready"] or "–" }}
+                        </span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                        {% if ac["All Meta-reviews Ready"] %}
-                        <span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800">
-                            {{ ac["All Meta-reviews Ready"] }}
-                        </span>
-                        {% else %}
-                        <span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold rounded-full bg-gray-100 text-gray-800">
-                            -
-                        </span>
-                        {% endif %}
+                    <td class="whitespace-nowrap {% if ac['Late_Papers'] > 0 %}text-red-600 font-medium{% else %}text-gray-400{% endif %}">
+                        {{ ac["Late_Papers"] if ac["Late_Papers"] > 0 else "–" }}
+                    </td>
+                    <td class="whitespace-nowrap {% if ac.get('Emergency_Declared',0) > 0 %}text-blue-600{% else %}text-gray-400{% endif %}">
+                        {% if ac.get("Emergency_Declared",0) > 0 %}⚡ {{ ac["Emergency_Declared"] }}{% else %}–{% endif %}
+                    </td>
+                    <td class="whitespace-nowrap {% if ac.get('Emergency_Unassigned',0) > 0 %}text-orange-600 font-medium{% else %}text-gray-400{% endif %}">
+                        {% if ac.get("Emergency_Unassigned",0) > 0 %}⚠ {{ ac["Emergency_Unassigned"] }}{% else %}–{% endif %}
                     </td>
                 </tr>
                 {% endfor %}
@@ -78,3 +153,44 @@
         </table>
     </div>
 </div>
+
+<script>
+$(document).ready(function() {
+    if (!$('#ac-dashboard-table tbody tr').length) return;
+
+    const hasSac = {{ 'true' if ac_meta and ac_meta[0].get("Senior Area Chair") else 'false' }};
+    const acDt = $('#ac-dashboard-table').DataTable({
+        deferRender: true,
+        pageLength: 25,
+        autoWidth: false,
+        order: [[hasSac ? 1 : 0, 'asc']],
+        layout: { topStart: null, topEnd: null, bottomStart: 'info', bottomEnd: 'paging' }
+    });
+
+    $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+        if (settings.nTable.id !== 'ac-dashboard-table') return true;
+        const row     = $(settings.aoData[dataIndex].nTr);
+        const allRdy  = $('#ac-allready-filter').val();
+        const metaF   = $('#ac-meta-filter').val();
+        const lateF   = $('#ac-late-filter').val();
+        const emergF  = $('#ac-emergency-filter').val();
+
+        if (allRdy && row.attr('data-all-ready') !== allRdy) return false;
+        if (metaF  && row.attr('data-all-meta')  !== metaF)  return false;
+        if (lateF  && row.attr('data-late')       !== lateF)  return false;
+        if (emergF === 'declared' && row.attr('data-emergency')       !== '1') return false;
+        if (emergF === 'unmet'    && row.attr('data-emergency-unmet') !== '1') return false;
+        return true;
+    });
+
+    $('#ac-allready-filter, #ac-meta-filter, #ac-late-filter, #ac-emergency-filter').on('change', function() { acDt.draw(); });
+    $('#ac-search-input').on('input', function() { acDt.search(this.value).draw(); });
+    $('#ac-length-select').on('change', function() { acDt.page.len(this.value).draw(); });
+    $('#ac-reset-btn').on('click', function() {
+        $('#ac-allready-filter, #ac-meta-filter, #ac-late-filter, #ac-emergency-filter').val('');
+        $('#ac-search-input').val('');
+        $('#ac-length-select').val('25');
+        acDt.search('').page.len(25).draw();
+    });
+});
+</script>

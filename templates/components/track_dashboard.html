@@ -1,0 +1,128 @@
+<style>
+  #track-table th, #track-table td {
+    padding: 5px 6px !important;
+    outline: none !important;
+    text-align: left !important;
+  }
+  #track-table thead th {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    font-weight: 400 !important;
+  }
+</style>
+
+<div class="px-2 py-4 sm:p-5">
+    {% if not track_data %}
+    <p class="text-gray-500 text-sm">No track/area data available for this venue (the <code>track</code> or <code>area</code> field may not be set).</p>
+    {% else %}
+    <div class="space-y-6">
+        <div class="w-full rounded-lg border border-gray-200 bg-white p-4">
+            <div style="height:500px;">
+                <canvas id="track-chart"></canvas>
+            </div>
+        </div>
+        <div class="w-full overflow-x-auto">
+            <table id="track-table" class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:160px;">Track / Area</th>
+                        <th class="text-xs text-gray-500 uppercase tracking-wider" title="Total papers in this track or area">Papers</th>
+                        <th class="text-xs text-gray-500 uppercase tracking-wider" title="Completed meta-reviews divided by total papers in this track or area">Meta Done</th>
+                        <th class="text-xs text-gray-500 uppercase tracking-wider" title="Percentage of papers in this track or area that already have a meta-review">Meta %</th>
+                        <th class="text-xs text-gray-500 uppercase tracking-wider" title="Average reviewer overall score for papers in this track or area">Avg Overall</th>
+                        <th class="text-xs text-gray-500 uppercase tracking-wider" title="Average AC/meta-review score for papers in this track or area">Avg Meta</th>
+                        <th class="text-xs text-gray-500 uppercase tracking-wider" title="Papers in this track or area with at least one review issue report">Issues</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for row in track_data %}
+                    <tr>
+                        <td class="whitespace-nowrap text-gray-900">{{ row["Track"] }}</td>
+                        <td class="whitespace-nowrap text-gray-500">{{ row["Papers"] }}</td>
+                        <td class="whitespace-nowrap text-gray-500">{{ row["Meta Done"] }}</td>
+                        <td class="whitespace-nowrap">
+                            <span class="inline-flex items-center px-2 py-0.5 text-xs rounded-full
+                                {% if row['Meta Pct'] == 100 %}bg-green-100 text-green-800
+                                {% elif row['Meta Pct'] >= 80 %}bg-yellow-100 text-yellow-800
+                                {% else %}bg-red-100 text-red-700{% endif %}">
+                                {{ row["Meta Pct"] }}%
+                            </span>
+                        </td>
+                        <td class="whitespace-nowrap text-gray-500">{{ row["Avg Overall"] if row["Avg Overall"] != "" else "–" }}</td>
+                        <td class="whitespace-nowrap text-gray-500">{{ row["Avg Meta"] if row["Avg Meta"] != "" else "–" }}</td>
+                        <td class="whitespace-nowrap {% if row['Issues'] > 0 %}text-red-600 font-medium{% else %}text-gray-400{% endif %}">
+                            {{ row["Issues"] if row["Issues"] > 0 else "–" }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+(function() {
+    const initTrackChart = function() {
+        const ctx = document.getElementById('track-chart');
+        if (!ctx) return;
+        const trackData = {{ track_data | tojson }};
+        if (!trackData.length) return;
+        const palette = [
+            '#4F46E5', '#0EA5E9', '#14B8A6', '#10B981', '#84CC16',
+            '#EAB308', '#F59E0B', '#F97316', '#EF4444', '#EC4899',
+            '#D946EF', '#A855F7', '#8B5CF6', '#6366F1', '#3B82F6',
+            '#06B6D4', '#22C55E', '#65A30D', '#CA8A04', '#DC2626',
+            '#FB7185', '#F472B6', '#C084FC', '#818CF8', '#60A5FA',
+            '#38BDF8', '#2DD4BF', '#34D399', '#A3E635', '#FACC15',
+            '#FDBA74', '#F87171', '#E879F9', '#A78BFA', '#93C5FD',
+            '#67E8F9', '#5EEAD4', '#86EFAC', '#BEF264', '#FDE047',
+            '#FDBA74', '#FDA4AF', '#F9A8D4', '#D8B4FE', '#C4B5FD',
+            '#BFDBFE', '#BAE6FD', '#99F6E4', '#BBF7D0', '#D9F99D'
+        ];
+        const colors = trackData.map((_, i) => palette[i % palette.length]);
+        window.ReportCommon.replaceChart(ctx, {
+            type: 'bar',
+            data: {
+                labels: trackData.map(r => r.Track),
+                datasets: [{
+                    label: 'Papers',
+                    data: trackData.map(r => r.Papers),
+                    backgroundColor: colors,
+                    borderColor: colors,
+                    hoverBackgroundColor: colors,
+                    borderWidth: 1,
+                    borderRadius: 6,
+                    maxBarThickness: 36
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, ticks: { precision: 0 } },
+                    x: {
+                        ticks: {
+                            autoSkip: false,
+                            maxRotation: 90,
+                            minRotation: 90,
+                            font: { size: 10 }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {callbacks: {label(ctx) {
+                        const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+                        return `${ctx.label}: ${ctx.raw} papers (${Math.round(ctx.raw/total*100)}%)`;
+                    }}}
+                }
+            }
+        });
+    };
+    document.addEventListener('report:tabshown', function(event) {
+        if (event.detail.tabId !== 'track-tab') return;
+        window.ReportCommon.initOnce('track-chart', initTrackChart);
+    });
+})();
+</script>

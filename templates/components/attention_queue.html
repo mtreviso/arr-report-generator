@@ -1,0 +1,238 @@
+<style>
+  #attention-table th, #attention-table td {
+    padding: 5px 6px !important;
+    outline: none !important;
+    text-align: left !important;
+  }
+  #attention-table thead th {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    font-weight: 400 !important;
+  }
+  .dt-column-order { display: none !important; }
+  #attention-table thead th::after {
+    content: ' ↕';
+    font-size: 0.65rem;
+    color: #9ca3af;
+    opacity: 0.6;
+  }
+  #attention-table thead th.dt-ordering-asc::after  { content: ' ↑'; color: #4f46e5; opacity: 1; }
+  #attention-table thead th.dt-ordering-desc::after { content: ' ↓'; color: #4f46e5; opacity: 1; }
+</style>
+
+<div class="px-2 py-4 sm:p-5">
+    {% set has_sac = attention_has_sac | default(false) %}
+    {% set has_ac = attention_has_ac | default(true) %}
+    {% if not attention_papers %}
+    <div class="flex items-center gap-2 text-green-700 bg-green-50 rounded-lg p-4 border border-green-200">
+        <span class="text-lg">✓</span>
+        <span class="text-sm">No papers currently require attention.</span>
+    </div>
+    {% else %}
+
+    <!-- Filter panel -->
+    <div class="bg-gray-50 rounded-lg border border-gray-200 p-4 mb-4">
+        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Filters</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Issues</label>
+                <select id="attn-issues-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="">All</option>
+                    <option value="1">Has issue</option>
+                    <option value="0">No issue</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Ethics</label>
+                <select id="attn-ethics-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="">All</option>
+                    <option value="1">Ethics flagged</option>
+                    <option value="0">No ethics flag</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Missing Reviews</label>
+                <select id="attn-missing-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="">All</option>
+                    <option value="1">Has missing</option>
+                    <option value="0">Complete</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Emergency</label>
+                <select id="attn-emergency-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="">All</option>
+                    <option value="declared">⚡ Declared</option>
+                    <option value="assigned">✓ Reviewer assigned</option>
+                    <option value="unmet">⚡ Unmet</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Per page</label>
+                <select id="attn-length-select" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="25" selected>25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="-1">All</option>
+                </select>
+            </div>
+        </div>
+        <div class="mt-3 flex items-center gap-3">
+            <div class="flex-1" style="max-width:360px;">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Search</label>
+                <input id="attn-search-input" type="text" placeholder="Title, SAC, AC…"
+                    class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+            </div>
+            <div class="mt-4">
+                <button id="attn-reset-btn" class="py-2 px-3 text-xs bg-white border border-gray-300 rounded-md text-gray-600 hover:bg-gray-100 focus:outline-none">
+                    Reset
+                </button>
+            </div>
+        </div>
+
+        <!-- Flag legend -->
+        <div class="lg:col-span-6 mt-6 pt-3 border-t border-gray-200">
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Flag legend</p>
+            <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
+                <span><span class="flag-badge flag-issue">!</span> Review issue report</span>
+                <span><span class="flag-badge flag-ethics">E</span> Ethics concern</span>
+                <span><span class="flag-badge flag-emergency">⚡</span> Emergency review requested</span>
+                <!-- <span><span class="flag-badge" style="background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;">+x emer</span> x Emergency reviewers added</span> -->
+                <!-- <span><span class="flag-badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;">x missing</span> Missing x expected reviews</span> -->
+            </div>
+        </div>
+
+    </div>
+
+    <p class="text-xs text-gray-500 mb-3">
+        Papers flagged for one or more of: review issue reported, ethics concern, emergency review requested, or fewer reviews than expected. The emergency badges indicate whether emergency review was requested and whether an emergency reviewer is currently assigned.
+    </p>
+
+    <div class="overflow-x-auto w-full">
+        <table id="attention-table" class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:50px;" title="Paper number">#</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:200px;">Title</th>
+                    {% if has_sac %}<th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:120px;">SAC</th>{% endif %}
+                    {% if has_ac %}<th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:120px;">AC</th>{% endif %}
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:120px;" title="Completed reviews divided by expected reviews for this paper">Reviews</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:150px;" title="Issue, ethics, emergency, and missing-review flags for this paper">Flags</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for p in attention_papers %}
+                <tr
+                    data-has-issue="{{ 1 if p['Has Review Issue'] else 0 }}"
+                    data-ethics="{{ 1 if p.get('Ethics Flag') else 0 }}"
+                    data-missing="{{ 1 if p.get('Has Missing Reviews', p['Completed Reviews'] < p['Expected Reviews']) else 0 }}"
+                    data-emergency="{{ 1 if p.get('Has Emergency Declaration') else 0 }}"
+                    data-emergency-assigned="{{ 1 if p.get('Has Emergency Reviewer') else 0 }}"
+                    data-emergency-unmet="{{ 1 if p.get('Has Emergency Declaration') and not p.get('Has Emergency Reviewer') else 0 }}"
+                >
+                    <td class="whitespace-nowrap text-gray-700">{{ p['Paper #'] }}</td>
+                    <td class="text-gray-700" style="max-width:240px;">
+                        <div class="truncate">
+                            <a href="https://openreview.net/forum?id={{ p['Paper ID'] }}" target="_blank"
+                               class="text-indigo-600 hover:text-indigo-900 tip tip-left" data-tip="{{ p['Title'] }}">
+                               {{ p['Title'] }}
+                            </a>
+                        </div>
+                    </td>
+                    {% if has_sac %}
+                    <td class="whitespace-nowrap text-gray-500">
+                        {% set sac_id = p.get('Senior Area Chair ID') %}
+                        {% if sac_id %}<a href="https://openreview.net/profile?id={{ sac_id }}" target="_blank" class="text-gray-500 hover:underline" style="text-decoration:none;"{% if p.get('Senior Area Chair Affiliation', '') %} title="{{ p.get('Senior Area Chair Affiliation', '') }}"{% endif %}>{{ p.get('Senior Area Chair','') }}</a>
+                        {% else %}<span{% if p.get('Senior Area Chair Affiliation', '') %} title="{{ p.get('Senior Area Chair Affiliation', '') }}"{% endif %}>{{ p.get('Senior Area Chair','') }}</span>{% endif %}
+                    </td>
+                    {% endif %}
+                    {% if has_ac %}
+                    <td class="whitespace-nowrap text-gray-500">
+                        {% set ac_id = p.get('Area Chair ID') %}
+                        {% if ac_id %}<a href="https://openreview.net/profile?id={{ ac_id }}" target="_blank" class="text-gray-500 hover:underline" style="text-decoration:none;"{% if p.get('Area Chair Affiliation', '') %} title="{{ p.get('Area Chair Affiliation', '') }}"{% endif %}>{{ p.get('Area Chair','') }}</a>
+                        {% else %}<span{% if p.get('Area Chair Affiliation', '') %} title="{{ p.get('Area Chair Affiliation', '') }}"{% endif %}>{{ p.get('Area Chair','') }}</span>{% endif %}
+                    </td>
+                    {% endif %}
+                    <td class="whitespace-nowrap {% if p['Completed Reviews'] < p['Expected Reviews'] %}text-red-600{% else %}text-gray-500{% endif %}">
+                        <span>{{ p['Completed Reviews'] }}/{{ p['Expected Reviews'] }}</span>
+                    </td>
+                    <td class="whitespace-nowrap">
+                        <div class="flex gap-1 flex-wrap">
+                        {% if p['Has Review Issue'] %}
+                            <a href="{{ p['Review Issue Link'] }}" target="_blank">
+                                <span class="flag-badge flag-issue tip" data-tip="{{ p['Review Issue Count'] }} review issue(s) — click to open">!</span>
+                            </a>
+                        {% endif %}
+                        {% if p.get('Ethics Flag') %}
+                            <span class="flag-badge flag-ethics tip"
+                                  data-tip="Ethics concern: {{ p['Ethics Flag'] }}">E</span>
+                        {% endif %}
+                        {% if p.get('Has Emergency Declaration') %}
+                            {% if p.get('Emergency Declaration Link') %}<a href="{{ p['Emergency Declaration Link'] }}" target="_blank">{% endif %}
+                                <span class="flag-badge tip" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;"
+                                      data-tip="Emergency requested{% if p.get('Has Emergency Reviewer') %} — ✓ assigned{% else %} — ⚠ no reviewer yet{% endif %}">⚡</span>
+                            {% if p.get('Emergency Declaration Link') %}</a>{% endif %}
+                        {% endif %}
+                        {% if p.get('Has Emergency Reviewer') %}
+                            <span class="flag-badge flag-emergency"
+                                  title="Emergency reviewer assigned">✓</span>
+                        {% endif %}
+                        {% if p.get('Missing Reviews', 0) > 0 %}
+                            <span class="flag-badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;">
+                                {{ p.get('Missing Reviews', p['Expected Reviews'] - p['Completed Reviews']) }} missing
+                            </span>
+                        {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+$(document).ready(function() {
+    if (!$('#attention-table tbody tr').length) return;
+
+    const attnDt = $('#attention-table').DataTable({
+        deferRender: true,
+        pageLength: 25,
+        autoWidth: false,
+        layout: { topStart: null, topEnd: null, bottomStart: 'info', bottomEnd: 'paging' },
+        order: [[0, 'asc']],
+    });
+
+    // Custom row filtering
+    $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+        if (settings.nTable.id !== 'attention-table') return true;
+        const row = $(settings.aoData[dataIndex].nTr);
+        const issues    = $('#attn-issues-filter').val();
+        const ethics    = $('#attn-ethics-filter').val();
+        const missing   = $('#attn-missing-filter').val();
+        const emergency = $('#attn-emergency-filter').val();
+
+        if (issues  && row.attr('data-has-issue') !== issues)  return false;
+        if (ethics  && row.attr('data-ethics')    !== ethics)  return false;
+        if (missing && row.attr('data-missing')   !== missing) return false;
+        if (emergency === 'declared' && row.attr('data-emergency') !== '1') return false;
+        if (emergency === 'assigned' && row.attr('data-emergency-assigned') !== '1') return false;
+        if (emergency === 'unmet'    && row.attr('data-emergency-unmet') !== '1') return false;
+        return true;
+    });
+
+    $('#attn-issues-filter, #attn-ethics-filter, #attn-missing-filter, #attn-emergency-filter').on('change', function() {
+        attnDt.draw();
+    });
+    $('#attn-search-input').on('input', function() { attnDt.search(this.value).draw(); });
+    $('#attn-length-select').on('change', function() { attnDt.page.len(this.value).draw(); });
+
+    $('#attn-reset-btn').on('click', function() {
+        $('#attn-issues-filter, #attn-ethics-filter, #attn-missing-filter, #attn-emergency-filter').val('');
+        $('#attn-search-input').val('');
+        $('#attn-length-select').val('25');
+        attnDt.search('').page.len(25).draw();
+    });
+});
+</script>
