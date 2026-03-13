@@ -138,8 +138,8 @@ This is useful for verifying exactly what a SAC sees without asking them to run 
 
 All report scripts support `--comments-level none|basic|full`.
 
-- `none`: omit comments tab and skip comment processing
-- `basic`: direct replies only (default)
+- `none` (default): omit comments tab and skip comment processing
+- `basic`: direct replies only 
 - `full`: full reply threads --- slowest / largest output
 
 ---

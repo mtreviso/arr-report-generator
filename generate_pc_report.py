@@ -31,6 +31,7 @@ from utils import make_filename
 
 
 def _build_template_data(gen):
+    ac_scoring_data = gen.generate_ac_scoring_data()
     return {
         "title":                   f"PC Dashboard: {gen.venue_id}",
         "generated_date":          datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -51,13 +52,13 @@ def _build_template_data(gen):
         "paper_type_distribution": gen.generate_paper_type_distribution(),
         "review_completion_data":  gen.generate_review_completion_data(),
         "score_scatter_data":      gen.generate_score_scatter_data(),
-        "ac_scoring_data":         gen.generate_ac_scoring_data(),
+        "ac_scoring_data":         ac_scoring_data,
         "score_outliers":          gen.compute_score_outliers(),
         "high_disagreement":       gen.compute_high_disagreement_papers(),
         "reviewer_load":           gen.compute_reviewer_load_histogram(),
         "ac_load":                 gen.compute_ac_load_histogram(),
         "sac_load":                gen.compute_sac_load_histogram(),
-        "ac_scoring_top":          gen.generate_ac_scoring_data()[:15],
+        "ac_scoring_top":          ac_scoring_data[:15],
         "sac_scoring_top":         gen.compute_sac_scoring_data(),
     }
 

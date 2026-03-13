@@ -638,6 +638,7 @@ class PCReportGenerator(ARRReportGenerator):
             p.write_text(html)
             return p
 
+        ac_scoring_data = self.generate_ac_scoring_data()
         template_data = {
             "title":                   f"PC Dashboard: {self.venue_id}",
             "generated_date":          datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -658,13 +659,13 @@ class PCReportGenerator(ARRReportGenerator):
             "paper_type_distribution": self.generate_paper_type_distribution(),
             "review_completion_data":  self.generate_review_completion_data(),
             "score_scatter_data":      self.generate_score_scatter_data(),
-            "ac_scoring_data":         self.generate_ac_scoring_data(),
+            "ac_scoring_data":         ac_scoring_data,
             "score_outliers":          self.compute_score_outliers(),
             "high_disagreement":       self.compute_high_disagreement_papers(),
             "reviewer_load":           self.compute_reviewer_load_histogram(),
             "ac_load":                 self.compute_ac_load_histogram(),
             "sac_load":                self.compute_sac_load_histogram(),
-            "ac_scoring_top":          self.generate_ac_scoring_data()[:15],
+            "ac_scoring_top":          ac_scoring_data[:15],
             "sac_scoring_top":         self.compute_sac_scoring_data(),
         }
 

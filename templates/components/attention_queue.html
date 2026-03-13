@@ -95,9 +95,9 @@
             <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Flag legend</p>
             <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
                 <span><span class="flag-badge flag-issue">!</span> Review issue report</span>
+                <span><span class="flag-badge flag-ethics">E</span> Ethics concern</span>
                 <span><span class="flag-badge flag-emergency">⚡</span> Emergency review requested</span>
                 <!-- <span><span class="flag-badge" style="background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;">+x emer</span> x Emergency reviewers added</span> -->
-                <span><span class="flag-badge flag-ethics">E</span> Ethics concern</span>
                 <!-- <span><span class="flag-badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;">x missing</span> Missing x expected reviews</span> -->
             </div>
         </div>
@@ -163,15 +163,15 @@
                                 <span class="flag-badge flag-issue tip" data-tip="{{ p['Review Issue Count'] }} review issue(s) — click to open">!</span>
                             </a>
                         {% endif %}
+                        {% if p.get('Ethics Flag') %}
+                            <span class="flag-badge flag-ethics tip"
+                                  data-tip="Ethics concern: {{ p['Ethics Flag'] }}">E</span>
+                        {% endif %}
                         {% if p.get('Has Emergency Declaration') %}
                             {% if p.get('Emergency Declaration Link') %}<a href="{{ p['Emergency Declaration Link'] }}" target="_blank">{% endif %}
                                 <span class="flag-badge tip" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;"
                                       data-tip="Emergency requested{% if p.get('Has Emergency Reviewer') %} — ✓ assigned{% else %} — ⚠ no reviewer yet{% endif %}">⚡</span>
                             {% if p.get('Emergency Declaration Link') %}</a>{% endif %}
-                        {% endif %}
-                        {% if p.get('Ethics Flag') %}
-                            <span class="flag-badge flag-ethics tip"
-                                  data-tip="Ethics concern: {{ p['Ethics Flag'] }}">E</span>
                         {% endif %}
                         {% if p.get('Has Emergency Reviewer') %}
                             <span class="flag-badge flag-emergency"
