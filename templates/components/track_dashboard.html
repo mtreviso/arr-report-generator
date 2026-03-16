@@ -85,7 +85,10 @@
         window.ReportCommon.replaceChart(ctx, {
             type: 'bar',
             data: {
-                labels: trackData.map(r => r.Track),
+                labels: trackData.map(r => {
+                    const t = r.Track || '';
+                    return t.length > 33 ? t.slice(0, 30) + '...' : t;
+                }),
                 datasets: [{
                     label: 'Papers',
                     data: trackData.map(r => r.Papers),
@@ -104,8 +107,8 @@
                     x: {
                         ticks: {
                             autoSkip: false,
-                            maxRotation: 90,
-                            minRotation: 90,
+                            maxRotation: 45,
+                            minRotation: 45,
                             font: { size: 10 }
                         }
                     }

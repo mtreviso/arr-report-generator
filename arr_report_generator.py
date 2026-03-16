@@ -169,6 +169,88 @@ class ARRReportGenerator:
             for part in ["/-/Author-Editor_Confidential_Comment", "/-/Comment", "/-/Review_Issue_Report"]
         )
 
+
+    def _get_content_value(self, content, key, default=None):
+        value = content.get(key, default) if isinstance(content, dict) else default
+        if isinstance(value, dict) and 'value' in value:
+            return value.get('value', default)
+        return default if value is None else value
+
+    def _normalize_multi_value_field(self, value):
+        if value is None:
+            return []
+        if isinstance(value, (list, tuple, set)):
+            raw_values = list(value)
+        else:
+            raw_values = [value]
+        items = []
+        for raw in raw_values:
+            if raw is None:
+                continue
+            if isinstance(raw, dict) and 'value' in raw:
+                raw = raw.get('value')
+            if raw is None:
+                continue
+            if isinstance(raw, str):
+                parts = re.split(r'\s*[;|]\s*', raw)
+                if len(parts) == 1 and ',' in raw:
+                    parts = [part.strip() for part in raw.split(',')]
+                for part in parts:
+                    label = re.sub(r'\s+', ' ', str(part).strip())
+                    if label:
+                        items.append(label)
+            else:
+                label = re.sub(r'\s+', ' ', str(raw).strip())
+                if label:
+                    items.append(label)
+        deduped = []
+        seen = set()
+        for item in items:
+            key = item.casefold()
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(item)
+        return deduped
+
+    def _extract_contribution_types(self, *contents):
+        candidate_keys = [
+            'contribution_types',
+            'contribution_type',
+            'types_of_contribution',
+            'type_of_contribution',
+            'paper_contribution_types',
+            'paper_contribution_type',
+            'contribution_categories',
+            'contribution_category',
+            'contributions',
+        ]
+        contribution_types = []
+        for content in contents:
+            if not isinstance(content, dict):
+                continue
+            values = []
+            for key in candidate_keys:
+                if key in content:
+                    values.extend(self._normalize_multi_value_field(self._get_content_value(content, key)))
+            if not values:
+                for key in content.keys():
+                    key_l = str(key).lower()
+                    if 'contribution' in key_l and any(token in key_l for token in ('type', 'category')):
+                        values.extend(self._normalize_multi_value_field(self._get_content_value(content, key)))
+            if values:
+                contribution_types.extend(values)
+                break
+        deduped = []
+        seen = set()
+        for item in contribution_types:
+            norm = item.casefold()
+            if norm in seen:
+                continue
+            seen.add(norm)
+            deduped.append(item)
+        return deduped
+
     # -------------------------------------------------------------------------
     # Formatting helpers
     # -------------------------------------------------------------------------
@@ -564,7 +646,8 @@ class ARRReportGenerator:
             ac_affiliation = self.get_affiliation_for_user(ac_user_id)
             ac_email = ""  # OpenReview forbids SACs to view emails
 
-            paper_type = submission.content.get("paper_type", {}).get("value", "")
+            paper_type = self._get_content_value(submission.content, "paper_type", "")
+            contribution_types = self._extract_contribution_types(submission.content)
 
             # --- Per-paper reply scan ---
             completed_reviews = 0
@@ -722,6 +805,8 @@ class ARRReportGenerator:
                 "Paper ID":              submission.id,
                 "Title":                 paper_title,
                 "Paper Type":            paper_type,
+                "Contribution Types":    "; ".join(contribution_types),
+                "Contribution Type List": contribution_types,
                 "Area Chair":            ac_name,
                 "Area Chair ID":         ac_user_id,
                 "Area Chair Email":      ac_email,
@@ -869,8 +954,27 @@ class ARRReportGenerator:
         if not self.papers_data:
             return {'labels': [], 'counts': []}
         df = self._papers_df()
-        type_counts = df["Paper Type"].value_counts().to_dict()
+        type_series = df["Paper Type"].fillna("").astype(str).str.strip()
+        type_series = type_series[type_series != ""]
+        type_counts = type_series.value_counts().to_dict()
         return {'labels': list(type_counts.keys()), 'counts': list(type_counts.values())}
+
+    def generate_contribution_type_distribution(self):
+        if not self.papers_data:
+            return {'labels': [], 'counts': []}
+        counts = collections.Counter()
+        for paper in self.papers_data:
+            contribution_types = paper.get('Contribution Type List') or []
+            if not contribution_types:
+                contribution_types = self._normalize_multi_value_field(
+                    paper.get('Contribution Types')
+                )
+            counts.update(contribution_types)
+        items = counts.most_common()  # sorted descending by count
+        return {
+            'labels': [label for label, _ in items],
+            'counts': [count for _, count in items],
+        }
 
     def generate_review_completion_data(self):
         if not self.ac_meta_data:
@@ -1096,6 +1200,7 @@ class ARRReportGenerator:
         self.process_data()
 
         paper_type_distribution  = self.generate_paper_type_distribution()
+        contribution_type_distribution = self.generate_contribution_type_distribution()
         review_completion_data   = self.generate_review_completion_data()
         score_scatter_data       = self.generate_score_scatter_data()
         ac_scoring_data          = self.generate_ac_scoring_data()
@@ -1115,6 +1220,7 @@ class ARRReportGenerator:
             "histogram_data":        self.generate_histogram_data(),
             "correlation_data":      self.correlation_data,
             "paper_type_distribution": paper_type_distribution,
+            "contribution_type_distribution": contribution_type_distribution,
             "review_completion_data":  review_completion_data,
             "score_scatter_data":    score_scatter_data,
             "ac_scoring_data":       ac_scoring_data,

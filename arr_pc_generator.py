@@ -76,7 +76,8 @@ class PCReportGenerator(ARRReportGenerator):
             sac_email = self.get_email_for_user(sac_uid) if sac_uid else ""
             sac_affiliation = self.get_affiliation_for_user(sac_uid) if sac_uid else ""
 
-            paper_type = submission.content.get("paper_type", {}).get("value", "")
+            paper_type = self._get_content_value(submission.content, "paper_type", "")
+            contribution_types = self._extract_contribution_types(submission.content)
             # Try multiple field names ARR uses across rounds
             track = ""
             for _tf in ("primary_area", "track", "area", "subject_area",
@@ -199,6 +200,8 @@ class PCReportGenerator(ARRReportGenerator):
                 "Paper ID":              submission.id,
                 "Title":                 submission.content.get("title", {}).get("value", "Untitled"),
                 "Paper Type":            paper_type,
+                "Contribution Types":    "; ".join(contribution_types),
+                "Contribution Type List": contribution_types,
                 "Track":                 track,
                 "Area Chair":            ac_name,
                 "Area Chair ID":         ac_uid,
@@ -627,6 +630,7 @@ class PCReportGenerator(ARRReportGenerator):
             "histogram_data":          self.generate_histogram_data(),
             "correlation_data":        self.correlation_data,
             "paper_type_distribution": self.generate_paper_type_distribution(),
+            "contribution_type_distribution": self.generate_contribution_type_distribution(),
             "review_completion_data":  self.generate_review_completion_data(),
             "score_scatter_data":      self.generate_score_scatter_data(),
             "ac_scoring_data":         ac_scoring_data,

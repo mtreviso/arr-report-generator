@@ -114,6 +114,7 @@
                 <tr>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:50px;" title="Paper number">#</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:200px;">Title</th>
+                <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:72px;">Type</th>
                     {% if has_sac %}<th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:120px;">SAC</th>{% endif %}
                     {% if has_ac %}<th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:120px;">AC</th>{% endif %}
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:120px;" title="Completed reviews divided by expected reviews for this paper">Reviews</th>
@@ -139,6 +140,7 @@
                             </a>
                         </div>
                     </td>
+                    <td class="whitespace-nowrap text-gray-500">{{ p.get('Paper Type', '') }}</td>
                     {% if has_sac %}
                     <td class="whitespace-nowrap text-gray-500">
                         {% set sac_id = p.get('Senior Area Chair ID') %}

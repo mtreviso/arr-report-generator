@@ -258,8 +258,9 @@ class CommitmentReportGenerator(ARRReportGenerator):
             recommendation, presentation_mode, award = self._extract_commitment_meta_info(sub)
 
             paper_title      = sub.content.get('title', {}).get('value', 'Untitled')
-            paper_type       = sub.content.get('paper_type', {}).get('value', '')
-            response_to_meta = sub.content.get('response_to_metareview', {}).get('value', '')
+            paper_type       = self._get_content_value(sub.content, 'paper_type', '')
+            contribution_types = self._extract_contribution_types(sub.content)
+            response_to_meta = self._get_content_value(sub.content, 'response_to_metareview', '')
 
             paper_link   = sub.content.get('paper_link', {}).get('value', '')
             linked_forum = self._parse_linked_forum_id(paper_link)
@@ -267,7 +268,9 @@ class CommitmentReportGenerator(ARRReportGenerator):
             replies      = self._get_linked_replies(linked_forum) if linked_forum else []
 
             if linked_note and not paper_type:
-                paper_type = linked_note.content.get('paper_type', {}).get('value', '')
+                paper_type = self._get_content_value(linked_note.content, 'paper_type', '')
+            if linked_note and not contribution_types:
+                contribution_types = self._extract_contribution_types(linked_note.content)
 
             prev_url = ""
             if linked_note and 'previous_URL' in linked_note.content:
@@ -413,6 +416,8 @@ class CommitmentReportGenerator(ARRReportGenerator):
                 "Submission Link":       f"{base_url}{sub.id}",
                 "Linked Forum":          f"{base_url}{linked_forum}" if linked_forum else "",
                 "Paper Type":            paper_type,
+                "Contribution Types":    "; ".join(contribution_types),
+                "Contribution Type List": contribution_types,
                 "Completed Reviews":     completed_reviews,
                 "Expected Reviews":      expected_reviews,
                 "Resubmission":          prev_url,
@@ -566,6 +571,7 @@ class CommitmentReportGenerator(ARRReportGenerator):
             "histogram_data":          self.generate_histogram_data(),
             "correlation_data":        self.correlation_data,
             "paper_type_distribution": self.generate_paper_type_distribution(),
+            "contribution_type_distribution": self.generate_contribution_type_distribution(),
             "score_scatter_data":      self.generate_score_scatter_data(),
         }
 

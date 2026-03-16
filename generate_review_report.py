@@ -56,6 +56,7 @@ def _build_template_data(gen):
         "histogram_data":          gen.generate_histogram_data(),
         "correlation_data":        gen.correlation_data,
         "paper_type_distribution": gen.generate_paper_type_distribution(),
+        "contribution_type_distribution": gen.generate_contribution_type_distribution(),
         "review_completion_data":  gen.generate_review_completion_data(),
         "score_scatter_data":      gen.generate_score_scatter_data(),
         "ac_scoring_data":         gen.generate_ac_scoring_data(),
