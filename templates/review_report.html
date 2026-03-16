@@ -128,6 +128,20 @@
             </div>
             <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
                 <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Scores by Paper Type &amp; Preprint Status</h2>
+                    <p class="mt-1 text-sm text-gray-500">Average review scores broken down by paper type and anonymity.</p>
+                </div>
+                {% include 'components/score_by_type.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Reviewer Load vs. Confidence</h2>
+                    <p class="mt-1 text-sm text-gray-500">Do reviewers with heavier loads give lower-confidence reviews?</p>
+                </div>
+                {% include 'components/reviewer_load_quality.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
                     <h2 class="text-xl font-semibold text-gray-800">Score Correlation Matrix</h2>
                 </div>
                 {% include 'components/correlation_matrix.html' %}

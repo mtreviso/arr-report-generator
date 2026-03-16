@@ -123,6 +123,14 @@
                 </select>
             </div>
             <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Single-blind</label>
+                <select id="sb-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">All</option>
+                    <option value="1">Has SB review</option>
+                    <option value="0">No SB review</option>
+                </select>
+            </div>
+            <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Meta review</label>
                 <select id="meta-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
                     <option value="">All</option>
@@ -143,7 +151,7 @@
                 <select id="emergency-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
                     <option value="">All</option>
                     <option value="declared">⚡ Declared</option>
-                    <option value="unmet">⚡ Unmet (no reviewer)</option>
+                    <option value="unmet">⚡ Unmet (unassigned)</option>
                     <option value="0">No emergency</option>
                 </select>
             </div>
@@ -209,10 +217,13 @@
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Flag legend</p>
                 <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
                     <span><span class="flag-badge flag-nonanon">P</span> Has public preprint</span>
+                    <span><span class="flag-badge flag-sb-anon">SB</span> Reviewer knows author(s) — anonymous paper (suspicious)</span>
+                    <span><span class="flag-badge flag-sb-preprint">SB</span> Reviewer knows author(s) — preprinted paper</span>
+
                     <span><span class="flag-badge flag-issue">!</span> Review issue report (clickable)</span>
                     <span><span class="flag-badge flag-info">C</span> Confidential comment</span>
                     <span><span class="flag-badge flag-warn">&#9888;</span> Low-confidence reviewer (conf. &#8804; 2)</span>
-                    <span><span class="flag-badge flag-emergency">⚡</span> Emergency review requested (⚠ = no reviewer yet)</span>
+                    <span><span class="flag-badge flag-emergency">⚡</span> Emergency review requested (✗ = unassigned)</span>
                 </div>
             </div>
         </div>
@@ -279,7 +290,7 @@
             parts.push(row['Review Issue Link'] ? '<a href="'+esc(row['Review Issue Link'])+'" target="_blank">'+badge+'</a>' : badge);
         }
         if (boolish(row['Has Emergency Declaration'])) {
-            const tip = 'Emergency review requested ('+esc(row['Emergency Declaration Count'] || 0)+')' + (boolish(row['Has Emergency Reviewer']) ? '&#10;✓ Emergency reviewer assigned' : '&#10;⚠ No emergency reviewer yet');
+            const tip = 'Emergency review requested ('+esc(row['Emergency Declaration Count'] || 0)+')' + (boolish(row['Has Emergency Reviewer']) ? '&#10;✓ Emergency reviewer assigned' : '&#10;✗ No reviewer yet');
             const badge = '<span class="tip flag-badge flag-emergency" data-tip="'+tip+'">⚡</span>';
             parts.push(row['Emergency Declaration Link'] ? '<a href="'+esc(row['Emergency Declaration Link'])+'" target="_blank">'+badge+'</a>' : badge);
         }
@@ -288,6 +299,14 @@
         }
         if (boolish(row['Has Low Confidence'])) {
             parts.push('<span class="tip flag-badge flag-warn" data-tip="Low confidence reviewer(s)&#10;'+esc(row['Low Confidence Reviewers'] || '')+'">&#9888;</span>');
+        }
+        if (boolish(row['Has Compromised Review'])) {
+            const isAnon = (row['Is Anonymous'] || '').toLowerCase() === 'yes';
+            const badgeClass = isAnon ? 'flag-sb-anon' : 'flag-sb-preprint';
+            const tip = isAnon
+                ? 'Suspicious: reviewer claims to know author(s) of anonymous paper'
+                : 'Single-blind: reviewer knows author(s) (preprinted paper)';
+            parts.push('<span class="tip flag-badge ' + badgeClass + '" data-tip="' + tip + '">SB</span>');
         }
         if (!parts.length) return '<span class="text-gray-300">&#8211;</span>';
         return '<div class="flex gap-1 items-center justify-start">'+parts.join('')+'</div>';
@@ -306,6 +325,7 @@
             __has_meta: row['Meta Review Score'] ? '1' : '0',
             __emergency: boolish(row['Has Emergency Declaration']) ? '1' : '0',
             __emergency_unmet: (boolish(row['Has Emergency Declaration']) && !boolish(row['Has Emergency Reviewer'])) ? '1' : '0',
+            __has_sb: (boolish(row['Has Compromised Review'])) ? '1' : '0',
             __overall: parseAvg(row['Overall Assessment']),
             __excitement: parseAvg(row['Excitement Score']),
             __confidence: parseAvg(row['Reviewer Confidence'])
@@ -328,6 +348,7 @@
             const excMin      = $('#exc-min-filter').val();
             const confMin     = $('#conf-min-filter').val();
             const emergency   = $('#emergency-filter').val();
+            const sb          = $('#sb-filter').val();
             const ac          = firstSelectValue('ac-filter');
             const type        = firstSelectValue('paper-type-filter');
 
@@ -341,6 +362,7 @@
             if (emergency === 'declared' && row.__emergency !== '1') return false;
             if (emergency === 'unmet' && row.__emergency_unmet !== '1') return false;
             if (emergency === '0' && row.__emergency === '1') return false;
+            if (sb && row.__has_sb !== sb) return false;
             if (anon) {
                 if (anon === 'yes' && row.__anon !== 'yes') return false;
                 if (anon === 'no' && row.__anon !== 'no') return false;
@@ -391,7 +413,7 @@
         const typeSel = $('#paper-type-filter select');
         $('#papers-search-input').on('input', function() { dt.search(this.value).draw(); });
         $('#papers-length-select').on('change', function() { dt.page.len(this.value).draw(); });
-        $('#ready-filter, #issues-filter, #lowconf-filter, #meta-filter, #anon-filter, #conf-comment-filter, #overall-min-filter, #overall-max-filter, #exc-min-filter, #conf-min-filter, #emergency-filter').on('change', function() { dt.draw(); });
+        $('#ready-filter, #issues-filter, #lowconf-filter, #meta-filter, #anon-filter, #conf-comment-filter, #overall-min-filter, #overall-max-filter, #exc-min-filter, #conf-min-filter, #emergency-filter, #sb-filter').on('change', function() { dt.draw(); });
         acSel.on('change', function() { dt.draw(); });
         typeSel.on('change', function() { dt.draw(); });
     }

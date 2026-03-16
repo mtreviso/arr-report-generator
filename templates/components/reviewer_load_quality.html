@@ -1,0 +1,88 @@
+<div class="px-4 py-5 sm:p-6">
+    <p class="text-xs text-gray-500 mb-5">
+        Each point represents a reviewer-load bucket: how many papers were assigned (X axis)
+        vs. the average confidence score given by reviewers carrying that load (Y axis).
+        Bubble size reflects the number of reviewers in that bucket.
+        Low confidence at high load may indicate overloaded reviewers.
+    </p>
+
+    {% if reviewer_load_quality.total_reviewers > 0 %}
+    <div class="flex gap-6 mb-5 text-sm text-gray-600">
+        <span>Total reviewers: <strong class="text-gray-800">{{ reviewer_load_quality.total_reviewers }}</strong></span>
+        <span>Avg load: <strong class="text-gray-800">{{ reviewer_load_quality.avg_load }}</strong> papers/reviewer</span>
+    </div>
+    <div style="height:320px;">
+        <canvas id="reviewer-load-quality-chart"></canvas>
+    </div>
+    {% else %}
+    <div class="text-center py-8 text-gray-400 text-sm">No reviewer load data available.</div>
+    {% endif %}
+</div>
+
+<script>
+(function() {
+    const initReviewerLoadQuality = function() {
+        const ctx = document.getElementById('reviewer-load-quality-chart');
+        if (!ctx) return;
+        const points = {{ reviewer_load_quality.points | tojson }};
+        const validPoints = points.filter(p => p.avg_confidence !== null);
+        if (!validPoints.length) {
+            ctx.parentNode.innerHTML = '<div class="text-center py-8 text-gray-400 text-sm">No confidence data available.</div>';
+            return;
+        }
+        const maxCount = Math.max(...validPoints.map(p => p.reviewer_count));
+        const data = validPoints.map(p => ({
+            x: p.load,
+            y: p.avg_confidence,
+            r: Math.max(5, Math.round(8 * Math.sqrt(p.reviewer_count / maxCount) + 3)),
+            count: p.reviewer_count,
+        }));
+        window.ReportCommon.replaceChart(ctx, {
+            type: 'bubble',
+            data: { datasets: [{
+                label: 'Reviewers',
+                data,
+                backgroundColor: data.map(d => {
+                    if (d.y <= 2)   return 'rgba(239,68,68,0.65)';
+                    if (d.y <= 2.5) return 'rgba(245,158,11,0.65)';
+                    return 'rgba(99,102,241,0.65)';
+                }),
+                borderColor: 'rgba(99,102,241,0.9)',
+                borderWidth: 1,
+            }]},
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                animation: { duration: 350 },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Papers assigned to reviewer' },
+                        ticks: { precision: 0, stepSize: 1 },
+                        min: 0,
+                    },
+                    y: {
+                        title: { display: true, text: 'Avg confidence score' },
+                        min: 1, max: 5,
+                        ticks: { stepSize: 0.5 },
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label(ctx) {
+                        const d = ctx.raw;
+                        return [
+                            `Load: ${d.x} paper(s)`,
+                            `Avg confidence: ${d.y}`,
+                            `Reviewers in bucket: ${d.count}`,
+                        ];
+                    }}}
+                }
+            }
+        });
+    };
+
+    document.addEventListener('report:tabshown', function(event) {
+        if (event.detail.tabId !== 'analytics-tab') return;
+        window.ReportCommon.initOnce('reviewer-load-quality', initReviewerLoadQuality);
+    });
+})();
+</script>

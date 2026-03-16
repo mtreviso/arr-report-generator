@@ -49,7 +49,7 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+    <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
         <div class="bg-red-50 rounded-lg p-3 border border-red-100 text-center">
             <div class="text-xl font-bold text-red-600">{{ s.review_issues }}</div>
             <div class="text-xs text-red-400 uppercase tracking-wide mt-1">Review Issues</div>
@@ -62,9 +62,13 @@
             <div class="text-xl font-bold text-yellow-600">{{ s.low_conf_papers }}</div>
             <div class="text-xs text-yellow-500 uppercase tracking-wide mt-1">Low Confidence</div>
         </div>
+        <div class="bg-lime-50 rounded-lg p-3 border border-lime-100 text-center">
+            <div class="text-xl font-bold text-lime-600">{{ s.sb_papers | default(0) }}</div>
+            <div class="text-xs text-lime-400 uppercase tracking-wide mt-1">Single-blind (SB)</div>
+        </div>
         <div class="bg-blue-50 rounded-lg p-3 border border-blue-100 text-center">
             <div class="text-xl font-bold text-blue-600">{{ s.emergency_declared | default(0) }}</div>
-            <div class="text-xs text-blue-400 uppercase tracking-wide mt-1">⚡ Emergency Declared</div>
+            <div class="text-xs text-blue-400 uppercase tracking-wide mt-1">⚡ Emergency</div>
         </div>
         <div class="bg-amber-50 rounded-lg p-3 border border-amber-100 text-center">
             <div class="text-xl font-bold text-amber-600">{{ s.emergency_unmet | default(0) }}</div>

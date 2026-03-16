@@ -202,7 +202,7 @@
                 <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
                     <span><span class="flag-badge flag-nonanon">P</span> Has public preprint</span>
                     <span><span class="flag-badge flag-issue">!</span> Review issue report (clickable, count in tooltip)</span>
-                    <span><span class="flag-badge flag-emergency">⚡</span> Emergency review requested (⚠ = no reviewer yet)</span>
+                    <span><span class="flag-badge flag-emergency">⚡</span> Emergency review requested (✗ = unassigned)</span>
                     <span><span class="flag-badge flag-issue">M</span> Meta-review issue report (clickable)</span>
                     <span><span class="flag-badge flag-info">C</span> Confidential comment</span>
                     <span><span class="flag-badge flag-warn">&#9888;</span> Low-confidence reviewer (conf. &#8804; 2)</span>
@@ -284,7 +284,7 @@
             parts.push(row['Meta Review Issue Link'] ? '<a href="'+esc(row['Meta Review Issue Link'])+'" target="_blank">'+badge+'</a>' : badge);
         }
         if (boolish(row['Has Emergency Declaration'])) {
-            const tip = 'Emergency review requested ('+esc(row['Emergency Declaration Count'] || 0)+')' + (boolish(row['Has Emergency Reviewer']) ? '&#10;✓ Emergency reviewer assigned' : '&#10;⚠ No emergency reviewer yet');
+            const tip = 'Emergency review requested ('+esc(row['Emergency Declaration Count'] || 0)+')' + (boolish(row['Has Emergency Reviewer']) ? '&#10;✓ Emergency reviewer assigned' : '&#10;✗ No reviewer yet');
             const badge = '<span class="tip flag-badge flag-emergency"  data-tip="'+tip+'">⚡</span>';
             parts.push(row['Emergency Declaration Link'] ? '<a href="'+esc(row['Emergency Declaration Link'])+'" target="_blank">'+badge+'</a>' : badge);
         }

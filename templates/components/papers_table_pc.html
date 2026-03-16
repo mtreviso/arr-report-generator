@@ -102,7 +102,7 @@
                 <select id="pc-emergency-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
                     <option value="">All</option>
                     <option value="declared">⚡ Declared</option>
-                    <option value="unmet">⚡ Unmet (no reviewer)</option>
+                    <option value="unmet">⚡ Unmet (unassigned)</option>
                     <option value="0">No emergency</option>
                 </select>
             </div>
@@ -112,6 +112,14 @@
                     <option value="">All</option>
                     <option value="1">Has low conf</option>
                     <option value="0">All high conf</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Single-blind</label>
+                <select id="pc-sb-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">All</option>
+                    <option value="1">Has SB review</option>
+                    <option value="0">No SB review</option>
                 </select>
             </div>
             <div>
@@ -163,11 +171,14 @@
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Flag legend</p>
                 <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
                     <span><span class="flag-badge flag-nonanon">P</span> Has public preprint</span>
+                    <span><span class="flag-badge flag-sb-anon">SB</span> Reviewer knows author(s) — anonymous paper (suspicious)</span>
+                    <span><span class="flag-badge flag-sb-preprint">SB</span> Reviewer knows author(s) — preprinted paper</span>
+
                     <span><span class="flag-badge flag-issue">!</span> Review issue report (clickable)</span>
                     <span><span class="flag-badge flag-info">C</span> Confidential comment</span>
                     <span><span class="flag-badge flag-warn">&#9888;</span> Low-confidence reviewer (conf. &#8804; 2)</span>
                     <span><span class="flag-badge flag-ethics" >E</span> Ethics concern</span>
-                    <span><span class="flag-badge flag-emergency">⚡</span> Emergency review requested (⚠ = no reviewer yet)</span>
+                    <span><span class="flag-badge flag-emergency">⚡</span> Emergency review requested (✗ = unassigned)</span>
                 </div>
             </div>
         </div>
@@ -244,9 +255,17 @@
             parts.push('<span class="tip flag-badge flag-ethics" data-tip="Ethics concern: '+esc(row['Ethics Flag'])+'">E</span>');
         }
         if (boolish(row['Has Emergency Declaration'])) {
-            const tip = 'Emergency review requested ('+esc(row['Emergency Declaration Count'] || 0)+')' + (boolish(row['Has Emergency Reviewer']) ? '&#10;✓ Emergency reviewer assigned' : '&#10;⚠ No emergency reviewer yet');
+            const tip = 'Emergency review requested ('+esc(row['Emergency Declaration Count'] || 0)+')' + (boolish(row['Has Emergency Reviewer']) ? '&#10;✓ Emergency reviewer assigned' : '&#10;✗ No reviewer yet');
             const badge = '<span class="tip flag-badge flag-emergency" data-tip="'+tip+'">⚡</span>';
             parts.push(row['Emergency Declaration Link'] ? '<a href="'+esc(row['Emergency Declaration Link'])+'" target="_blank">'+badge+'</a>' : badge);
+        }
+        if (boolish(row['Has Compromised Review'])) {
+            const isAnon = (row['Is Anonymous'] || '').toLowerCase() === 'yes';
+            const badgeClass = isAnon ? 'flag-sb-anon' : 'flag-sb-preprint';
+            const tip = isAnon
+                ? 'Suspicious: reviewer claims to know author(s) of anonymous paper'
+                : 'Single-blind: reviewer knows author(s) (preprinted paper)';
+            parts.push('<span class="tip flag-badge ' + badgeClass + '" data-tip="' + tip + '">SB</span>');
         }
         if (!parts.length) return '<span class="text-gray-300">&#8211;</span>';
         return '<div class="flex gap-1 items-center justify-start">'+parts.join('')+'</div>';
@@ -265,6 +284,7 @@
             __ethics: row['Ethics Flag'] ? '1' : '0',
             __emergency: boolish(row['Has Emergency Declaration']) ? '1' : '0',
             __emergency_unmet: (boolish(row['Has Emergency Declaration']) && !boolish(row['Has Emergency Reviewer'])) ? '1' : '0',
+            __has_sb: boolish(row['Has Compromised Review']) ? '1' : '0',
             __overall: parseAvg(row['Overall Assessment'])
         }));
 
@@ -278,6 +298,7 @@
             const ready     = $('#pc-ready-filter').val();
             const issues    = $('#pc-issues-filter').val();
             const lconf     = $('#pc-lowconf-filter').val();
+            const sb        = $('#pc-sb-filter').val();
             const meta      = $('#pc-meta-filter').val();
             const ethics    = $('#pc-ethics-filter').val();
             const oMin      = $('#pc-overall-min-filter').val();
@@ -298,6 +319,7 @@
             if (emergency === 'declared' && row.__emergency !== '1') return false;
             if (emergency === 'unmet' && row.__emergency_unmet !== '1') return false;
             if (emergency === '0' && row.__emergency === '1') return false;
+            if (sb && row.__has_sb !== sb) return false;
             if (oMin && (row.__overall === null || row.__overall < parseFloat(oMin))) return false;
             if (oMax && (row.__overall === null || row.__overall > parseFloat(oMax))) return false;
             return true;
@@ -338,7 +360,7 @@
         const typeSel = $('#pc-type-filter select');
         $('#pc-papers-search').on('input', function() { dt.search(this.value).draw(); });
         $('#pc-papers-length').on('change', function() { dt.page.len(this.value).draw(); });
-        $('#pc-ready-filter, #pc-issues-filter, #pc-lowconf-filter, #pc-meta-filter, #pc-ethics-filter, #pc-emergency-filter, #pc-overall-min-filter, #pc-overall-max-filter').on('change', function() { dt.draw(); });
+        $('#pc-ready-filter, #pc-issues-filter, #pc-lowconf-filter, #pc-sb-filter, #pc-meta-filter, #pc-ethics-filter, #pc-emergency-filter, #pc-overall-min-filter, #pc-overall-max-filter').on('change', function() { dt.draw(); });
         sacSel.on('change', function() { dt.draw(); });
         acSel.on('change', function() { dt.draw(); });
         typeSel.on('change', function() { dt.draw(); });

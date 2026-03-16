@@ -55,8 +55,8 @@ class ARRReportGenerator:
                     for g in self.client.get_all_groups(members=me, prefix=f'{venue_id}/{self.submission_name}')
                     if g.id.endswith('Senior_Area_Chairs')
                 }
-            except:
-                # Fix for old API version
+            except Exception as e:
+                print(f"Warning: could not fetch SAC groups via members filter ({e}). Falling back to full scan.")
                 self.my_sac_groups = set()
                 all_groups = self.client.get_all_groups(prefix=f'{venue_id}/{self.submission_name}')
                 for g in all_groups:
@@ -70,6 +70,8 @@ class ARRReportGenerator:
         self.comments_data = []
         self.correlation_data = None
         self.attention_papers = []
+        self.reviewer_load = {}            # reviewer_id -> paper count
+        self.reviewer_confidence_data = {} # reviewer_id -> [confidence scores]
 
         # Score distributions for visualization
         self.score_distributions = {
@@ -251,6 +253,78 @@ class ARRReportGenerator:
             deduped.append(item)
         return deduped
 
+    def _extract_knows_authors(self, content):
+        """Return True if the reviewer indicated they know (some of) the authors."""
+        KEYS = [
+            "reviewer_identity_awareness",
+            "know_the_authors",
+            "author_identity",
+            "reviewer_knows_authors",
+            "identity_of_authors",
+            "authors_identity",
+            "reviewer_author_identity",
+            "author_awareness",
+        ]
+        # Negative phrases that unambiguously mean "I do NOT know"
+        NEGATIVE_PHRASES = (
+            "do not know",
+            "don't know",
+            "unaware",
+            "not aware",
+            "no conflict",
+            "i have no",
+        )
+        # Positive phrases used by ARR (prose options)
+        POSITIVE_PHRASES = (
+            "i know",
+            "i am aware",
+            "i'm aware",
+            "aware of the identity",
+            "know the identity",
+            "know at least one",
+            "know some of",
+            "know one of",
+        )
+
+        for key in KEYS:
+            val = content.get(key, {})
+            if isinstance(val, dict):
+                val = val.get("value", "")
+            if val is None:
+                continue
+            v = str(val).strip().lower()
+            if not v:
+                continue
+            # Explicit negatives
+            if v in ("no", "false", "0", "n/a") or any(neg in v for neg in NEGATIVE_PHRASES):
+                continue
+            # Explicit affirmatives
+            if v in ("yes", "true", "1") or v.startswith("yes"):
+                return True
+            if any(pos in v for pos in POSITIVE_PHRASES):
+                return True
+
+        # Broad fallback: scan all keys whose name contains identity/know/aware
+        for key, raw in content.items():
+            kl = key.lower()
+            if not any(t in kl for t in ("identity", "know", "aware")):
+                continue
+            if isinstance(raw, dict):
+                raw = raw.get("value", "")
+            if raw is None:
+                continue
+            v = str(raw).strip().lower()
+            if not v:
+                continue
+            if any(neg in v for neg in NEGATIVE_PHRASES) or v in ("no", "false", "0"):
+                continue
+            if v in ("yes", "true", "1") or v.startswith("yes"):
+                return True
+            if any(pos in v for pos in POSITIVE_PHRASES):
+                return True
+
+        return False
+
     # -------------------------------------------------------------------------
     # Formatting helpers
     # -------------------------------------------------------------------------
@@ -282,15 +356,8 @@ class ARRReportGenerator:
             return float('nan')
 
     def parse_meta_review(self, s):
-        try:
-            if s is None:
-                return float('nan')
-            if isinstance(s, (int, float)):
-                return float(s)
-            match = re.search(r'-?\d+(?:\.\d+)?', str(s))
-            return float(match.group(0)) if match else float('nan')
-        except Exception:
-            return float('nan')
+        """Alias for parse_avg — both extract the leading numeric value."""
+        return self.parse_avg(s)
 
     def classify_comment_type(self, reply):
         """Determine the type of comment."""
@@ -449,7 +516,7 @@ class ARRReportGenerator:
     def _sanitize_tilde_id(self, uid):
         """~Foo_Bar1 -> Foo Bar"""
         name = uid.strip().lstrip("~")
-        name = re.sub(r'\\d+$', '', name)
+        name = re.sub(r'\d+$', '', name)
         name = name.replace("_", " ").strip()
         return name.title()
 
@@ -615,6 +682,18 @@ class ARRReportGenerator:
             return replies
         return []
 
+    def _resolve_reviewer_id(self, sig):
+        """Resolve an anonymous reviewer signature to a real user ID."""
+        if not sig:
+            return sig
+        if sig.startswith("~") or "@" in sig:
+            return sig
+        if '/Reviewer_' in sig:
+            grp = self._get_group_cached(sig)
+            if grp and getattr(grp, 'members', None):
+                return grp.members[0]
+        return sig
+
     def process_papers_data(self):
         """Process all papers data."""
         base_url = "https://openreview.net/forum?id="
@@ -663,6 +742,7 @@ class ARRReportGenerator:
             has_emergency_declaration = False
             emergency_declaration_link = ""
             emergency_declaration_count = 0
+            knows_authors_count = 0  # reviewers who indicated they know the authors
 
             replies = self._get_submission_replies(submission)
 
@@ -735,6 +815,29 @@ class ARRReportGenerator:
                             overall_assessment_scores.append(float(val))
                     except:
                         pass
+                    # Single-blind detection: reviewer claims to know the authors
+                    # Debug: on the very first review processed, log all identity/know/aware fields
+                    if not self.papers_data and completed_reviews == 1:
+                        sb_related = {k: v for k, v in content.items()
+                                      if any(t in k.lower() for t in ("identity", "know", "aware", "author"))}
+                        if sb_related:
+                            print(f"[DEBUG SB] Identity/author-awareness fields in first review: {list(sb_related.keys())}")
+                            for k, v in sb_related.items():
+                                print(f"  {k!r}: {v!r}")
+                        else:
+                            print(f"[DEBUG SB] No identity/know/aware fields found. Review keys: {sorted(content.keys())}")
+                    if self._extract_knows_authors(content):
+                        knows_authors_count += 1
+                    # Track per-reviewer confidence for load-vs-quality chart
+                    sigs = reply.get("signatures", [])
+                    if sigs:
+                        rev_uid = self._resolve_reviewer_id(sigs[0])
+                        try:
+                            conf_val = content.get("confidence", {}).get("value")
+                            if conf_val is not None:
+                                self.reviewer_confidence_data.setdefault(rev_uid, []).append(float(conf_val))
+                        except:
+                            pass
 
                 if self.is_meta_review(reply):
                     content = reply.get("content", {})
@@ -751,6 +854,9 @@ class ARRReportGenerator:
             reviewers_group = self._get_group_cached(reviewers_group_id)
             if reviewers_group and getattr(reviewers_group, "members", None):
                 expected_reviews = len(reviewers_group.members)
+                for rev_id in reviewers_group.members:
+                    actual_rev_id = self._resolve_reviewer_id(rev_id)
+                    self.reviewer_load[actual_rev_id] = self.reviewer_load.get(actual_rev_id, 0) + 1
 
             # Emergency reviewer group
             has_emergency_reviewer = False
@@ -827,6 +933,10 @@ class ARRReportGenerator:
                 "Has Emergency Reviewer": has_emergency_reviewer,
                 "Emergency Reviewer Count": emergency_reviewer_count,
                 "Review Issue Count":    review_issue_count,
+                "Ethics Flag":           "",   # populated in PCReportGenerator; base always ""
+                # Single-blind / knows-authors
+                "Knows Authors Count":   knows_authors_count,
+                "Has Compromised Review": knows_authors_count > 0,
                 # Scores
                 "Reviewer Confidence":   reviewer_confidence,
                 "Confidence List":       confidence_list,
@@ -868,7 +978,10 @@ class ARRReportGenerator:
             Late_Papers=("Completed Reviews", lambda x: (x < df.loc[x.index, "Expected Reviews"]).sum()),
             Emergency_Declared=("Has Emergency Declaration", "sum"),
             Emergency_Assigned=("Has Emergency Reviewer", "sum"),
+            Low_Conf_Papers=("Has Low Confidence", "sum"),
+            SB_Papers=("Has Compromised Review", "sum"),
         ).reset_index()
+
         meta_df["All Reviews Ready"] = meta_df.apply(
             lambda row: "✓" if row["Papers_Ready"] == row["Num_Papers"] else "", axis=1
         )
@@ -881,8 +994,23 @@ class ARRReportGenerator:
         meta_df["Emergency_Unassigned"] = (
             meta_df["Emergency_Declared"] - meta_df["Emergency_Assigned"]
         ).clip(lower=0)
-        # Carry forward the tilde ID (needed for profile links in templates)
-        ac_id_map    = df.groupby("Area Chair")["Area Chair ID"].first().to_dict()
+
+        # Per-AC score means (computed separately to use parse_avg)
+        parse_fn = self.parse_avg
+        def _nanmean_parsed(series):
+            vals = [parse_fn(v) for v in series if v]
+            vals = [v for v in vals if not np.isnan(v)]
+            return round(float(np.mean(vals)), 2) if vals else None
+
+        ac_conf    = df.groupby("Area Chair")["Reviewer Confidence"].apply(_nanmean_parsed)
+        ac_overall = df.groupby("Area Chair")["Overall Assessment"].apply(_nanmean_parsed)
+        ac_meta    = df.groupby("Area Chair")["Meta Review Score"].apply(_nanmean_parsed)
+        meta_df["Avg_Confidence"] = meta_df["Area Chair"].map(ac_conf)
+        meta_df["Avg_Overall"]    = meta_df["Area Chair"].map(ac_overall)
+        meta_df["Avg_Meta"]       = meta_df["Area Chair"].map(ac_meta)
+
+        # Carry forward the tilde ID
+        ac_id_map = df.groupby("Area Chair")["Area Chair ID"].first().to_dict()
         meta_df["Area Chair ID"] = meta_df["Area Chair"].map(ac_id_map).fillna("")
         # Affiliation: look up by tilde ID
         meta_df["Area Chair Affiliation"] = meta_df["Area Chair ID"].map(
@@ -966,14 +1094,12 @@ class ARRReportGenerator:
         for paper in self.papers_data:
             contribution_types = paper.get('Contribution Type List') or []
             if not contribution_types:
-                contribution_types = self._normalize_multi_value_field(
-                    paper.get('Contribution Types')
-                )
+                contribution_types = self._normalize_multi_value_field(paper.get('Contribution Types'))
             counts.update(contribution_types)
-        items = counts.most_common()  # sorted descending by count
+        sorted_items = sorted(counts.items(), key=lambda x: x[1], reverse=True)
         return {
-            'labels': [label for label, _ in items],
-            'counts': [count for _, count in items],
+            'labels': [item[0] for item in sorted_items],
+            'counts': [item[1] for item in sorted_items],
         }
 
     def generate_review_completion_data(self):
@@ -1037,6 +1163,75 @@ class ARRReportGenerator:
                 'labels': [str(d[0]) for d in diff_data],
                 'counts': [d[1] for d in diff_data],
             },
+        }
+
+    def generate_score_by_type_data(self):
+        """Scores broken down by paper type and by anonymity (preprint status)."""
+        if not self.papers_data:
+            return {'by_paper_type': [], 'by_anonymity': []}
+        df = self._papers_df()
+
+        def _group_scores(group_col, label_map=None):
+            rows = []
+            for val, grp in df.groupby(group_col):
+                if not str(val).strip():
+                    continue
+                label = label_map.get(val, val) if label_map else val
+                overall_vals = grp["Overall Assessment"].apply(self.parse_avg).dropna()
+                meta_vals    = grp["Meta Review Score"].apply(self.parse_avg).dropna()
+                conf_vals    = grp["Reviewer Confidence"].apply(self.parse_avg).dropna()
+                rows.append({
+                    "label":       label,
+                    "count":       len(grp),
+                    "avg_overall": round(float(overall_vals.mean()), 2) if len(overall_vals) else None,
+                    "avg_meta":    round(float(meta_vals.mean()),    2) if len(meta_vals)    else None,
+                    "avg_conf":    round(float(conf_vals.mean()),    2) if len(conf_vals)    else None,
+                })
+            rows.sort(key=lambda r: r["count"], reverse=True)
+            return rows
+
+        anon_map = {"Yes": "Anonymous", "No": "Non-anonymous (preprint)", "": "Unknown"}
+        by_anon = _group_scores("Is Anonymous", anon_map)
+        # Filter out "Unknown" if empty
+        by_anon = [r for r in by_anon if r["label"] != "Unknown" or r["count"] > 0]
+
+        by_type = _group_scores("Paper Type")
+
+        return {'by_paper_type': by_type, 'by_anonymity': by_anon}
+
+    def generate_reviewer_load_quality_data(self):
+        """Per-reviewer: papers assigned vs average confidence score (for scatter plot)."""
+        results = []
+        for rev_id, load in self.reviewer_load.items():
+            confs = self.reviewer_confidence_data.get(rev_id, [])
+            avg_conf = round(float(np.mean(confs)), 2) if confs else None
+            results.append({
+                "load": load,
+                "avg_confidence": avg_conf,
+            })
+        # Aggregate into (load, avg_confidence) pairs — bucket by load
+        buckets = {}
+        for r in results:
+            l = r["load"]
+            if l not in buckets:
+                buckets[l] = []
+            if r["avg_confidence"] is not None:
+                buckets[l].append(r["avg_confidence"])
+        agg = []
+        for l in sorted(buckets.keys()):
+            confs = buckets[l]
+            agg.append({
+                "load":          l,
+                "avg_confidence": round(float(np.mean(confs)), 2) if confs else None,
+                "reviewer_count": len(results) and sum(1 for r in results if r["load"] == l),
+            })
+        total_reviewers = len(self.reviewer_load)
+        avg_load = round(sum(self.reviewer_load.values()) / total_reviewers, 2) if total_reviewers else 0
+        return {
+            "points": agg,
+            "raw":    results,
+            "total_reviewers": total_reviewers,
+            "avg_load": avg_load,
         }
 
     def process_comments_data(self):
@@ -1204,6 +1399,8 @@ class ARRReportGenerator:
         review_completion_data   = self.generate_review_completion_data()
         score_scatter_data       = self.generate_score_scatter_data()
         ac_scoring_data          = self.generate_ac_scoring_data()
+        score_by_type_data       = self.generate_score_by_type_data()
+        reviewer_load_quality    = self.generate_reviewer_load_quality_data()
 
         template_data = {
             "title":                 f"ARR Review Report: {self.venue_id}",
@@ -1224,6 +1421,8 @@ class ARRReportGenerator:
             "review_completion_data":  review_completion_data,
             "score_scatter_data":    score_scatter_data,
             "ac_scoring_data":       ac_scoring_data,
+            "score_by_type_data":    score_by_type_data,
+            "reviewer_load_quality": reviewer_load_quality,
         }
 
         template_dir = self._resolve_template_dir()

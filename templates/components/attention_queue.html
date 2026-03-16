@@ -68,6 +68,12 @@
                 </select>
             </div>
             <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Type</label>
+                <select id="attn-type-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="">All types</option>
+                </select>
+            </div>
+            <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Per page</label>
                 <select id="attn-length-select" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
                     <option value="25" selected>25</option>
@@ -130,6 +136,7 @@
                     data-emergency="{{ 1 if p.get('Has Emergency Declaration') else 0 }}"
                     data-emergency-assigned="{{ 1 if p.get('Has Emergency Reviewer') else 0 }}"
                     data-emergency-unmet="{{ 1 if p.get('Has Emergency Declaration') and not p.get('Has Emergency Reviewer') else 0 }}"
+                    data-type="{{ p.get('Paper Type', '') | e }}"
                 >
                     <td class="whitespace-nowrap text-gray-700">{{ p['Paper #'] }}</td>
                     <td class="text-gray-700" style="max-width:240px;">
@@ -172,7 +179,7 @@
                         {% if p.get('Has Emergency Declaration') %}
                             {% if p.get('Emergency Declaration Link') %}<a href="{{ p['Emergency Declaration Link'] }}" target="_blank">{% endif %}
                                 <span class="flag-badge tip" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;"
-                                      data-tip="Emergency requested{% if p.get('Has Emergency Reviewer') %} — ✓ assigned{% else %} — ⚠ no reviewer yet{% endif %}">⚡</span>
+                                      data-tip="Emergency requested{% if p.get('Has Emergency Reviewer') %} — ✓ assigned{% else %} — unassigned{% endif %}">⚡</span>
                             {% if p.get('Emergency Declaration Link') %}</a>{% endif %}
                         {% endif %}
                         {% if p.get('Has Emergency Reviewer') %}
@@ -214,6 +221,7 @@ $(document).ready(function() {
         const ethics    = $('#attn-ethics-filter').val();
         const missing   = $('#attn-missing-filter').val();
         const emergency = $('#attn-emergency-filter').val();
+        const type      = $('#attn-type-filter').val();
 
         if (issues  && row.attr('data-has-issue') !== issues)  return false;
         if (ethics  && row.attr('data-ethics')    !== ethics)  return false;
@@ -221,17 +229,25 @@ $(document).ready(function() {
         if (emergency === 'declared' && row.attr('data-emergency') !== '1') return false;
         if (emergency === 'assigned' && row.attr('data-emergency-assigned') !== '1') return false;
         if (emergency === 'unmet'    && row.attr('data-emergency-unmet') !== '1') return false;
+        if (type && row.attr('data-type') !== type) return false;
         return true;
     });
 
-    $('#attn-issues-filter, #attn-ethics-filter, #attn-missing-filter, #attn-emergency-filter').on('change', function() {
+
+    // Populate type filter from data attributes
+    const attnTypes = Array.from(new Set(
+        Array.from($('#attention-table tbody tr')).map(tr => $(tr).attr('data-type') || '').filter(Boolean)
+    )).sort();
+    attnTypes.forEach(t => $('#attn-type-filter').append($('<option>').val(t).text(t)));
+
+    $('#attn-issues-filter, #attn-ethics-filter, #attn-missing-filter, #attn-emergency-filter, #attn-type-filter').on('change', function() {
         attnDt.draw();
     });
     $('#attn-search-input').on('input', function() { attnDt.search(this.value).draw(); });
     $('#attn-length-select').on('change', function() { attnDt.page.len(this.value).draw(); });
 
     $('#attn-reset-btn').on('click', function() {
-        $('#attn-issues-filter, #attn-ethics-filter, #attn-missing-filter, #attn-emergency-filter').val('');
+        $('#attn-issues-filter, #attn-ethics-filter, #attn-missing-filter, #attn-emergency-filter, #attn-type-filter').val('').trigger('change');
         $('#attn-search-input').val('');
         $('#attn-length-select').val('25');
         attnDt.search('').page.len(25).draw();

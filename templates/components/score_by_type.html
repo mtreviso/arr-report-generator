@@ -1,0 +1,131 @@
+<div class="px-4 py-5 sm:p-6">
+    <p class="text-xs text-gray-500 mb-5">
+        Average reviewer scores (Overall Assessment, Meta/AC score, Reviewer Confidence) grouped
+        by paper type and by preprint status. Only groups with at least one score are shown.
+    </p>
+
+    {% set anon_rows = score_by_type_data.by_anonymity | selectattr("label", "ne", "Unknown") | list %}
+    {% set type_rows = score_by_type_data.by_paper_type %}
+    {% set show_anon = anon_rows | length > 1 %}
+    {% set show_type = type_rows | length > 0 %}
+
+    {% if show_anon or show_type %}
+    <div class="grid grid-cols-1 {% if show_anon and show_type %}xl:grid-cols-2{% endif %} gap-8">
+
+        {% if show_anon %}
+        <div>
+            <h3 class="text-sm font-semibold text-gray-700 mb-3">By Preprint Status</h3>
+            <div class="overflow-x-auto mb-4">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider" title="Number of papers in this group">Papers</th>
+                            <th class="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider" title="Mean reviewer overall assessment score">Avg Overall</th>
+                            <th class="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider" title="Mean AC / meta-review score">Avg Meta</th>
+                            <th class="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider" title="Mean reviewer confidence score">Avg Conf</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for row in anon_rows %}
+                        <tr>
+                            <td class="px-4 py-2 text-sm font-medium text-gray-900">{{ row.label }}</td>
+                            <td class="px-4 py-2 text-sm text-gray-500">{{ row.count }}</td>
+                            <td class="px-4 py-2 text-sm text-gray-500">{{ row.avg_overall if row.avg_overall is not none else "–" }}</td>
+                            <td class="px-4 py-2 text-sm text-gray-500">{{ row.avg_meta if row.avg_meta is not none else "–" }}</td>
+                            <td class="px-4 py-2 text-sm text-gray-500">{{ row.avg_conf if row.avg_conf is not none else "–" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div style="height:200px;"><canvas id="anon-scores-chart"></canvas></div>
+        </div>
+        {% endif %}
+
+        {% if show_type %}
+        <div>
+            <h3 class="text-sm font-semibold text-gray-700 mb-3">By Paper Type</h3>
+            <div class="overflow-x-auto mb-4">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Type</th>
+                            <th class="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Papers</th>
+                            <th class="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Avg Overall</th>
+                            <th class="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Avg Meta</th>
+                            <th class="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Avg Conf</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for row in type_rows %}
+                        <tr>
+                            <td class="px-4 py-2 text-sm font-medium text-gray-900">{{ row.label }}</td>
+                            <td class="px-4 py-2 text-sm text-gray-500">{{ row.count }}</td>
+                            <td class="px-4 py-2 text-sm text-gray-500">{{ row.avg_overall if row.avg_overall is not none else "–" }}</td>
+                            <td class="px-4 py-2 text-sm text-gray-500">{{ row.avg_meta if row.avg_meta is not none else "–" }}</td>
+                            <td class="px-4 py-2 text-sm text-gray-500">{{ row.avg_conf if row.avg_conf is not none else "–" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div style="height:200px;"><canvas id="type-scores-chart"></canvas></div>
+        </div>
+        {% endif %}
+
+    </div>
+    {% else %}
+    <div class="text-center py-8 text-gray-400 text-sm">No paper type or preprint data available.</div>
+    {% endif %}
+</div>
+
+<script>
+(function() {
+    function makeGroupedBar(canvasId, rows) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx || !rows.length) return;
+        const labels  = rows.map(r => r.label);
+        const overall = rows.map(r => r.avg_overall);
+        const meta    = rows.map(r => r.avg_meta);
+        const conf    = rows.map(r => r.avg_conf);
+        window.ReportCommon.replaceChart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    { label: 'Avg Overall', data: overall, backgroundColor: 'rgba(99,102,241,0.7)',  borderColor: 'rgba(99,102,241,1)',  borderWidth: 1, borderRadius: 3 },
+                    { label: 'Avg Meta',    data: meta,    backgroundColor: 'rgba(16,185,129,0.7)',  borderColor: 'rgba(16,185,129,1)',  borderWidth: 1, borderRadius: 3 },
+                    { label: 'Avg Conf',    data: conf,    backgroundColor: 'rgba(245,158,11,0.7)',  borderColor: 'rgba(245,158,11,1)',  borderWidth: 1, borderRadius: 3 },
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 350 },
+                scales: {
+                    y: { beginAtZero: false, min: 1, max: 5, title: { display: true, text: 'Score' }, ticks: { stepSize: 0.5 } }
+                },
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 12, padding: 10, font: { size: 11 } } },
+                    tooltip: { callbacks: { label(ctx) {
+                        return ctx.parsed.y !== null ? ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}` : ` ${ctx.dataset.label}: –`;
+                    }}}
+                }
+            }
+        });
+    }
+
+    const initScoreByType = function() {
+        const anonRows = {{ score_by_type_data.by_anonymity | tojson }};
+        const typeRows = {{ score_by_type_data.by_paper_type | tojson }};
+        makeGroupedBar('anon-scores-chart', anonRows.filter(r => r.label !== 'Unknown'));
+        makeGroupedBar('type-scores-chart', typeRows);
+    };
+
+    document.addEventListener('report:tabshown', function(event) {
+        if (event.detail.tabId !== 'analytics-tab') return;
+        window.ReportCommon.initOnce('score-by-type', initScoreByType);
+    });
+})();
+</script>

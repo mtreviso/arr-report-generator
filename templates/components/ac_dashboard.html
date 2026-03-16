@@ -91,6 +91,8 @@
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:85px;" title="Whether every paper handled by this AC already has a meta-review">Meta Ready</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:85px;" title="Number of papers with fewer completed reviews than expected">Late Papers</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Number of papers with an emergency review request or declaration">⚡ Emerg.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Average reviewer confidence score across this AC's papers">Avg Conf</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:60px;" title="Papers with a reviewer who indicated they know the authors (single-blind)">SB</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;" title="Number of papers where emergency review was requested but no emergency reviewer is currently assigned">⚡ Unmet</th>
                 </tr>
             </thead>
@@ -143,6 +145,15 @@
                     </td>
                     <td class="whitespace-nowrap {% if ac.get('Emergency_Declared',0) > 0 %}text-blue-600{% else %}text-gray-400{% endif %}">
                         {% if ac.get("Emergency_Declared",0) > 0 %}⚡ {{ ac["Emergency_Declared"] }}{% else %}–{% endif %}
+                    </td>
+                    <td class="whitespace-nowrap text-gray-500">
+                        {% set avg_conf = ac.get("Avg_Confidence") %}
+                        {% if avg_conf is not none %}
+                            <span class="{% if avg_conf <= 2 %}text-red-600 font-medium{% elif avg_conf <= 2.5 %}text-yellow-600{% else %}text-gray-500{% endif %}">{{ avg_conf }}</span>
+                        {% else %}–{% endif %}
+                    </td>
+                    <td class="whitespace-nowrap {% if ac.get('SB_Papers',0) > 0 %}text-orange-600 font-medium{% else %}text-gray-400{% endif %}">
+                        {{ ac.get('SB_Papers', 0) if ac.get('SB_Papers', 0) > 0 else '–' }}
                     </td>
                     <td class="whitespace-nowrap {% if ac.get('Emergency_Unassigned',0) > 0 %}text-orange-600 font-medium{% else %}text-gray-400{% endif %}">
                         {% if ac.get("Emergency_Unassigned",0) > 0 %}⚠ {{ ac["Emergency_Unassigned"] }}{% else %}–{% endif %}

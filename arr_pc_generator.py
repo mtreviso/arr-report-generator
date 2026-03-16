@@ -46,8 +46,6 @@ class PCReportGenerator(ARRReportGenerator):
 
     def process_papers_data(self):
         """Process all papers, adding SAC column (PC can see SAC assignments)."""
-        base_url = "https://openreview.net/forum?id="
-
         for submission in tqdm(self.submissions, desc="Processing papers"):
             if self.is_withdrawn(submission):
                 continue
@@ -105,6 +103,7 @@ class PCReportGenerator(ARRReportGenerator):
             has_emergency_declaration = False
             emergency_declaration_link = ""
             emergency_declaration_count = 0
+            knows_authors_count       = 0
 
             for reply in self._get_submission_replies(submission):
                 invitations = reply.get("invitations", [])
@@ -153,6 +152,28 @@ class PCReportGenerator(ARRReportGenerator):
                     ec = content.get('ethical_concerns', {}).get('value', '').strip().lower()
                     if ne == "yes" or (ec and "no" not in ec):
                         ethics_flag = "yes"
+                    # Single-blind detection
+                    if not self.papers_data and completed_reviews == 1:
+                        sb_related = {k: v for k, v in content.items()
+                                      if any(t in k.lower() for t in ("identity", "know", "aware", "author"))}
+                        if sb_related:
+                            print(f"[DEBUG SB] Identity/author-awareness fields in first review: {list(sb_related.keys())}")
+                            for k, v in sb_related.items():
+                                print(f"  {k!r}: {v!r}")
+                        else:
+                            print(f"[DEBUG SB] No identity/know/aware fields found. Review keys: {sorted(content.keys())}")
+                    if self._extract_knows_authors(content):
+                        knows_authors_count += 1
+                    # Per-reviewer confidence tracking
+                    sigs = reply.get("signatures", [])
+                    if sigs:
+                        rev_uid = self._resolve_reviewer_id(sigs[0])
+                        try:
+                            conf_val = content.get("confidence", {}).get("value")
+                            if conf_val is not None:
+                                self.reviewer_confidence_data.setdefault(rev_uid, []).append(float(conf_val))
+                        except Exception:
+                            pass
 
                 if self.is_meta_review(reply):
                     content = reply.get("content", {})
@@ -168,13 +189,7 @@ class PCReportGenerator(ARRReportGenerator):
             if rg and getattr(rg, 'members', None):
                 expected_reviews = len(rg.members)
                 for rev_id in rg.members:
-                    # Anonymous venues store per-submission group IDs like
-                    # venue/SubmissionN/Reviewer_abc — resolve to the real tilde ID
-                    actual_rev_id = rev_id
-                    if '/Reviewer_' in rev_id:
-                        rev_grp = self._get_group_cached(rev_id)
-                        if rev_grp and getattr(rev_grp, 'members', None):
-                            actual_rev_id = rev_grp.members[0]
+                    actual_rev_id = self._resolve_reviewer_id(rev_id)
                     self.reviewer_load[actual_rev_id] = self.reviewer_load.get(actual_rev_id, 0) + 1
 
             # Emergency reviewer group
@@ -227,6 +242,8 @@ class PCReportGenerator(ARRReportGenerator):
                 "Has Emergency Reviewer": has_emergency_reviewer,
                 "Emergency Reviewer Count": emergency_reviewer_count,
                 "Review Issue Count":    review_issue_count,
+                "Knows Authors Count":   knows_authors_count,
+                "Has Compromised Review": knows_authors_count > 0,
                 "Reviewer Confidence":   fmt(confidence_scores),
                 "Confidence List":       " / ".join(f"{s:.1f}" for s in confidence_scores),
                 "Soundness Score":       fmt(soundness_scores),
@@ -275,6 +292,7 @@ class PCReportGenerator(ARRReportGenerator):
             issues           = int(group["Has Review Issue"].sum())
             low_conf         = int(group["Has Low Confidence"].sum())
             ethics           = int((group["Ethics Flag"] != "").sum())
+            sb_papers        = int(group["Has Compromised Review"].sum()) if "Has Compromised Review" in group.columns else 0
             sac_id    = group["Senior Area Chair ID"].iloc[0]
             sac_email = group["Senior Area Chair Email"].iloc[0]
             sac_affil = group["Senior Area Chair Affiliation"].iloc[0] if "Senior Area Chair Affiliation" in group.columns else ""
@@ -295,6 +313,7 @@ class PCReportGenerator(ARRReportGenerator):
                 "All_Meta_Done":           "✓" if meta_done == num_papers else "",
                 "Review_Issues":           issues,
                 "Low_Conf_Papers":         low_conf,
+                "SB_Papers":               sb_papers,
                 "Ethics_Papers":           ethics,
                 "Late_Papers":             late_papers,
                 "Emergency_Declared":      emerg_decl,
@@ -343,14 +362,8 @@ class PCReportGenerator(ARRReportGenerator):
     # -----------------------------------------------------------------------
 
     def compute_attention_papers(self):
-        """Papers that may need PC attention: ethics flag, review issues, unfinished reviews."""
-        if not self.papers_data:
-            return
-        self.attention_papers = [
-            p for p in self.papers_data
-            if p["Ethics Flag"] or p["Has Review Issue"] or
-               (p["Completed Reviews"] < p["Expected Reviews"] and p["Expected Reviews"] > 0)
-        ]
+        """Delegate to base class so enrichment fields (Missing Reviews, etc.) are set."""
+        super().compute_attention_papers()
 
     # -----------------------------------------------------------------------
     # Overview statistics
@@ -368,6 +381,7 @@ class PCReportGenerator(ARRReportGenerator):
         issues         = int(df["Has Review Issue"].sum())
         ethics         = int((df["Ethics Flag"] != "").sum())
         low_conf       = int(df["Has Low Confidence"].sum())
+        sb_papers      = int(df["Has Compromised Review"].sum()) if "Has Compromised Review" in df.columns else 0
         all_reviewed   = int((df["Completed Reviews"] >= df["Expected Reviews"]).sum())
         sac_count      = df["Senior Area Chair"].nunique() if "Senior Area Chair" in df.columns else 0
         ac_count       = df["Area Chair"].nunique()
@@ -397,6 +411,7 @@ class PCReportGenerator(ARRReportGenerator):
             "review_issues":           issues,
             "ethics_papers":           ethics,
             "low_conf_papers":         low_conf,
+            "sb_papers":               sb_papers,
             "sac_count":               sac_count,
             "ac_count":                ac_count,
             "emergency_declared":      emerg_decl,
@@ -611,7 +626,10 @@ class PCReportGenerator(ARRReportGenerator):
             p.write_text(html)
             return p
 
-        ac_scoring_data = self.generate_ac_scoring_data()
+        ac_scoring_data      = self.generate_ac_scoring_data()
+        score_by_type_data   = self.generate_score_by_type_data()
+        reviewer_load_quality = self.generate_reviewer_load_quality_data()
+
         template_data = {
             "title":                   f"PC Dashboard: {self.venue_id}",
             "generated_date":          datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -641,6 +659,8 @@ class PCReportGenerator(ARRReportGenerator):
             "sac_load":                self.compute_sac_load_histogram(),
             "ac_scoring_top":          ac_scoring_data[:15],
             "sac_scoring_top":         self.compute_sac_scoring_data(),
+            "score_by_type_data":      score_by_type_data,
+            "reviewer_load_quality":   reviewer_load_quality,
         }
 
         template_dir = self._resolve_template_dir()

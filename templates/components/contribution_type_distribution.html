@@ -1,31 +1,37 @@
 <div class="px-4 py-5 sm:p-6">
     <p class="mb-4 text-sm text-gray-500">A paper may select multiple contribution types, so percentages are based on total contribution-type selections.</p>
-    <div class="flex flex-col md:flex-row">
-        <div class="w-full md:w-1/2">
-            <canvas id="contribution-type-chart" style="max-height: 300px;"></canvas>
+    {% if contribution_type_distribution.labels %}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <!-- Horizontal bar chart — all labels always visible on the Y axis -->
+        <div>
+            <canvas id="contribution-type-chart"></canvas>
         </div>
-        <div class="w-full md:w-1/2 mt-4 md:mt-0">
+        <!-- Table -->
+        <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contribution Type</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Count</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contribution Type</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Count</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     {% set total = contribution_type_distribution.counts | sum %}
                     {% for i in range(contribution_type_distribution.labels | length) %}
                     <tr>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ contribution_type_distribution.labels[i] }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ contribution_type_distribution.counts[i] }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{% if total %}{{ "%.1f"|format(contribution_type_distribution.counts[i] / total * 100) }}%{% else %}0.0%{% endif %}</td>
+                        <td class="px-4 py-2 text-sm font-medium text-gray-900">{{ contribution_type_distribution.labels[i] }}</td>
+                        <td class="px-4 py-2 text-sm text-gray-500">{{ contribution_type_distribution.counts[i] }}</td>
+                        <td class="px-4 py-2 text-sm text-gray-500">{% if total %}{{ "%.1f"|format(contribution_type_distribution.counts[i] / total * 100) }}%{% else %}0.0%{% endif %}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
+    {% else %}
+    <div class="text-center py-8 text-gray-400 text-sm">No contribution type data available.</div>
+    {% endif %}
 </div>
 
 <script>
@@ -35,45 +41,57 @@
         if (!ctx) return;
         const labels = {{ contribution_type_distribution.labels | tojson }};
         const counts = {{ contribution_type_distribution.counts | tojson }};
-        if (!labels.length) { ctx.parentNode.innerHTML = '<div class="text-center py-8 text-gray-500">No data.</div>'; return; }
-        const colors = [
-            'rgba(99,102,241,0.7)',   // indigo
-            'rgba(16,185,129,0.7)',   // emerald
-            'rgba(245,158,11,0.7)',   // amber
-            'rgba(239,68,68,0.7)',    // red
-            'rgba(14,165,233,0.7)',   // sky
-            'rgba(168,85,247,0.7)',   // violet
-            'rgba(236,72,153,0.7)',   // pink
-            'rgba(34,197,94,0.7)',    // green
-            'rgba(249,115,22,0.7)',   // orange
-            'rgba(6,182,212,0.7)',    // cyan
-            'rgba(132,204,22,0.7)',   // lime
-            'rgba(217,70,239,0.7)',   // fuchsia
-            'rgba(59,130,246,0.7)',   // blue
-            'rgba(251,191,36,0.7)',   // yellow
-            'rgba(244,63,94,0.7)',    // rose
-            'rgba(20,184,166,0.7)',   // teal
-            'rgba(139,92,246,0.7)',   // purple
-            'rgba(234,88,12,0.7)',    // orange-dark
-            'rgba(163,230,53,0.7)',   // lime-light
-            'rgba(96,165,250,0.7)'    // blue-light
+        if (!labels.length) return;
+
+        // Palette cycles through 20 distinct colours so all slices are always visible
+        const palette = [
+            'rgba(99,102,241,0.75)', 'rgba(16,185,129,0.75)', 'rgba(245,158,11,0.75)',
+            'rgba(239,68,68,0.75)',  'rgba(14,165,233,0.75)', 'rgba(168,85,247,0.75)',
+            'rgba(236,72,153,0.75)', 'rgba(20,184,166,0.75)', 'rgba(251,146,60,0.75)',
+            'rgba(34,197,94,0.75)',  'rgba(59,130,246,0.75)', 'rgba(217,70,239,0.75)',
+            'rgba(234,179,8,0.75)',  'rgba(239,68,68,0.75)',  'rgba(6,182,212,0.75)',
+            'rgba(139,92,246,0.75)', 'rgba(249,115,22,0.75)', 'rgba(16,185,129,0.75)',
+            'rgba(248,113,113,0.75)','rgba(96,165,250,0.75)',
         ];
-        const borders = colors.map(c => c.replace('0.7','1'));
+        const colors = labels.map((_, i) => palette[i % palette.length]);
+
+        // Dynamically size the canvas height based on number of items
+        const barHeight = 28;
+        const chartHeight = Math.max(180, labels.length * barHeight + 40);
+        ctx.style.height = chartHeight + 'px';
+        ctx.height = chartHeight;
+
         window.ReportCommon.replaceChart(ctx, {
-            type: 'doughnut',
-            data: {labels, datasets:[{data: counts, backgroundColor: colors.slice(0,labels.length), borderColor: borders.slice(0,labels.length), borderWidth:1}]},
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    data: counts,
+                    backgroundColor: colors,
+                    borderColor: colors.map(c => c.replace('0.75', '1')),
+                    borderWidth: 1,
+                    borderRadius: 3,
+                }]
+            },
             options: {
-                responsive: true, maintainAspectRatio: false,
+                indexAxis: 'y',   // horizontal bars — labels always visible
+                responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
-                    legend: {position:'right', labels:{boxWidth:15,padding:15}},
-                    tooltip: {callbacks: {label(ctx) {
-                        const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
-                        return `${ctx.label}: ${ctx.formattedValue} (${Math.round(ctx.raw/total*100)}%)`;
+                    legend: { display: false },
+                    tooltip: { callbacks: { label(ctx) {
+                        const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                        return ` ${ctx.formattedValue}  (${Math.round(ctx.raw / total * 100)}%)`;
                     }}}
+                },
+                scales: {
+                    x: { beginAtZero: true, title: { display: true, text: 'Papers' }, ticks: { precision: 0 } },
+                    y: { ticks: { font: { size: 11 } } }
                 }
             }
         });
     };
+
     document.addEventListener('report:tabshown', function(event) {
         if (event.detail.tabId !== 'analytics-tab') return;
         window.ReportCommon.initOnce('contribution-type-chart', initContributionTypeChart);
