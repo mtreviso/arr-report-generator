@@ -34,7 +34,7 @@ def add_impersonate_arg(parser) -> None:
     )
 
 
-def add_comments_level_arg(parser, default="none") -> None:
+def add_comments_level_arg(parser, default="full") -> None:
     parser.add_argument(
         "--comments-level",
         choices=["none", "basic", "full"],
