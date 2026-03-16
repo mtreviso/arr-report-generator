@@ -153,15 +153,15 @@ class PCReportGenerator(ARRReportGenerator):
                     if ne == "yes" or (ec and "no" not in ec):
                         ethics_flag = "yes"
                     # Single-blind detection
-                    if not self.papers_data and completed_reviews == 1:
-                        sb_related = {k: v for k, v in content.items()
-                                      if any(t in k.lower() for t in ("identity", "know", "aware", "author"))}
-                        if sb_related:
-                            print(f"[DEBUG SB] Identity/author-awareness fields in first review: {list(sb_related.keys())}")
-                            for k, v in sb_related.items():
-                                print(f"  {k!r}: {v!r}")
-                        else:
-                            print(f"[DEBUG SB] No identity/know/aware fields found. Review keys: {sorted(content.keys())}")
+                    # if not self.papers_data and completed_reviews == 1:
+                    #     sb_related = {k: v for k, v in content.items()
+                    #                   if any(t in k.lower() for t in ("identity", "know", "aware", "author"))}
+                    #     if sb_related:
+                    #         print(f"[DEBUG SB] Identity/author-awareness fields in first review: {list(sb_related.keys())}")
+                    #         for k, v in sb_related.items():
+                    #             print(f"  {k!r}: {v!r}")
+                    #     else:
+                    #         print(f"[DEBUG SB] No identity/know/aware fields found. Review keys: {sorted(content.keys())}")
                     if self._extract_knows_authors(content):
                         knows_authors_count += 1
                     # Per-reviewer confidence tracking

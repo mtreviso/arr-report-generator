@@ -254,8 +254,18 @@ class ARRReportGenerator:
         return deduped
 
     def _extract_knows_authors(self, content):
-        """Return True if the reviewer indicated they know (some of) the authors."""
+        """Return True if the reviewer indicated they know (some of) the authors.
+
+        ARR's radio field is typically named 'reviewer_identity' with options like:
+          "No"  — reviewer does not know the authors
+          "Yes" — reviewer knows at least one author
+        or in some cycles with longer prose options. We handle all known variants.
+        The full debug dump on the first review will show the exact field/value.
+        """
+        # Known ARR field names, ordered by likelihood
         KEYS = [
+            "knowledge_of_or_educated_guess_at_author_identity",  # actual ARR field name (PC view)
+            "reviewer_identity",           # most common in recent ARR cycles
             "reviewer_identity_awareness",
             "know_the_authors",
             "author_identity",
@@ -265,7 +275,7 @@ class ARRReportGenerator:
             "reviewer_author_identity",
             "author_awareness",
         ]
-        # Negative phrases that unambiguously mean "I do NOT know"
+        # Phrases that unambiguously mean "I do NOT know the authors"
         NEGATIVE_PHRASES = (
             "do not know",
             "don't know",
@@ -273,9 +283,13 @@ class ARRReportGenerator:
             "not aware",
             "no conflict",
             "i have no",
+            "no, i do not",
+            "no, the identity",
         )
-        # Positive phrases used by ARR (prose options)
+        # Phrases used by ARR meaning "I DO know the authors"
         POSITIVE_PHRASES = (
+            "yes, i know",
+            "yes, the identity",
             "i know",
             "i am aware",
             "i'm aware",
@@ -284,6 +298,7 @@ class ARRReportGenerator:
             "know at least one",
             "know some of",
             "know one of",
+            "submitting author",
         )
 
         for key in KEYS:
@@ -295,17 +310,19 @@ class ARRReportGenerator:
             v = str(val).strip().lower()
             if not v:
                 continue
-            # Explicit negatives
+            # Explicit negatives (check before positives — "No, I do not know" must not match)
             if v in ("no", "false", "0", "n/a") or any(neg in v for neg in NEGATIVE_PHRASES):
                 continue
             # Explicit affirmatives
-            if v in ("yes", "true", "1") or v.startswith("yes"):
+            if v in ("yes", "true") or v.startswith("yes"):
                 return True
             if any(pos in v for pos in POSITIVE_PHRASES):
                 return True
 
-        # Broad fallback: scan all keys whose name contains identity/know/aware
+        # Broad fallback: scan all keys whose name contains identity/know/aware/author
         for key, raw in content.items():
+            if key in KEYS:
+                continue  # already handled above
             kl = key.lower()
             if not any(t in kl for t in ("identity", "know", "aware")):
                 continue
@@ -318,7 +335,7 @@ class ARRReportGenerator:
                 continue
             if any(neg in v for neg in NEGATIVE_PHRASES) or v in ("no", "false", "0"):
                 continue
-            if v in ("yes", "true", "1") or v.startswith("yes"):
+            if v in ("yes", "true") or v.startswith("yes"):
                 return True
             if any(pos in v for pos in POSITIVE_PHRASES):
                 return True
@@ -636,10 +653,23 @@ class ARRReportGenerator:
         if preprint_val:
             v = preprint_val.lower()
             if v in ("no", "false", "0") or v.startswith("no"):
-                return "Yes"   # explicitly said no preprint → anonymous
-            return "No"        # URL or any other non-empty value → non-anon
+                return "Yes"
+            return "No"
 
-        # 2) Boolean / yes-no fields
+        # ARR prose values for preprint_status (binding option strings)
+        ANON_PROSE = (
+            "no non-anonymous preprint",
+            "there is no non-anonymous",
+            "will not be posted",
+            "no preprint",
+        )
+        NON_ANON_PROSE = (
+            "non-anonymous preprint exists",
+            "preprint is available",
+            "posted a preprint",
+            "there is a non-anonymous",
+        )
+
         BOOL_KEYS = [
             "anonymous_preprint", "anonymized", "preprint_status",
             "is_anonymous", "nonAnonymousPreprint",
@@ -650,7 +680,12 @@ class ARRReportGenerator:
             if not val:
                 continue
             v = val.lower()
-            if v in ("yes", "true", "1") or v.startswith("yes"):
+            # Prose-first: check full ARR option strings before simple yes/no
+            if any(p in v for p in ANON_PROSE):
+                return "Yes"
+            if any(p in v for p in NON_ANON_PROSE):
+                return "No"
+            if v in ("yes", "true") or v.startswith("yes"):
                 return "Yes"
             if v in ("no", "false", "0") or v.startswith("no"):
                 return "No"
@@ -665,7 +700,7 @@ class ARRReportGenerator:
             v = str(raw).strip().lower()
             if not v:
                 continue
-            if v in ("yes", "true", "1") or v.startswith("yes"):
+            if v in ("yes", "true") or v.startswith("yes"):
                 return "Yes"
             if v in ("no", "false", "0") or v.startswith("no"):
                 return "No"
