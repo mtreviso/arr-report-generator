@@ -35,6 +35,8 @@ _COMMON_ATTRS = [
     "score_distributions",
     "profile_cache",
     "ac_email_cache",
+    "group_index_complete",
+    "missing_group_ids",
 ]
 
 # PCReportGenerator extras

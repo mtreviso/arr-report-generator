@@ -83,19 +83,61 @@ class ARRReportGenerator:
 
         # Group index (bulk pre-fetch for speed)
         self.group_index = {}
+        self.group_index_complete = False
+        self.missing_group_ids = set()
         self._build_group_index()
+
+        # Cached dataframe for repeated report aggregations
+        self._papers_df_cache = None
+        self._papers_df_cache_sig = None
 
     def _build_group_index(self):
         """Pre-fetch all groups under this venue/submission prefix into a dict."""
         prefix = f'{self.venue_id}/{self.submission_name}'
+        self.group_index_complete = False
+        self.missing_group_ids = set()
         try:
             print(f'Pre-fetching groups with prefix: {prefix}')
             groups = self.client.get_all_groups(prefix=prefix)
             self.group_index = {g.id: g for g in groups}
+            self.group_index_complete = True
             print(f'Cached {len(self.group_index)} groups for fast lookup')
         except Exception as e:
             print(f'Warning: could not pre-fetch groups ({e}). Falling back to per-group API calls.')
             self.group_index = {}
+            self.group_index_complete = False
+
+    def _get_group_cached(self, group_id):
+        if not group_id:
+            return None
+        group = self.group_index.get(group_id)
+        if group is not None:
+            return group
+        if group_id in self.missing_group_ids:
+            return None
+        if self.group_index_complete:
+            self.missing_group_ids.add(group_id)
+            return None
+        try:
+            group = self.client.get_group(group_id)
+            self.group_index[group_id] = group
+            return group
+        except Exception:
+            self.missing_group_ids.add(group_id)
+            return None
+
+    def _papers_df(self):
+        cache = getattr(self, '_papers_df_cache', None)
+        cache_sig = getattr(self, '_papers_df_cache_sig', None)
+        if not self.papers_data:
+            self._papers_df_cache = pd.DataFrame()
+            self._papers_df_cache_sig = (id(self.papers_data), 0)
+            return self._papers_df_cache
+        sig = (id(self.papers_data), len(self.papers_data))
+        if cache is None or cache_sig != sig:
+            self._papers_df_cache = pd.DataFrame(self.papers_data)
+            self._papers_df_cache_sig = sig
+        return self._papers_df_cache
 
     # -------------------------------------------------------------------------
     # Helper predicates
@@ -411,13 +453,7 @@ class ARRReportGenerator:
         if ac_entry.startswith("~") or "@" in ac_entry:
             return ac_entry
         if "/Area_Chair_" in ac_entry:
-            g = self.group_index.get(ac_entry)
-            if g is None:
-                try:
-                    g = self.client.get_group(ac_entry)
-                    self.group_index[ac_entry] = g
-                except Exception:
-                    g = None
+            g = self._get_group_cached(ac_entry)
             if g and getattr(g, "members", None):
                 return g.members[0]
         return ac_entry
@@ -517,13 +553,7 @@ class ARRReportGenerator:
 
             # Retrieve the assigned Area Chair (use cached groups first)
             ac_group_id = f'{prefix}/Area_Chairs'
-            area_chairs_group = self.group_index.get(ac_group_id)
-            if area_chairs_group is None:
-                try:
-                    area_chairs_group = self.client.get_group(ac_group_id)
-                    self.group_index[ac_group_id] = area_chairs_group
-                except Exception:
-                    area_chairs_group = None
+            area_chairs_group = self._get_group_cached(ac_group_id)
 
             if not area_chairs_group or not getattr(area_chairs_group, "members", None):
                 continue
@@ -635,13 +665,7 @@ class ARRReportGenerator:
             # Expected reviews from Reviewers group
             expected_reviews = 0
             reviewers_group_id = f'{prefix}/Reviewers'
-            reviewers_group = self.group_index.get(reviewers_group_id)
-            if reviewers_group is None:
-                try:
-                    reviewers_group = self.client.get_group(reviewers_group_id)
-                    self.group_index[reviewers_group_id] = reviewers_group
-                except Exception:
-                    reviewers_group = None
+            reviewers_group = self._get_group_cached(reviewers_group_id)
             if reviewers_group and getattr(reviewers_group, "members", None):
                 expected_reviews = len(reviewers_group.members)
 
@@ -654,13 +678,7 @@ class ARRReportGenerator:
                 "/Emergency_Review_Assignees",
             ]
             for suffix in EMERGENCY_GROUP_SUFFIXES:
-                erg = self.group_index.get(f'{prefix}{suffix}')
-                if erg is None:
-                    try:
-                        erg = self.client.get_group(f'{prefix}{suffix}')
-                        self.group_index[f'{prefix}{suffix}'] = erg
-                    except Exception:
-                        erg = None
+                erg = self._get_group_cached(f'{prefix}{suffix}')
                 if erg and getattr(erg, 'members', None):
                     has_emergency_reviewer = True
                     emergency_reviewer_count = len(erg.members)
@@ -755,7 +773,7 @@ class ARRReportGenerator:
         """Compute metadata aggregated by Area Chair."""
         if not self.papers_data:
             return
-        df = pd.DataFrame(self.papers_data)
+        df = self._papers_df()
         meta_df = df.groupby("Area Chair").agg(
             Completed_Reviews=("Completed Reviews", "sum"),
             Expected_Reviews=("Expected Reviews", "sum"),
@@ -814,7 +832,7 @@ class ARRReportGenerator:
         """Compute correlation between different review scores."""
         if not self.papers_data:
             return
-        df = pd.DataFrame(self.papers_data)
+        df = self._papers_df()
         corr_data = pd.DataFrame({
             "Overall_Assessment_Avg":  df["Overall Assessment"].apply(self.parse_avg),
             "Reviewer_Confidence_Avg": df["Reviewer Confidence"].apply(self.parse_avg),
@@ -850,7 +868,7 @@ class ARRReportGenerator:
     def generate_paper_type_distribution(self):
         if not self.papers_data:
             return {'labels': [], 'counts': []}
-        df = pd.DataFrame(self.papers_data)
+        df = self._papers_df()
         type_counts = df["Paper Type"].value_counts().to_dict()
         return {'labels': list(type_counts.keys()), 'counts': list(type_counts.values())}
 
@@ -869,7 +887,7 @@ class ARRReportGenerator:
     def generate_ac_scoring_data(self):
         if not self.papers_data:
             return []
-        df = pd.DataFrame(self.papers_data)
+        df = self._papers_df()
         ac_id_map = df.groupby("Area Chair")["Area Chair ID"].first().to_dict() if "Area Chair ID" in df.columns else {}
         result = []
         for ac_name in df['Area Chair'].unique():

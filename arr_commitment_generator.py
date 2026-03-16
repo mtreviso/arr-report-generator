@@ -62,9 +62,13 @@ class CommitmentReportGenerator(ARRReportGenerator):
         self.profile_cache        = {}
         self.linked_note_cache    = {}
         self.linked_replies_cache = {}
+        self._papers_df_cache = None
+        self._papers_df_cache_sig = None
 
         # Build group index then find assigned submissions
         self.group_index = {}
+        self.group_index_complete = False
+        self.missing_group_ids = set()
         self._build_group_index()
         print(f"Role: {role.upper()} | Venue: {venue_id} | Me: {me}")
         self._find_submissions()
@@ -75,23 +79,21 @@ class CommitmentReportGenerator(ARRReportGenerator):
 
     def _build_group_index(self):
         prefix = f'{self.venue_id}/{self.submission_name}'
+        self.group_index_complete = False
+        self.missing_group_ids = set()
         try:
             print(f"Pre-fetching groups with prefix: {prefix}")
             groups = self.client.get_all_groups(prefix=prefix)
             self.group_index = {g.id: g for g in groups}
+            self.group_index_complete = True
             print(f"Cached {len(self.group_index)} groups for fast lookup")
         except Exception as e:
             print(f"Warning: could not pre-fetch groups ({e}). Falling back to per-group calls.")
             self.group_index = {}
+            self.group_index_complete = False
 
     def _is_me_in_group(self, group_id):
-        group = self.group_index.get(group_id)
-        if group is None:
-            try:
-                group = self.client.get_group(group_id)
-                self.group_index[group_id] = group
-            except Exception:
-                return False
+        group = self._get_group_cached(group_id)
         return bool(getattr(group, 'members', None)) and self.me in group.members
 
     def _find_submissions(self):
@@ -224,6 +226,21 @@ class CommitmentReportGenerator(ARRReportGenerator):
         self.linked_replies_cache[forum_id] = replies
         return replies
 
+    def _extract_commitment_meta_info(self, submission):
+        recommendation = ""
+        presentation_mode = ""
+        award = ""
+        for reply in self._get_submission_replies(submission):
+            if not self.is_meta_review(reply):
+                continue
+            content = getattr(reply, 'content', None) or reply.get('content', {})
+            recommendation = content.get('recommendation', {}).get('value', '')
+            presentation_mode = content.get('presentation_mode', {}).get('value', '')
+            af = content.get('award', {}).get('value', [])
+            award = ", ".join(af) if isinstance(af, list) else af
+            break
+        return recommendation, presentation_mode, award
+
     # -----------------------------------------------------------------------
     # Data processing
     # -----------------------------------------------------------------------
@@ -238,21 +255,7 @@ class CommitmentReportGenerator(ARRReportGenerator):
 
         for sub in tqdm(self.submissions, desc="Processing papers"):
             # SAC meta-review on commitment submission
-            recommendation    = ""
-            presentation_mode = ""
-            award             = ""
-            try:
-                metas = self.client.get_notes(
-                    invitation=f"{self.venue_id}/{self.submission_name}{sub.number}/-/Meta_Review"
-                )
-                if metas:
-                    c = metas[0].content
-                    recommendation    = c.get("recommendation",    {}).get("value", "")
-                    presentation_mode = c.get("presentation_mode", {}).get("value", "")
-                    af = c.get("award", {}).get("value", [])
-                    award = ", ".join(af) if isinstance(af, list) else af
-            except Exception:
-                pass
+            recommendation, presentation_mode, award = self._extract_commitment_meta_info(sub)
 
             paper_title      = sub.content.get('title', {}).get('value', 'Untitled')
             paper_type       = sub.content.get('paper_type', {}).get('value', '')
@@ -373,12 +376,11 @@ class CommitmentReportGenerator(ARRReportGenerator):
                         ethics_flag = "AC: yes"
 
             # Expected reviews
-            try:
-                rg_id = f"{self.venue_id}/{self.submission_name}{sub.number}/Reviewers"
-                rg = self.group_index.get(rg_id) or self.client.get_group(rg_id)
-                self.group_index[rg_id] = rg
-                expected_reviews = len(rg.members) if getattr(rg, 'members', None) else max(3, completed_reviews)
-            except Exception:
+            rg_id = f"{self.venue_id}/{self.submission_name}{sub.number}/Reviewers"
+            rg = self._get_group_cached(rg_id)
+            if rg and getattr(rg, 'members', None):
+                expected_reviews = len(rg.members)
+            else:
                 expected_reviews = max(3, completed_reviews)
 
             # Emergency reviewer group
@@ -386,13 +388,7 @@ class CommitmentReportGenerator(ARRReportGenerator):
             emergency_reviewer_count = 0
             for suffix in ["/Emergency_Reviewers", "/Emergency_Reviewer", "/Emergency_Review_Assignees"]:
                 erg_id = f"{self.venue_id}/{self.submission_name}{sub.number}{suffix}"
-                erg = self.group_index.get(erg_id)
-                if erg is None:
-                    try:
-                        erg = self.client.get_group(erg_id)
-                        self.group_index[erg_id] = erg
-                    except Exception:
-                        erg = None
+                erg = self._get_group_cached(erg_id)
                 if erg and getattr(erg, 'members', None):
                     has_emergency_reviewer = True
                     emergency_reviewer_count = len(erg.members)

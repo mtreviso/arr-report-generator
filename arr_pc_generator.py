@@ -61,13 +61,7 @@ class PCReportGenerator(ARRReportGenerator):
             prefix = f'{self.venue_id}/{self.submission_name}{submission.number}'
 
             # Area Chair
-            ac_group = self.group_index.get(f'{prefix}/Area_Chairs')
-            if ac_group is None:
-                try:
-                    ac_group = self.client.get_group(f'{prefix}/Area_Chairs')
-                    self.group_index[f'{prefix}/Area_Chairs'] = ac_group
-                except Exception:
-                    ac_group = None
+            ac_group = self._get_group_cached(f'{prefix}/Area_Chairs')
             ac_entry  = (ac_group.members[0] if ac_group and getattr(ac_group,'members',None) else "")
             ac_uid    = self._resolve_ac_user_id(ac_entry)
             ac_name   = self.get_display_name_for_user(ac_uid) if ac_uid else ""
@@ -75,13 +69,7 @@ class PCReportGenerator(ARRReportGenerator):
             ac_affiliation = self.get_affiliation_for_user(ac_uid) if ac_uid else ""
 
             # Senior Area Chair
-            sac_group = self.group_index.get(f'{prefix}/Senior_Area_Chairs')
-            if sac_group is None:
-                try:
-                    sac_group = self.client.get_group(f'{prefix}/Senior_Area_Chairs')
-                    self.group_index[f'{prefix}/Senior_Area_Chairs'] = sac_group
-                except Exception:
-                    sac_group = None
+            sac_group = self._get_group_cached(f'{prefix}/Senior_Area_Chairs')
             sac_entry = (sac_group.members[0] if sac_group and getattr(sac_group,'members',None) else "")
             sac_uid   = self._resolve_ac_user_id(sac_entry)
             sac_name  = self.get_display_name_for_user(sac_uid) if sac_uid else ""
@@ -175,13 +163,7 @@ class PCReportGenerator(ARRReportGenerator):
 
             # Expected reviews
             expected_reviews = 0
-            rg = self.group_index.get(f'{prefix}/Reviewers')
-            if rg is None:
-                try:
-                    rg = self.client.get_group(f'{prefix}/Reviewers')
-                    self.group_index[f'{prefix}/Reviewers'] = rg
-                except Exception:
-                    rg = None
+            rg = self._get_group_cached(f'{prefix}/Reviewers')
             if rg and getattr(rg, 'members', None):
                 expected_reviews = len(rg.members)
                 for rev_id in rg.members:
@@ -189,13 +171,7 @@ class PCReportGenerator(ARRReportGenerator):
                     # venue/SubmissionN/Reviewer_abc — resolve to the real tilde ID
                     actual_rev_id = rev_id
                     if '/Reviewer_' in rev_id:
-                        rev_grp = self.group_index.get(rev_id)
-                        if rev_grp is None:
-                            try:
-                                rev_grp = self.client.get_group(rev_id)
-                                self.group_index[rev_id] = rev_grp
-                            except Exception:
-                                rev_grp = None
+                        rev_grp = self._get_group_cached(rev_id)
                         if rev_grp and getattr(rev_grp, 'members', None):
                             actual_rev_id = rev_grp.members[0]
                     self.reviewer_load[actual_rev_id] = self.reviewer_load.get(actual_rev_id, 0) + 1
@@ -205,13 +181,7 @@ class PCReportGenerator(ARRReportGenerator):
             emergency_reviewer_count = 0
             for suffix in ["/Emergency_Reviewers", "/Emergency_Reviewer", "/Emergency_Review_Assignees"]:
                 erg_id = f'{prefix}{suffix}'
-                erg = self.group_index.get(erg_id)
-                if erg is None:
-                    try:
-                        erg = self.client.get_group(erg_id)
-                        self.group_index[erg_id] = erg
-                    except Exception:
-                        erg = None
+                erg = self._get_group_cached(erg_id)
                 if erg and getattr(erg, 'members', None):
                     has_emergency_reviewer = True
                     emergency_reviewer_count = len(erg.members)
@@ -286,7 +256,7 @@ class PCReportGenerator(ARRReportGenerator):
         """Aggregate per Senior Area Chair (analogous to AC dashboard for SAC level)."""
         if not self.papers_data:
             return
-        df = pd.DataFrame(self.papers_data)
+        df = self._papers_df()
         if "Senior Area Chair" not in df.columns or df["Senior Area Chair"].eq("").all():
             self.sac_meta_data = []
             return
@@ -338,7 +308,7 @@ class PCReportGenerator(ARRReportGenerator):
         """Aggregate per track/area."""
         if not self.papers_data:
             return
-        df = pd.DataFrame(self.papers_data)
+        df = self._papers_df()
         if "Track" not in df.columns or df["Track"].eq("").all():
             self.track_data = []
             return
@@ -387,7 +357,7 @@ class PCReportGenerator(ARRReportGenerator):
         """High-level counters mirroring the PC console."""
         if not self.papers_data:
             return {}
-        df = pd.DataFrame(self.papers_data)
+        df = self._papers_df()
         total          = len(df)
         reviews_done   = int(df["Completed Reviews"].sum())
         reviews_exp    = int(df["Expected Reviews"].sum())
@@ -569,7 +539,7 @@ class PCReportGenerator(ARRReportGenerator):
         """Top SACs by avg |AC score - reviewer avg|, aggregated from papers_data."""
         if not self.papers_data:
             return []
-        df = pd.DataFrame(self.papers_data)
+        df = self._papers_df()
         if "Senior Area Chair" not in df.columns:
             return []
         results = []
