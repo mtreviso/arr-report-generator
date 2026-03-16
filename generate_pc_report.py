@@ -61,6 +61,8 @@ def _build_template_data(gen):
         "sac_load":                gen.compute_sac_load_histogram(),
         "ac_scoring_top":          ac_scoring_data[:15],
         "sac_scoring_top":         gen.compute_sac_scoring_data(),
+        "score_by_type_data":      gen.generate_score_by_type_data(),
+        "reviewer_load_quality":   gen.generate_reviewer_load_quality_data(),
     }
 
 

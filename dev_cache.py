@@ -37,6 +37,8 @@ _COMMON_ATTRS = [
     "ac_email_cache",
     "group_index_complete",
     "missing_group_ids",
+    "reviewer_load",
+    "reviewer_confidence_data",
 ]
 
 # PCReportGenerator extras

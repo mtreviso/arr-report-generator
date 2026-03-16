@@ -60,6 +60,8 @@ def _build_template_data(gen):
         "review_completion_data":  gen.generate_review_completion_data(),
         "score_scatter_data":      gen.generate_score_scatter_data(),
         "ac_scoring_data":         gen.generate_ac_scoring_data(),
+        "score_by_type_data":      gen.generate_score_by_type_data(),
+        "reviewer_load_quality":   gen.generate_reviewer_load_quality_data(),
     }
 
 
