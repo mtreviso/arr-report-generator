@@ -4,7 +4,7 @@ HTML dashboards for OpenReview ARR/ACL venues for Senior Area Chairs, Area Chair
 
 **Runs entirely on your machine.** Your OpenReview credentials are only used to fetch data and are never stored or transmitted elsewhere.
 
-📄 See [`docs/how-to-use.html`](docs/how-to-use.html) for a simple walkthrough, or use the README below for the full reference.
+📄 See [the doc page](https://mtreviso.github.io/arr-report-generator/docs.html) for a simple walkthrough, or use the README below for the full reference.
 
 ---
 
