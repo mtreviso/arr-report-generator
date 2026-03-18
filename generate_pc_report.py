@@ -99,12 +99,13 @@ def main():
     add_append_date_arg(parser)
     args = parser.parse_args()
 
-    if not args.username:
-        args.username = input("OpenReview username: ")
-    if not args.password:
-        args.password = getpass.getpass("OpenReview password: ")
-    if not args.me:
-        args.me = input("Your OpenReview tilde ID (e.g. ~Your_Name1): ")
+    if not args.use_cache:
+        if not args.username:
+            args.username = input("OpenReview username: ")
+        if not args.password:
+            args.password = getpass.getpass("OpenReview password: ")
+        if not args.me:
+            args.me = input("Your OpenReview tilde ID (e.g. ~Your_Name1): ")
 
     if args.use_cache and args.save_cache:
         print("Error: --use-cache and --save-cache are mutually exclusive.")
@@ -123,6 +124,7 @@ def main():
             venue_id=args.venue_id,
             me=args.me,
             comments_level=args.comments_level,
+            skip_api_init=args.use_cache,
         )
 
         filename = make_filename(args.venue_id, "pc_report", args.append_date)

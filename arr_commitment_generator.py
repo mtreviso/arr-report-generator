@@ -23,7 +23,7 @@ VALID_ROLES = ('sac', 'ac', 'pc')
 class CommitmentReportGenerator(ARRReportGenerator):
 
     def __init__(self, username, password, venue_id, me, role='sac',
-                 impersonate_group=None, comments_level='basic'):
+                 impersonate_group=None, comments_level='basic', skip_api_init=False):
         if role not in VALID_ROLES:
             raise ValueError(f"role must be one of {VALID_ROLES}, got {role!r}")
         self.role = role
@@ -37,6 +37,14 @@ class CommitmentReportGenerator(ARRReportGenerator):
         self.password  = password
         self.venue_id  = venue_id
         self.me        = me
+        self.client = None
+        self.venue_group = None
+        self.submission_name = 'Submission'
+        self.submissions = []
+
+        if skip_api_init:
+            return
+
         self.client = openreview.api.OpenReviewClient(
             baseurl='https://api2.openreview.net',
             username=username,

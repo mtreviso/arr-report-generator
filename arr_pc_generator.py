@@ -30,10 +30,11 @@ class PCReportGenerator(ARRReportGenerator):
     - Adds attention queue (papers needing PC action)
     """
 
-    def __init__(self, username, password, venue_id, me, comments_level='none'):
+    def __init__(self, username, password, venue_id, me, comments_level='none', skip_api_init=False):
         # Call base __init__ with role='pc' so it skips the SAC filter
         super().__init__(username=username, password=password,
-                         venue_id=venue_id, me=me, role='pc', comments_level=comments_level)
+                         venue_id=venue_id, me=me, role='pc', comments_level=comments_level,
+                         skip_api_init=skip_api_init)
         # Extra data containers
         self.sac_meta_data    = []
         self.track_data       = []

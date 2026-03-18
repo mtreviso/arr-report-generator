@@ -16,7 +16,7 @@ class ARRReportGenerator:
     LOW_CONF_THRESHOLD = 2
 
     def __init__(self, username, password, venue_id, me, role='sac',
-                 impersonate_group=None, comments_level='basic'):
+                 impersonate_group=None, comments_level='basic', skip_api_init=False):
         self.username = username
         self.password = password
         self.venue_id = venue_id
@@ -26,6 +26,43 @@ class ARRReportGenerator:
         if self.comments_level not in {'none', 'basic', 'full'}:
             raise ValueError(f"comments_level must be one of ('none', 'basic', 'full'), got {comments_level!r}")
         self.reply_details = 'replies' if self.comments_level == 'full' else 'directReplies'
+
+        # Data containers
+        self.papers_data = []
+        self.ac_meta_data = []
+        self.comments_data = []
+        self.correlation_data = None
+        self.attention_papers = []
+        self.reviewer_load = {}            # reviewer_id -> paper count
+        self.reviewer_confidence_data = {} # reviewer_id -> [confidence scores]
+
+        # Score distributions for visualization
+        self.score_distributions = {
+            'overall_assessment': [],
+            'meta_review': []
+        }
+
+        # Caches
+        self.ac_email_cache = {}
+        self.profile_cache = {}
+
+        # Group index / submission state
+        self.client = None
+        self.venue_group = None
+        self.submission_name = 'Submission'
+        self.submissions = []
+        self.my_sac_groups = set() if role == 'pc' else set()
+        self.group_index = {}
+        self.group_index_complete = False
+        self.missing_group_ids = set()
+
+        # Cached dataframe for repeated report aggregations
+        self._papers_df_cache = None
+        self._papers_df_cache_sig = None
+
+        if skip_api_init:
+            return
+
         self.client = openreview.api.OpenReviewClient(baseurl='https://api2.openreview.net',
                                                      username=username,
                                                      password=password)
@@ -64,34 +101,8 @@ class ARRReportGenerator:
                         if hasattr(g, 'members') and me in g.members:
                             self.my_sac_groups.add(g.id)
 
-        # Data containers
-        self.papers_data = []
-        self.ac_meta_data = []
-        self.comments_data = []
-        self.correlation_data = None
-        self.attention_papers = []
-        self.reviewer_load = {}            # reviewer_id -> paper count
-        self.reviewer_confidence_data = {} # reviewer_id -> [confidence scores]
-
-        # Score distributions for visualization
-        self.score_distributions = {
-            'overall_assessment': [],
-            'meta_review': []
-        }
-
-        # Caches
-        self.ac_email_cache = {}
-        self.profile_cache = {}
-
         # Group index (bulk pre-fetch for speed)
-        self.group_index = {}
-        self.group_index_complete = False
-        self.missing_group_ids = set()
         self._build_group_index()
-
-        # Cached dataframe for repeated report aggregations
-        self._papers_df_cache = None
-        self._papers_df_cache_sig = None
 
     def _build_group_index(self):
         """Pre-fetch all groups under this venue/submission prefix into a dict."""

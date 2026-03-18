@@ -90,7 +90,7 @@ def main():
     add_append_date_arg(parser)
     args = parser.parse_args()
 
-    if not args.username or not args.password or not args.me:
+    if not args.use_cache and (not args.username or not args.password or not args.me):
         parser.print_help()
         sys.exit(1)
 
@@ -113,6 +113,7 @@ def main():
             role=args.role,
             impersonate_group=args.impersonate or None,
             comments_level=args.comments_level,
+            skip_api_init=args.use_cache,
         )
 
         if args.impersonate:
