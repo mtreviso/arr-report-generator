@@ -174,7 +174,7 @@ cython_debug/
 .pypirc
 
 env
-reports/
+reports/*.html
 run_commitment.sh
 run_review.sh
 .dev_cache*
