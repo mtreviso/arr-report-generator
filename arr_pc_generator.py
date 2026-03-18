@@ -117,37 +117,25 @@ class PCReportGenerator(ARRReportGenerator):
                             f"&noteId={reply.get('id','')}"
                         )
 
-                EMERGENCY_DECL_PATTERNS = [
-                    "/-/Emergency_Review_Request",
-                    "/-/Emergency_Reviewer_Recruitment",
-                    "/-/Emergency_Reviewer_Request",
-                    "/-/Emergency_Review",
-                ]
-                if any(any(p in inv for p in EMERGENCY_DECL_PATTERNS) for inv in invitations):
+                if self._is_emergency_declaration_reply(reply):
                     has_emergency_declaration = True
                     emergency_declaration_count += 1
                     if not emergency_declaration_link:
-                        emergency_declaration_link = (
-                            f"https://openreview.net/forum?id={reply.get('forum','')}"
-                            f"&noteId={reply.get('id','')}"
-                        )
+                        emergency_declaration_link = self._reply_link(reply)
 
                 if self.is_relevant_comment(reply):
                     has_confidential = True
 
                 if self.is_actual_review(reply):
                     completed_reviews += 1
-                    content = reply.get("content", {})
+                    content = self._reply_content(reply)
                     for field, lst in [('confidence', confidence_scores),
                                        ('soundness', soundness_scores),
                                        ('excitement', excitement_scores),
                                        ('overall_assessment', overall_assessment_scores)]:
-                        try:
-                            v = content.get(field, {}).get("value")
-                            if v is not None:
-                                lst.append(float(v))
-                        except Exception:
-                            pass
+                        v = self._extract_numeric_score(content, field)
+                        if v is not None:
+                            lst.append(v)
                     ne = content.get('needs_ethics_review', {}).get('value', '').strip().lower()
                     ec = content.get('ethical_concerns', {}).get('value', '').strip().lower()
                     if ne == "yes" or (ec and "no" not in ec):
@@ -169,19 +157,15 @@ class PCReportGenerator(ARRReportGenerator):
                     if sigs:
                         rev_uid = self._resolve_reviewer_id(sigs[0])
                         try:
-                            conf_val = content.get("confidence", {}).get("value")
+                            conf_val = self._extract_numeric_score(content, 'confidence')
                             if conf_val is not None:
                                 self.reviewer_confidence_data.setdefault(rev_uid, []).append(float(conf_val))
                         except Exception:
                             pass
 
                 if self.is_meta_review(reply):
-                    content = reply.get("content", {})
-                    meta_review_score = (
-                        content.get("overall_assessment", {}).get("value", "") or
-                        content.get("overall_rating",    {}).get("value", "") or
-                        content.get("score",             {}).get("value", "")
-                    )
+                    content = self._reply_content(reply)
+                    meta_review_score = self._extract_meta_review_score(content)
 
             # Expected reviews
             expected_reviews = 0
@@ -241,6 +225,8 @@ class PCReportGenerator(ARRReportGenerator):
                 "Emergency Declaration Count": emergency_declaration_count,
                 "Has Emergency Reviewer": has_emergency_reviewer,
                 "Emergency Reviewer Count": emergency_reviewer_count,
+                "Has Emergency Assigned": bool(has_emergency_declaration and has_emergency_reviewer),
+                "Has Emergency Unmet": bool(has_emergency_declaration and not has_emergency_reviewer),
                 "Review Issue Count":    review_issue_count,
                 "Knows Authors Count":   knows_authors_count,
                 "Has Compromised Review": knows_authors_count > 0,
@@ -297,8 +283,8 @@ class PCReportGenerator(ARRReportGenerator):
             sac_email = group["Senior Area Chair Email"].iloc[0]
             sac_affil = group["Senior Area Chair Affiliation"].iloc[0] if "Senior Area Chair Affiliation" in group.columns else ""
             emerg_decl   = int(group["Has Emergency Declaration"].sum()) if "Has Emergency Declaration" in group.columns else 0
-            emerg_assign = int(group["Has Emergency Reviewer"].sum()) if "Has Emergency Reviewer" in group.columns else 0
-            emerg_unmet  = max(0, emerg_decl - emerg_assign)
+            emerg_assign = int(group["Has Emergency Assigned"].sum()) if "Has Emergency Assigned" in group.columns else 0
+            emerg_unmet  = int(group["Has Emergency Unmet"].sum()) if "Has Emergency Unmet" in group.columns else max(0, emerg_decl - emerg_assign)
             late_papers  = int((group["Completed Reviews"] < group["Expected Reviews"]).sum())
             rows.append({
                 "Senior Area Chair":            sac_name,
@@ -317,6 +303,7 @@ class PCReportGenerator(ARRReportGenerator):
                 "Ethics_Papers":           ethics,
                 "Late_Papers":             late_papers,
                 "Emergency_Declared":      emerg_decl,
+                "Emergency_Assigned":      emerg_assign,
                 "Emergency_Unassigned":    emerg_unmet,
             })
         rows.sort(key=lambda r: r["Num_Papers"], reverse=True)
@@ -393,8 +380,13 @@ class PCReportGenerator(ARRReportGenerator):
         ).dropna()
 
         # Emergency stats
-        emerg_decl  = int(df["Has Emergency Declaration"].sum()) if "Has Emergency Declaration" in df.columns else 0
-        emerg_unmet = int((df["Has Emergency Declaration"] & ~df["Has Emergency Reviewer"]).sum()) if "Has Emergency Declaration" in df.columns else 0
+        if "Emergency Declaration Count" in df.columns:
+            emergency_counts = pd.to_numeric(df["Emergency Declaration Count"], errors="coerce").fillna(0)
+            emerg_decl = int((emergency_counts > 0).sum())
+        elif "Has Emergency Declaration" in df.columns:
+            emerg_decl = int(df["Has Emergency Declaration"].sum())
+        else:
+            emerg_decl = 0
 
         # Paper type breakdown
         type_counts = df["Paper Type"].value_counts().to_dict() if "Paper Type" in df.columns else {}
@@ -415,7 +407,6 @@ class PCReportGenerator(ARRReportGenerator):
             "sac_count":               sac_count,
             "ac_count":                ac_count,
             "emergency_declared":      emerg_decl,
-            "emergency_unmet":         emerg_unmet,
             "avg_overall":             round(float(overall_vals.mean()), 2) if len(overall_vals) else None,
             "avg_meta":                round(float(meta_vals.mean()),    2) if len(meta_vals)    else None,
             "type_counts":             type_counts,

@@ -717,6 +717,67 @@ class ARRReportGenerator:
             return replies
         return []
 
+    def _reply_attr(self, reply, key, default=None):
+        if isinstance(reply, dict):
+            return reply.get(key, default)
+        return getattr(reply, key, default)
+
+    def _reply_content(self, reply):
+        content = self._reply_attr(reply, 'content', {})
+        return content if isinstance(content, dict) else {}
+
+    def _reply_invitations(self, reply):
+        invitations = self._reply_attr(reply, 'invitations', []) or []
+        if isinstance(invitations, (list, tuple, set)):
+            return list(invitations)
+        return [invitations]
+
+    def _reply_link(self, reply):
+        forum_id = self._reply_attr(reply, 'forum', '')
+        note_id = self._reply_attr(reply, 'id', '')
+        return f"https://openreview.net/forum?id={forum_id}&noteId={note_id}" if forum_id and note_id else ""
+
+    def _reply_matches_invitation(self, reply, patterns):
+        invitations = [str(inv) for inv in self._reply_invitations(reply)]
+        return any(any(pattern in inv for pattern in patterns) for inv in invitations)
+
+    def _extract_numeric_score(self, content, field):
+        try:
+            value = self._get_content_value(content, field)
+            if value in (None, ''):
+                return None
+            return float(value)
+        except Exception:
+            return None
+
+    def _extract_meta_review_score(self, content):
+        for field in ('overall_assessment', 'overall_rating', 'score'):
+            value = self._get_content_value(content, field)
+            if value not in (None, ''):
+                return value
+        return ''
+
+    def _is_emergency_declaration_reply(self, reply):
+        invitations = [str(inv) for inv in self._reply_invitations(reply)]
+        content = self._reply_content(reply)
+        lowered_invitations = [inv.lower() for inv in invitations]
+
+        explicit_patterns = [
+            '/-/emergency_declaration',
+            '/-/emergencydeclaration',
+        ]
+        if any(any(pattern in inv for pattern in explicit_patterns) for inv in lowered_invitations):
+            return True
+
+        title = str(self._get_content_value(content, 'title', '') or '').strip().lower()
+        if 'emergency declaration' in title:
+            return True
+
+        if any('emergency_declaration' in inv or 'emergencydeclaration' in inv for inv in lowered_invitations):
+            return True
+
+        return False
+
     def _resolve_reviewer_id(self, sig):
         """Resolve an anonymous reviewer signature to a real user ID."""
         if not sig:
@@ -804,20 +865,12 @@ class ARRReportGenerator:
                         note_id  = reply.get("id", "")
                         review_issue_link = f"https://openreview.net/forum?id={forum_id}&noteId={note_id}"
 
-                # Emergency review declaration (AC requests emergency reviewer)?
-                EMERGENCY_DECL_PATTERNS = [
-                    "/-/Emergency_Review_Request",
-                    "/-/Emergency_Reviewer_Recruitment",
-                    "/-/Emergency_Reviewer_Request",
-                    "/-/Emergency_Review",
-                ]
-                if any(any(p in inv for p in EMERGENCY_DECL_PATTERNS) for inv in invitations):
+                # Emergency declaration / emergency-review request
+                if self._is_emergency_declaration_reply(reply):
                     has_emergency_declaration = True
                     emergency_declaration_count += 1
                     if not emergency_declaration_link:
-                        forum_id = reply.get("forum", "")
-                        note_id  = reply.get("id", "")
-                        emergency_declaration_link = f"https://openreview.net/forum?id={forum_id}&noteId={note_id}"
+                        emergency_declaration_link = self._reply_link(reply)
 
                 # Confidential comment?
                 if self.is_relevant_comment(reply):
@@ -825,31 +878,16 @@ class ARRReportGenerator:
 
                 if self.is_actual_review(reply):
                     completed_reviews += 1
-                    content = reply.get("content", {})
-                    try:
-                        val = content.get("confidence", {}).get("value", None)
-                        if val is not None:
-                            confidence_scores.append(float(val))
-                    except:
-                        pass
-                    try:
-                        val = content.get("soundness", {}).get("value", None)
-                        if val is not None:
-                            soundness_scores.append(float(val))
-                    except:
-                        pass
-                    try:
-                        val = content.get("excitement", {}).get("value", None)
-                        if val is not None:
-                            excitement_scores.append(float(val))
-                    except:
-                        pass
-                    try:
-                        val = content.get("overall_assessment", {}).get("value", None)
-                        if val is not None:
-                            overall_assessment_scores.append(float(val))
-                    except:
-                        pass
+                    content = self._reply_content(reply)
+                    for field, bucket in (
+                        ('confidence', confidence_scores),
+                        ('soundness', soundness_scores),
+                        ('excitement', excitement_scores),
+                        ('overall_assessment', overall_assessment_scores),
+                    ):
+                        value = self._extract_numeric_score(content, field)
+                        if value is not None:
+                            bucket.append(value)
                     # Single-blind detection: reviewer claims to know the authors
                     # Debug: on the very first review processed, log all identity/know/aware fields
                     # if not self.papers_data and completed_reviews == 1:
@@ -868,20 +906,15 @@ class ARRReportGenerator:
                     if sigs:
                         rev_uid = self._resolve_reviewer_id(sigs[0])
                         try:
-                            conf_val = content.get("confidence", {}).get("value")
+                            conf_val = self._extract_numeric_score(content, 'confidence')
                             if conf_val is not None:
                                 self.reviewer_confidence_data.setdefault(rev_uid, []).append(float(conf_val))
                         except:
                             pass
 
                 if self.is_meta_review(reply):
-                    content = reply.get("content", {})
-                    if "overall_assessment" in content:
-                        meta_review_score = content["overall_assessment"].get("value", "")
-                    elif "overall_rating" in content:
-                        meta_review_score = content["overall_rating"].get("value", "")
-                    elif "score" in content:
-                        meta_review_score = content["score"].get("value", "")
+                    content = self._reply_content(reply)
+                    meta_review_score = self._extract_meta_review_score(content)
 
             # Expected reviews from Reviewers group
             expected_reviews = 0
@@ -967,6 +1000,8 @@ class ARRReportGenerator:
                 "Emergency Declaration Count": emergency_declaration_count,
                 "Has Emergency Reviewer": has_emergency_reviewer,
                 "Emergency Reviewer Count": emergency_reviewer_count,
+                "Has Emergency Assigned": bool(has_emergency_declaration and has_emergency_reviewer),
+                "Has Emergency Unmet": bool(has_emergency_declaration and not has_emergency_reviewer),
                 "Review Issue Count":    review_issue_count,
                 "Ethics Flag":           "",   # populated in PCReportGenerator; base always ""
                 # Single-blind / knows-authors
@@ -1012,7 +1047,7 @@ class ARRReportGenerator:
             Meta_Reviews_Num=("Meta Review Score", lambda x: (x != "").sum()),
             Late_Papers=("Completed Reviews", lambda x: (x < df.loc[x.index, "Expected Reviews"]).sum()),
             Emergency_Declared=("Has Emergency Declaration", "sum"),
-            Emergency_Assigned=("Has Emergency Reviewer", "sum"),
+            Emergency_Assigned=("Has Emergency Assigned", "sum"),
             Low_Conf_Papers=("Has Low Confidence", "sum"),
             SB_Papers=("Has Compromised Review", "sum"),
         ).reset_index()
@@ -1115,26 +1150,83 @@ class ARRReportGenerator:
 
     def generate_paper_type_distribution(self):
         if not self.papers_data:
-            return {'labels': [], 'counts': []}
+            return {'labels': [], 'counts': [], 'rows': []}
         df = self._papers_df()
-        type_series = df["Paper Type"].fillna("").astype(str).str.strip()
-        type_series = type_series[type_series != ""]
-        type_counts = type_series.value_counts().to_dict()
-        return {'labels': list(type_counts.keys()), 'counts': list(type_counts.values())}
+        rows = []
+        for label, group in df.groupby('Paper Type'):
+            label = str(label or '').strip()
+            if not label:
+                continue
+            overall_vals = group['Overall Assessment'].apply(self.parse_avg).dropna()
+            meta_vals = group['Meta Review Score'].apply(self.parse_avg).dropna()
+            soundness_vals = group['Soundness Score'].apply(self.parse_avg).dropna()
+            excitement_vals = group['Excitement Score'].apply(self.parse_avg).dropna()
+            rows.append({
+                'label': label,
+                'count': len(group),
+                'avg_overall': round(float(overall_vals.mean()), 2) if len(overall_vals) else None,
+                'avg_meta': round(float(meta_vals.mean()), 2) if len(meta_vals) else None,
+                'avg_soundness': round(float(soundness_vals.mean()), 2) if len(soundness_vals) else None,
+                'avg_excitement': round(float(excitement_vals.mean()), 2) if len(excitement_vals) else None,
+            })
+        rows.sort(key=lambda row: row['count'], reverse=True)
+        return {
+            'labels': [row['label'] for row in rows],
+            'counts': [row['count'] for row in rows],
+            'rows': rows,
+        }
 
     def generate_contribution_type_distribution(self):
         if not self.papers_data:
-            return {'labels': [], 'counts': []}
+            return {'labels': [], 'counts': [], 'rows': []}
         counts = collections.Counter()
+        stats = collections.defaultdict(lambda: {
+            'paper_ids': set(),
+            'overall': [],
+            'meta': [],
+            'soundness': [],
+            'excitement': [],
+        })
         for paper in self.papers_data:
             contribution_types = paper.get('Contribution Type List') or []
             if not contribution_types:
                 contribution_types = self._normalize_multi_value_field(paper.get('Contribution Types'))
-            counts.update(contribution_types)
-        sorted_items = sorted(counts.items(), key=lambda x: x[1], reverse=True)
+            if not contribution_types:
+                continue
+            overall = self.parse_avg(paper.get('Overall Assessment'))
+            meta = self.parse_avg(paper.get('Meta Review Score'))
+            soundness = self.parse_avg(paper.get('Soundness Score'))
+            excitement = self.parse_avg(paper.get('Excitement Score'))
+            paper_id = paper.get('Paper ID') or paper.get('Paper #')
+            for contribution_type in contribution_types:
+                counts.update([contribution_type])
+                bucket = stats[contribution_type]
+                if paper_id is not None:
+                    bucket['paper_ids'].add(paper_id)
+                if not np.isnan(overall):
+                    bucket['overall'].append(float(overall))
+                if not np.isnan(meta):
+                    bucket['meta'].append(float(meta))
+                if not np.isnan(soundness):
+                    bucket['soundness'].append(float(soundness))
+                if not np.isnan(excitement):
+                    bucket['excitement'].append(float(excitement))
+        rows = []
+        for label, count in sorted(counts.items(), key=lambda item: item[1], reverse=True):
+            bucket = stats[label]
+            rows.append({
+                'label': label,
+                'count': count,
+                'paper_count': len(bucket['paper_ids']),
+                'avg_overall': round(float(np.mean(bucket['overall'])), 2) if bucket['overall'] else None,
+                'avg_meta': round(float(np.mean(bucket['meta'])), 2) if bucket['meta'] else None,
+                'avg_soundness': round(float(np.mean(bucket['soundness'])), 2) if bucket['soundness'] else None,
+                'avg_excitement': round(float(np.mean(bucket['excitement'])), 2) if bucket['excitement'] else None,
+            })
         return {
-            'labels': [item[0] for item in sorted_items],
-            'counts': [item[1] for item in sorted_items],
+            'labels': [row['label'] for row in rows],
+            'counts': [row['count'] for row in rows],
+            'rows': rows,
         }
 
     def generate_review_completion_data(self):
@@ -1201,10 +1293,21 @@ class ARRReportGenerator:
         }
 
     def generate_score_by_type_data(self):
-        """Scores broken down by paper type and by anonymity (preprint status)."""
+        """Scores broken down by paper type, contribution type, and by anonymity."""
         if not self.papers_data:
-            return {'by_paper_type': [], 'by_anonymity': []}
+            return {'by_paper_type': [], 'by_contribution_type': [], 'by_anonymity': []}
         df = self._papers_df()
+
+        def _score_row(label, count, overall_vals, meta_vals, conf_vals, soundness_vals, excitement_vals):
+            return {
+                'label': label,
+                'count': count,
+                'avg_overall': round(float(overall_vals.mean()), 2) if len(overall_vals) else None,
+                'avg_meta': round(float(meta_vals.mean()), 2) if len(meta_vals) else None,
+                'avg_conf': round(float(conf_vals.mean()), 2) if len(conf_vals) else None,
+                'avg_soundness': round(float(soundness_vals.mean()), 2) if len(soundness_vals) else None,
+                'avg_excitement': round(float(excitement_vals.mean()), 2) if len(excitement_vals) else None,
+            }
 
         def _group_scores(group_col, label_map=None):
             rows = []
@@ -1212,27 +1315,62 @@ class ARRReportGenerator:
                 if not str(val).strip():
                     continue
                 label = label_map.get(val, val) if label_map else val
-                overall_vals = grp["Overall Assessment"].apply(self.parse_avg).dropna()
-                meta_vals    = grp["Meta Review Score"].apply(self.parse_avg).dropna()
-                conf_vals    = grp["Reviewer Confidence"].apply(self.parse_avg).dropna()
-                rows.append({
-                    "label":       label,
-                    "count":       len(grp),
-                    "avg_overall": round(float(overall_vals.mean()), 2) if len(overall_vals) else None,
-                    "avg_meta":    round(float(meta_vals.mean()),    2) if len(meta_vals)    else None,
-                    "avg_conf":    round(float(conf_vals.mean()),    2) if len(conf_vals)    else None,
-                })
-            rows.sort(key=lambda r: r["count"], reverse=True)
+                rows.append(_score_row(
+                    label=label,
+                    count=len(grp),
+                    overall_vals=grp['Overall Assessment'].apply(self.parse_avg).dropna(),
+                    meta_vals=grp['Meta Review Score'].apply(self.parse_avg).dropna(),
+                    conf_vals=grp['Reviewer Confidence'].apply(self.parse_avg).dropna(),
+                    soundness_vals=grp['Soundness Score'].apply(self.parse_avg).dropna(),
+                    excitement_vals=grp['Excitement Score'].apply(self.parse_avg).dropna(),
+                ))
+            rows.sort(key=lambda row: row['count'], reverse=True)
             return rows
 
-        anon_map = {"Yes": "Anonymous", "No": "Non-anonymous (preprint)", "": "Unknown"}
-        by_anon = _group_scores("Is Anonymous", anon_map)
-        # Filter out "Unknown" if empty
-        by_anon = [r for r in by_anon if r["label"] != "Unknown" or r["count"] > 0]
+        anon_map = {'Yes': 'Anonymous', 'No': 'Non-anonymous (preprint)', '': 'Unknown'}
+        by_anon = _group_scores('Is Anonymous', anon_map)
+        by_anon = [row for row in by_anon if row['label'] != 'Unknown' or row['count'] > 0]
 
-        by_type = _group_scores("Paper Type")
+        by_type = _group_scores('Paper Type')
 
-        return {'by_paper_type': by_type, 'by_anonymity': by_anon}
+        contribution_rows = []
+        contribution_acc = collections.defaultdict(list)
+        for paper in self.papers_data:
+            contribution_types = paper.get('Contribution Type List') or []
+            if not contribution_types:
+                contribution_types = self._normalize_multi_value_field(paper.get('Contribution Types'))
+            if not contribution_types:
+                continue
+            parsed = {
+                'overall': self.parse_avg(paper.get('Overall Assessment')),
+                'meta': self.parse_avg(paper.get('Meta Review Score')),
+                'conf': self.parse_avg(paper.get('Reviewer Confidence')),
+                'soundness': self.parse_avg(paper.get('Soundness Score')),
+                'excitement': self.parse_avg(paper.get('Excitement Score')),
+            }
+            for label in contribution_types:
+                contribution_acc[label].append(parsed)
+        for label, rows in sorted(contribution_acc.items(), key=lambda item: len(item[1]), reverse=True):
+            overall_vals = pd.Series([row['overall'] for row in rows], dtype='float64').dropna()
+            meta_vals = pd.Series([row['meta'] for row in rows], dtype='float64').dropna()
+            conf_vals = pd.Series([row['conf'] for row in rows], dtype='float64').dropna()
+            soundness_vals = pd.Series([row['soundness'] for row in rows], dtype='float64').dropna()
+            excitement_vals = pd.Series([row['excitement'] for row in rows], dtype='float64').dropna()
+            contribution_rows.append(_score_row(
+                label=label,
+                count=len(rows),
+                overall_vals=overall_vals,
+                meta_vals=meta_vals,
+                conf_vals=conf_vals,
+                soundness_vals=soundness_vals,
+                excitement_vals=excitement_vals,
+            ))
+
+        return {
+            'by_paper_type': by_type,
+            'by_contribution_type': contribution_rows,
+            'by_anonymity': by_anon,
+        }
 
     def generate_reviewer_load_quality_data(self):
         """Per-reviewer: papers assigned vs average confidence score (for scatter plot)."""

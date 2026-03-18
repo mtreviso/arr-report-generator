@@ -1,28 +1,34 @@
 <div class="px-4 py-5 sm:p-6">
     <p class="mb-4 text-sm text-gray-500">A paper may select multiple contribution types, so percentages are based on total contribution-type selections.</p>
     {% if contribution_type_distribution.labels %}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        <!-- Horizontal bar chart — all labels always visible on the Y axis -->
-        <div>
-            <canvas id="contribution-type-chart"></canvas>
+    <div class="flex flex-col md:flex-row gap-6">
+        <div class="w-full md:w-5/12">
+            <canvas id="contribution-type-chart" style="max-height: 320px;"></canvas>
         </div>
-        <!-- Table -->
-        <div class="overflow-x-auto">
+        <div class="w-full md:w-7/12 overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contribution Type</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Count</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Overall</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Meta</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Sound.</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Excit.</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     {% set total = contribution_type_distribution.counts | sum %}
-                    {% for i in range(contribution_type_distribution.labels | length) %}
+                    {% for row in contribution_type_distribution.rows %}
                     <tr>
-                        <td class="px-4 py-2 text-sm font-medium text-gray-900">{{ contribution_type_distribution.labels[i] }}</td>
-                        <td class="px-4 py-2 text-sm text-gray-500">{{ contribution_type_distribution.counts[i] }}</td>
-                        <td class="px-4 py-2 text-sm text-gray-500">{% if total %}{{ "%.1f"|format(contribution_type_distribution.counts[i] / total * 100) }}%{% else %}0.0%{% endif %}</td>
+                        <td class="px-4 py-2 text-sm font-medium text-gray-900">{{ row.label }}</td>
+                        <td class="px-4 py-2 text-sm text-gray-500">{{ row.count }}</td>
+                        <td class="px-4 py-2 text-sm text-gray-500">{% if total %}{{ "%.1f"|format(row.count / total * 100) }}%{% else %}0.0%{% endif %}</td>
+                        <td class="px-4 py-2 text-sm text-gray-500">{{ row.avg_overall if row.avg_overall is not none else "–" }}</td>
+                        <td class="px-4 py-2 text-sm text-gray-500">{{ row.avg_meta if row.avg_meta is not none else "–" }}</td>
+                        <td class="px-4 py-2 text-sm text-gray-500">{{ row.avg_soundness if row.avg_soundness is not none else "–" }}</td>
+                        <td class="px-4 py-2 text-sm text-gray-500">{{ row.avg_excitement if row.avg_excitement is not none else "–" }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -43,7 +49,6 @@
         const counts = {{ contribution_type_distribution.counts | tojson }};
         if (!labels.length) return;
 
-        // Palette cycles through 20 distinct colours so all slices are always visible
         const palette = [
             'rgba(99,102,241,0.75)', 'rgba(16,185,129,0.75)', 'rgba(245,158,11,0.75)',
             'rgba(239,68,68,0.75)',  'rgba(14,165,233,0.75)', 'rgba(168,85,247,0.75)',
@@ -55,14 +60,8 @@
         ];
         const colors = labels.map((_, i) => palette[i % palette.length]);
 
-        // Dynamically size the canvas height based on number of items
-        const barHeight = 28;
-        const chartHeight = Math.max(180, labels.length * barHeight + 40);
-        ctx.style.height = chartHeight + 'px';
-        ctx.height = chartHeight;
-
         window.ReportCommon.replaceChart(ctx, {
-            type: 'bar',
+            type: 'pie',
             data: {
                 labels,
                 datasets: [{
@@ -70,23 +69,17 @@
                     backgroundColor: colors,
                     borderColor: colors.map(c => c.replace('0.75', '1')),
                     borderWidth: 1,
-                    borderRadius: 3,
                 }]
             },
             options: {
-                indexAxis: 'y',   // horizontal bars — labels always visible
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { display: false },
+                    legend: { position: 'right', labels: { boxWidth: 15, padding: 15 } },
                     tooltip: { callbacks: { label(ctx) {
                         const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-                        return ` ${ctx.formattedValue}  (${Math.round(ctx.raw / total * 100)}%)`;
+                        return ` ${ctx.label}: ${ctx.formattedValue} (${Math.round(ctx.raw / total * 100)}%)`;
                     }}}
-                },
-                scales: {
-                    x: { beginAtZero: true, title: { display: true, text: 'Papers' }, ticks: { precision: 0 } },
-                    y: { ticks: { font: { size: 11 } } }
                 }
             }
         });

@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎛️</text></svg>">
+    <link rel="icon" type="image/png" href="logo.png">
     <title>{{ title }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/2.3.7/css/dataTables.dataTables.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdn.datatables.net/2.3.7/js/dataTables.min.js"></script>
@@ -17,7 +18,10 @@
 <div class="relative">
     <header class="bg-indigo-900 shadow-md">
         <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-            <h1 class="text-3xl font-bold text-white">🎛️ ARR Commitment Dashboard</h1>
+            <div class="flex items-center gap-3 min-w-0">
+                <img src="logo.png" alt="ARR logo" class="h-10 w-auto object-contain shrink-0" onerror="this.style.display='none'">
+                <h1 class="text-3xl font-bold text-white truncate">ARR Commitment Dashboard</h1>
+            </div>
             <div class="text-right">
                 <p class="text-white text-sm">{{ venue_id }}</p>
                 <p class="text-white text-sm opacity-80">Generated at {{ generated_date }}</p>

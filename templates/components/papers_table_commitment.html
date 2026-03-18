@@ -199,13 +199,19 @@
             <!-- Flag legend -->
             <div class="lg:col-span-6 mt-1 pt-3 border-t border-gray-200">
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Flag legend</p>
-                <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
-                    <span><span class="flag-badge flag-nonanon">P</span> Has public preprint</span>
-                    <span><span class="flag-badge flag-issue">!</span> Review issue report (clickable, count in tooltip)</span>
-                    <span><span class="flag-badge flag-emergency">⚡</span> Emergency review requested (✗ = unassigned)</span>
-                    <span><span class="flag-badge flag-issue">M</span> Meta-review issue report (clickable)</span>
-                    <span><span class="flag-badge flag-info">C</span> Confidential comment</span>
-                    <span><span class="flag-badge flag-warn">&#9888;</span> Low-confidence reviewer (conf. &#8804; 2)</span>
+                <div class="flag-legend-rows">
+                    <div class="flag-legend-row">
+                        <div class="flag-legend-item"><span class="flag-badge flag-issue"><i class="fa-solid fa-triangle-exclamation"></i></span><span>Review issue report.</span></div>
+                        <div class="flag-legend-item"><span class="flag-badge flag-warn"><i class="fa-solid fa-circle-exclamation"></i></span><span>Low-confidence review detected (confidence ≤ 2).</span></div>
+                        <div class="flag-legend-item"><span class="flag-badge flag-info"><i class="fa-solid fa-lock"></i></span><span>Confidential comment present.</span></div>
+                        <div class="flag-legend-item"><span class="flag-badge flag-metaissue"><i class="fa-solid fa-file-circle-exclamation"></i></span><span>Meta-review issue report.</span></div>
+                    </div>
+                    <div class="flag-legend-row">
+                        <div class="flag-legend-item"><span class="flag-badge flag-nonanon"><i class="fa-solid fa-link"></i></span><span>Public preprint detected.</span></div>
+                    </div>
+                    <div class="flag-legend-row">
+                        <div class="flag-legend-item"><span class="flag-badge flag-emergency"><i class="fa-solid fa-bolt"></i><span class="flag-count">2</span></span><span>Emergency declaration count on the paper.</span></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -242,6 +248,11 @@
     function boolish(v) { return !!(v && v !== '0' && v !== 'false'); }
     function esc(v) { return window.ReportCommon.escapeHtml(v ?? ''); }
     function parseAvg(v) { return window.ReportCommon.parseAvg(v); }
+    function icon(name) { return '<i class="fa-solid '+name+'" aria-hidden="true"></i>'; }
+    function badgeHtml(cls, iconName, tip, label='') {
+        const text = label ? '<span class="flag-count">'+esc(label)+'</span>' : '';
+        return '<span class="tip flag-badge '+cls+'" data-tip="'+tip+'">'+icon(iconName)+text+'</span>';
+    }
     function selectHtml(id, label, values) {
         const host = document.getElementById(id);
         if (!host) return;
@@ -273,29 +284,30 @@
     function flagsCell(row) {
         const parts = [];
         if ((row['Is Anonymous'] || '').toLowerCase() === 'no') {
-            parts.push('<span class="tip flag-badge flag-nonanon" data-tip="Has public preprint">P</span>');
+            parts.push(badgeHtml('flag-nonanon', 'fa-link', 'Has public preprint'));
         }
         if (boolish(row['Has Review Issue'])) {
-            const badge = '<span class="tip flag-badge flag-issue" data-tip="'+esc((row['Review Issue Count'] || 0)+' review issue report(s)')+'&#10;Click to open on OpenReview">!</span>';
+            const badge = badgeHtml('flag-issue', 'fa-triangle-exclamation', esc((row['Review Issue Count'] || 0) + ' review issue report(s)') + '&#10;Click to open on OpenReview');
             parts.push(row['Review Issue Link'] ? '<a href="'+esc(row['Review Issue Link'])+'" target="_blank">'+badge+'</a>' : badge);
         }
         if (boolish(row['Has Meta Review Issue'])) {
-            const badge = '<span class="tip flag-badge flag-issue" data-tip="Meta-Review Issue Report&#10;Click to open on OpenReview">M</span>';
+            const badge = badgeHtml('flag-metaissue', 'fa-file-circle-exclamation', 'Meta-Review Issue Report&#10;Click to open on OpenReview');
             parts.push(row['Meta Review Issue Link'] ? '<a href="'+esc(row['Meta Review Issue Link'])+'" target="_blank">'+badge+'</a>' : badge);
         }
         if (boolish(row['Has Emergency Declaration'])) {
-            const tip = 'Emergency review requested ('+esc(row['Emergency Declaration Count'] || 0)+')' + (boolish(row['Has Emergency Reviewer']) ? '&#10;✓ Emergency reviewer assigned' : '&#10;✗ No reviewer yet');
-            const badge = '<span class="tip flag-badge flag-emergency"  data-tip="'+tip+'">⚡</span>';
+            const count = row['Emergency Declaration Count'] || 0;
+            const tip = 'Emergency declaration count: ' + esc(count);
+            const badge = badgeHtml('flag-emergency', 'fa-bolt', tip, count);
             parts.push(row['Emergency Declaration Link'] ? '<a href="'+esc(row['Emergency Declaration Link'])+'" target="_blank">'+badge+'</a>' : badge);
         }
         if (boolish(row['Has Confidential'])) {
-            parts.push('<span class="tip flag-badge flag-info" data-tip="Confidential comment present">C</span>');
+            parts.push(badgeHtml('flag-info', 'fa-lock', 'Confidential comment present'));
         }
         if (boolish(row['Has Low Confidence'])) {
-            parts.push('<span class="tip flag-badge flag-warn" data-tip="Low confidence reviewer(s)&#10;'+esc(row['Low Confidence Reviewers'] || '')+'">&#9888;</span>');
+            parts.push(badgeHtml('flag-warn', 'fa-circle-exclamation', 'Low confidence reviewer(s)&#10;' + esc(row['Low Confidence Reviewers'] || '')));
         }
         if (!parts.length) return '<span class="text-gray-300">&#8211;</span>';
-        return '<div class="flex gap-1 items-center justify-start">'+parts.join('')+'</div>';
+        return '<div class="flags-inline">'+parts.join('')+'</div>';
     }
 
     function initCommitmentPapers() {

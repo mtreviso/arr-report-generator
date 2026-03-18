@@ -314,20 +314,11 @@ class CommitmentReportGenerator(ARRReportGenerator):
                             f"&noteId={getattr(reply,'id','')}"
                         )
 
-                EMERGENCY_DECL_PATTERNS = [
-                    "/-/Emergency_Review_Request",
-                    "/-/Emergency_Reviewer_Recruitment",
-                    "/-/Emergency_Reviewer_Request",
-                    "/-/Emergency_Review",
-                ]
-                if any(any(p in i for p in EMERGENCY_DECL_PATTERNS) for i in invs):
+                if self._is_emergency_declaration_reply(reply):
                     has_emergency_declaration = True
                     emergency_declaration_count += 1
                     if not emergency_declaration_link:
-                        emergency_declaration_link = (
-                            f"https://openreview.net/forum?id={getattr(reply,'forum','')}"
-                            f"&noteId={getattr(reply,'id','')}"
-                        )
+                        emergency_declaration_link = self._reply_link(reply)
 
                 if any("/-/Meta-Review_Issue_Report" in i for i in invs):
                     has_meta_review_issue = True
@@ -342,17 +333,14 @@ class CommitmentReportGenerator(ARRReportGenerator):
 
                 if self.is_actual_review(reply):
                     completed_reviews += 1
-                    content = getattr(reply, 'content', {})
+                    content = self._reply_content(reply)
                     for field, lst in [('confidence', confidence_scores),
                                        ('soundness', soundness_scores),
                                        ('excitement', excitement_scores),
                                        ('overall_assessment', overall_assessment_scores)]:
-                        try:
-                            v = content.get(field, {}).get('value')
-                            if v is not None:
-                                lst.append(float(v))
-                        except Exception:
-                            pass
+                        v = self._extract_numeric_score(content, field)
+                        if v is not None:
+                            lst.append(v)
 
                     ne = content.get('needs_ethics_review', {}).get('value', '').strip().lower()
                     ec = content.get('ethical_concerns', {}).get('value', '').strip().lower()
@@ -368,12 +356,8 @@ class CommitmentReportGenerator(ARRReportGenerator):
                             break
 
                 if self.is_meta_review(reply):
-                    content = getattr(reply, 'content', {})
-                    meta_review_score = (
-                        content.get('overall_assessment', {}).get('value', '') or
-                        content.get('overall_rating',    {}).get('value', '') or
-                        content.get('score',             {}).get('value', '')
-                    )
+                    content = self._reply_content(reply)
+                    meta_review_score = self._extract_meta_review_score(content)
                     ec2 = content.get('ethical_concerns', {}).get('value', '').strip().lower()
                     if ec2 and "no concerns" not in ec2:
                         ethics_flag = "AC: yes"
@@ -435,6 +419,8 @@ class CommitmentReportGenerator(ARRReportGenerator):
                 "Emergency Declaration Count": emergency_declaration_count,
                 "Has Emergency Reviewer": has_emergency_reviewer,
                 "Emergency Reviewer Count": emergency_reviewer_count,
+                "Has Emergency Assigned": bool(has_emergency_declaration and has_emergency_reviewer),
+                "Has Emergency Unmet": bool(has_emergency_declaration and not has_emergency_reviewer),
                 "Review Issue Count":    review_issue_count,
                 "Ethics Flag":           ethics_flag,
                 "Preprint Flag":         preprint_flag,

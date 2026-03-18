@@ -62,9 +62,8 @@
                 <label class="block text-xs font-medium text-gray-600 mb-1">Emergency</label>
                 <select id="attn-emergency-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
                     <option value="">All</option>
-                    <option value="declared">⚡ Declared</option>
-                    <option value="assigned">✓ Reviewer assigned</option>
-                    <option value="unmet">⚡ Unmet</option>
+                    <option value="declared">Requested</option>
+                    <option value="0">No emergency</option>
                 </select>
             </div>
             <div>
@@ -99,19 +98,22 @@
         <!-- Flag legend -->
         <div class="lg:col-span-6 mt-6 pt-3 border-t border-gray-200">
             <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Flag legend</p>
-            <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
-                <span><span class="flag-badge flag-issue">!</span> Review issue report</span>
-                <span><span class="flag-badge flag-ethics">E</span> Ethics concern</span>
-                <span><span class="flag-badge flag-emergency">⚡</span> Emergency review requested</span>
-                <!-- <span><span class="flag-badge" style="background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;">+x emer</span> x Emergency reviewers added</span> -->
-                <!-- <span><span class="flag-badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;">x missing</span> Missing x expected reviews</span> -->
+            <div class="flag-legend-rows">
+                <div class="flag-legend-row">
+                    <div class="flag-legend-item"><span class="flag-badge flag-issue"><i class="fa-solid fa-triangle-exclamation"></i></span><span>Review issue report.</span></div>
+                    <div class="flag-legend-item"><span class="flag-badge flag-ethics"><i class="fa-solid fa-scale-balanced"></i></span><span>Ethics concern.</span></div>
+                </div>
+                <div class="flag-legend-row">
+                    <div class="flag-legend-item"><span class="flag-badge flag-emergency"><i class="fa-solid fa-bolt"></i><span class="flag-count">2</span></span><span>Emergency declaration count on the paper.</span></div>
+                    <div class="flag-legend-item"><span class="flag-badge flag-missing"><i class="fa-solid fa-clock"></i><span class="flag-count">2</span></span><span>Expected reviews still missing.</span></div>
+                </div>
             </div>
         </div>
 
     </div>
 
     <p class="text-xs text-gray-500 mb-3">
-        Papers flagged for one or more of: review issue reported, ethics concern, emergency review requested, or fewer reviews than expected. The emergency badges indicate whether emergency review was requested and whether an emergency reviewer is currently assigned.
+        Papers flagged for one or more of: review issue reported, ethics concern, emergency declaration activity, or fewer reviews than expected.
     </p>
 
     <div class="overflow-x-auto w-full">
@@ -134,8 +136,6 @@
                     data-ethics="{{ 1 if p.get('Ethics Flag') else 0 }}"
                     data-missing="{{ 1 if p.get('Has Missing Reviews', p['Completed Reviews'] < p['Expected Reviews']) else 0 }}"
                     data-emergency="{{ 1 if p.get('Has Emergency Declaration') else 0 }}"
-                    data-emergency-assigned="{{ 1 if p.get('Has Emergency Reviewer') else 0 }}"
-                    data-emergency-unmet="{{ 1 if p.get('Has Emergency Declaration') and not p.get('Has Emergency Reviewer') else 0 }}"
                     data-type="{{ p.get('Paper Type', '') | e }}"
                 >
                     <td class="whitespace-nowrap text-gray-700">{{ p['Paper #'] }}</td>
@@ -166,29 +166,26 @@
                         <span>{{ p['Completed Reviews'] }}/{{ p['Expected Reviews'] }}</span>
                     </td>
                     <td class="whitespace-nowrap">
-                        <div class="flex gap-1 flex-wrap">
+                        <div class="flags-inline">
                         {% if p['Has Review Issue'] %}
                             <a href="{{ p['Review Issue Link'] }}" target="_blank">
-                                <span class="flag-badge flag-issue tip" data-tip="{{ p['Review Issue Count'] }} review issue(s) — click to open">!</span>
+                                <span class="flag-badge flag-issue tip" data-tip="{{ p['Review Issue Count'] }} review issue(s) — click to open"><i class="fa-solid fa-triangle-exclamation"></i></span>
                             </a>
                         {% endif %}
                         {% if p.get('Ethics Flag') %}
                             <span class="flag-badge flag-ethics tip"
-                                  data-tip="Ethics concern: {{ p['Ethics Flag'] }}">E</span>
+                                  data-tip="Ethics concern: {{ p['Ethics Flag'] }}"><i class="fa-solid fa-scale-balanced"></i></span>
                         {% endif %}
                         {% if p.get('Has Emergency Declaration') %}
+                            {% set emergency_count = p.get('Emergency Declaration Count', 0) %}
                             {% if p.get('Emergency Declaration Link') %}<a href="{{ p['Emergency Declaration Link'] }}" target="_blank">{% endif %}
-                                <span class="flag-badge tip" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;"
-                                      data-tip="Emergency requested{% if p.get('Has Emergency Reviewer') %} — ✓ assigned{% else %} — unassigned{% endif %}">⚡</span>
+                                <span class="flag-badge flag-emergency tip"
+                                      data-tip="Emergency declaration count: {{ emergency_count }}"><i class="fa-solid fa-bolt"></i><span class="flag-count">{{ emergency_count }}</span></span>
                             {% if p.get('Emergency Declaration Link') %}</a>{% endif %}
                         {% endif %}
-                        {% if p.get('Has Emergency Reviewer') %}
-                            <span class="flag-badge flag-emergency"
-                                  title="Emergency reviewer assigned">✓</span>
-                        {% endif %}
                         {% if p.get('Missing Reviews', 0) > 0 %}
-                            <span class="flag-badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;">
-                                {{ p.get('Missing Reviews', p['Expected Reviews'] - p['Completed Reviews']) }} missing
+                            <span class="flag-badge flag-missing tip" data-tip="{{ p.get('Missing Reviews', p['Expected Reviews'] - p['Completed Reviews']) }} expected review(s) still missing">
+                                <i class="fa-solid fa-clock"></i><span class="flag-count">{{ p.get('Missing Reviews', p['Expected Reviews'] - p['Completed Reviews']) }}</span>
                             </span>
                         {% endif %}
                         </div>
@@ -227,8 +224,6 @@ $(document).ready(function() {
         if (ethics  && row.attr('data-ethics')    !== ethics)  return false;
         if (missing && row.attr('data-missing')   !== missing) return false;
         if (emergency === 'declared' && row.attr('data-emergency') !== '1') return false;
-        if (emergency === 'assigned' && row.attr('data-emergency-assigned') !== '1') return false;
-        if (emergency === 'unmet'    && row.attr('data-emergency-unmet') !== '1') return false;
         if (type && row.attr('data-type') !== type) return false;
         return true;
     });

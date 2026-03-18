@@ -109,20 +109,99 @@
         .comment-content { word-wrap: break-word; overflow-wrap: break-word; }
         #papers-table_paginate, .dt-paging { margin-bottom: 10px; }
 
+        .tab-button {
+            transition: color 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+            border-radius: 0.35rem 0.35rem 0 0;
+        }
+        .tab-button {
+            background: transparent;
+        }
+        .tab-button:hover,
+        .tab-button:focus,
+        .tab-button.active:hover {
+            background: transparent !important;
+        }
+        .tab-button:hover {
+            color: #374151;
+            border-color: #818cf8;
+        }
+        .tab-button.active:hover {
+            color: #4338ca;
+            border-color: #6366f1;
+        }
+
         /* Flag badges */
         .flag-badge {
-            display: inline-flex; align-items: center; justify-content: center;
-            padding: 2px 6px; border-radius: 9999px; font-size: 0.65rem; font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.32rem;
+            min-height: 1.45rem;
+            padding: 0.18rem 0.52rem;
+            border-radius: 9999px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            line-height: 1;
             white-space: nowrap;
+            border: 1px solid transparent;
         }
-        .flag-issue { background: #fee2e2; color: #991b1b; }
-        .flag-warn  { background: #fef3c7; color: #92400e; }
-        .flag-info  { background: #dbeafe; color: #1e40af; }
-        .flag-ok    { background: #d1fae5; color: #065f46; }
-        .flag-anon  { background: #f3e8ff; color: #6b21a8; }
-        .flag-nonanon { background: #ffedd5; color: #9a3412; }
-        .flag-ethics { background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; }
-        .flag-emergency { background:#ffffff; color:#1d4ed8; border:1px solid #bfdbfe;}
+        .flag-badge i { font-size: 0.72rem; }
+        .flag-badge .flag-count,
+        .flag-badge .flag-text { font-weight: 700; }
+        .flags-inline {
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 0.25rem;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+            width: max-content;
+            max-width: 100%;
+        }
+        .flags-inline > * {
+            flex: 0 0 auto;
+        }
+        .flag-issue { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+        .flag-metaissue { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+        .flag-warn  { background: #fff7ed; color: #c2410c; border-color: #fdba74; }
+        .flag-info  { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+        .flag-ok    { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+        .flag-anon  { background: #f3e8ff; color: #6b21a8; border-color: #d8b4fe; }
+        .flag-nonanon { background: #f8fafc; color: #334155; border-color: #cbd5e1; }
+        .flag-ethics { background:#fffbeb; color:#b45309; border-color:#fcd34d; }
+        .flag-emergency { background:#eff6ff; color:#1d4ed8; border-color:#93c5fd; }
+        .flag-emergency-unmet { background:#eef2ff; color:#5b21b6; border-color:#c4b5fd; }
+        .flag-missing { background:#fef2f2; color:#991b1b; border-color:#fca5a5; }
+        .flag-sb-anon { background: #fef2f2; color: #be123c; border: 1px solid #fda4af; font-weight: 700; }
+        .flag-sb-preprint{ background: #f5f3ff; color: #6d28d9; border: 1px solid #d8b4fe; font-weight: 700; }
+
+        .flag-legend-rows {
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+        }
+        .flag-legend-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem 1rem;
+        }
+        .flag-legend-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 0.55rem 1rem;
+        }
+        .flag-legend-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.55rem;
+            color: #4b5563;
+            font-size: 0.75rem;
+            line-height: 1.25rem;
+        }
+        .flag-legend-item .flag-badge {
+            flex: 0 0 auto;
+            margin-top: 0.05rem;
+        }
 
         /* Focus ring for select elements (matches input behaviour) */
         select:focus {
@@ -164,8 +243,6 @@
             color: #6b7280;
         }
 
-        .flag-sb-anon    { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; font-weight: 700; }
-        .flag-sb-preprint{ background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-weight: 700; }
         /* ── Row hover highlight (all DataTables) ───────────────────── */
         table.dataTable tbody tr:hover > td {
             background-color: #f9fafb !important;

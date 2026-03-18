@@ -49,7 +49,7 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         <div class="bg-red-50 rounded-lg p-3 border border-red-100 text-center">
             <div class="text-xl font-bold text-red-600">{{ s.review_issues }}</div>
             <div class="text-xs text-red-400 uppercase tracking-wide mt-1">Review Issues</div>
@@ -68,11 +68,7 @@
         </div>
         <div class="bg-blue-50 rounded-lg p-3 border border-blue-100 text-center">
             <div class="text-xl font-bold text-blue-600">{{ s.emergency_declared | default(0) }}</div>
-            <div class="text-xs text-blue-400 uppercase tracking-wide mt-1">⚡ Emergency</div>
-        </div>
-        <div class="bg-amber-50 rounded-lg p-3 border border-amber-100 text-center">
-            <div class="text-xl font-bold text-amber-600">{{ s.emergency_unmet | default(0) }}</div>
-            <div class="text-xs text-amber-400 uppercase tracking-wide mt-1">⚡ Emergency Unmet</div>
+            <div class="text-xs text-blue-500 uppercase tracking-wide mt-1">Emergency Papers</div>
         </div>
     </div>
 

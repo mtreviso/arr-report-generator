@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ARR Report Generator — How to Use</title>
+  <link rel="icon" type="image/png" href="reports/logo.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :not(pre) > code {
+      background: #eef2ff;
+      color: #4338ca;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 0.82em;
+      font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, monospace;
+    }
+    pre {
+      font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, monospace;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+  <!-- Top bar — dark so white logo is visible -->
+  <div class="bg-indigo-950 sticky top-0 z-10">
+    <div class="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <img src="reports/logo.png" alt="ARR Report Generator" class="h-8 w-auto" />
+        <div class="border-l border-indigo-800 pl-4">
+          <p class="text-xs font-medium text-indigo-400 uppercase tracking-widest">ARR Report Generator</p>
+          <p class="text-sm font-semibold text-white">How to use the package</p>
+        </div>
+      </div>
+      <a href="https://github.com/mtreviso/arr-report-generator" target="_blank"
+         class="flex items-center gap-1.5 text-sm text-indigo-300 hover:text-white transition-colors">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+        </svg>
+        GitHub ↗
+      </a>
+    </div>
+  </div>
+
+  <main class="max-w-6xl mx-auto px-6 py-10 space-y-10">
+
+    <!-- Hero card -->
+    <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+      <div class="grid lg:grid-cols-2 gap-8 items-start">
+        <div>
+          <span class="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">Local-only dashboard generator</span>
+          <h2 class="mt-4 text-3xl font-bold tracking-tight">
+            Generate OpenReview dashboards without running a server
+          </h2>
+          <p class="mt-4 text-slate-600 leading-7">
+            This package fetches venue data from OpenReview and writes fully self-contained HTML dashboards for
+            review-phase and commitment-phase workflows. You open the output file directly in your browser —
+            no backend, no server, your credentials never leave your machine.
+          </p>
+        </div>
+        <div class="rounded-2xl bg-slate-900 text-slate-100 p-5 mt-10 overflow-x-auto">
+<pre class="text-xs leading-6"><code>pip install -r requirements.txt
+
+python generate_review_report.py \
+  --username your@email.com \
+  --password 'yourpassword' \
+  --venue_id aclweb.org/ACL/ARR/2025/February \
+  --me '~Your_Name1'</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Steps: 1 and 2 side by side, then 3 full width -->
+    <section class="space-y-4">
+      <div class="grid lg:grid-cols-2 gap-4">
+
+        <!-- Step 1 -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <p class="text-xs font-semibold uppercase tracking-widest text-indigo-500 mb-2">Step 1</p>
+          <h3 class="text-lg font-bold">Install</h3>
+          <p class="mt-2 text-sm text-slate-600 leading-6">Clone the repository and install Python dependencies. Python 3.9+ is required.</p>
+          <pre class="mt-4 rounded-xl bg-slate-900 text-slate-100 p-4 text-xs overflow-x-auto"><code>git clone https://github.com/mtreviso/arr-report-generator
+cd arr-report-generator
+pip install -r requirements.txt</code></pre>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <p class="text-xs font-semibold uppercase tracking-widest text-indigo-500 mb-2">Step 2</p>
+          <h3 class="text-lg font-bold">Authenticate</h3>
+          <p class="mt-2 text-sm text-slate-600 leading-6">Pass credentials via flags, or set environment variables once so you never have to repeat them.</p>
+          <pre class="mt-4 rounded-xl bg-slate-900 text-slate-100 p-4 text-xs overflow-x-auto"><code>export OPENREVIEW_USERNAME='your@email.com'
+export OPENREVIEW_PASSWORD='yourpassword'
+export OPENREVIEW_ID='~Your_Name1'</code></pre>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-widest text-indigo-500 mb-2">Step 3</p>
+        <h3 class="text-lg font-bold mb-1">Choose the right script</h3>
+        <p class="text-slate-600 text-sm mb-6">All three entry points share the same credential flags, but target different phases and roles.</p>
+        <div class="grid lg:grid-cols-3 gap-6">
+
+          <!-- Review report -->
+          <div class="rounded-2xl border border-slate-200 p-5 flex flex-col">
+            <div class="flex items-center gap-2 mb-1">
+              <h4 class="font-semibold text-slate-900">Review report</h4>
+              <span class="rounded-full bg-indigo-50 px-2 py-0.5 text-xs text-indigo-600 font-medium">ARR venue</span>
+            </div>
+            <p class="mt-2 text-sm text-slate-600 leading-6">Use during the ARR review phase. Default role is SAC; pass <code>--role pc</code> to fetch all papers across the venue.</p>
+            <pre class="mt-4 rounded-xl bg-slate-900 text-slate-100 p-4 text-xs overflow-x-auto"><code>python generate_review_report.py \
+  --venue_id aclweb.org/ACL/ARR/2025/February \
+  --me '~Your_Name1'</code></pre>
+            <div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+              <span class="text-sm">📄 reports/review_report.html</span>
+            </div>
+          </div>
+
+          <!-- PC dashboard -->
+          <div class="rounded-2xl border border-slate-200 p-5 flex flex-col">
+            <div class="flex items-center gap-2 mb-1">
+              <h4 class="font-semibold text-slate-900">PC dashboard</h4>
+              <span class="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-600 font-medium">PC only</span>
+            </div>
+            <p class="mt-2 text-sm text-slate-600 leading-6">Fetches all papers across all SAC batches. Intended for Program Chairs. Can take several minutes on large venues.</p>
+            <pre class="mt-4 rounded-xl bg-slate-900 text-slate-100 p-4 text-xs overflow-x-auto"><code>python generate_pc_report.py \
+  --venue_id aclweb.org/ACL/ARR/2025/February \
+  --me '~Your_Name1'</code></pre>
+            <div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+              <span class="text-sm">📄 reports/pc_report.html</span>
+            </div>
+          </div>
+
+          <!-- Commitment report -->
+          <div class="rounded-2xl border border-slate-200 p-5 flex flex-col">
+            <div class="flex items-center gap-2 mb-1">
+              <h4 class="font-semibold text-slate-900">Commitment report</h4>
+              <span class="rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-600 font-medium">ACL / EMNLP</span>
+            </div>
+            <p class="mt-2 text-sm text-slate-600 leading-6">Use for the commitment phase of a downstream venue. Roles supported: SAC, AC, and PC.</p>
+            <pre class="mt-4 rounded-xl bg-slate-900 text-slate-100 p-4 text-xs overflow-x-auto"><code>python generate_commitment_report.py \
+  --venue_id aclweb.org/ACL/2025/Conference \
+  --me '~Your_Name1' \
+  --role sac</code></pre>
+            <div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+              <span class="text-sm">📄 reports/commitment_report.html</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Common options -->
+    <section class="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
+      <h2 class="text-2xl font-bold mb-6">Common options</h2>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="border-b border-slate-200 text-left text-slate-400 uppercase text-xs tracking-wide">
+              <th class="pb-2 pr-6">Flag</th>
+              <th class="pb-2">Meaning</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            <tr>
+              <td class="py-2.5 pr-6 font-mono text-xs text-indigo-700">--username / --password</td>
+              <td class="py-2.5 text-slate-600">OpenReview credentials (or set via env vars).</td>
+            </tr>
+            <tr>
+              <td class="py-2.5 pr-6 font-mono text-xs text-indigo-700">--venue_id</td>
+              <td class="py-2.5 text-slate-600">Full venue group ID, e.g. <code>aclweb.org/ACL/ARR/2025/February</code>.</td>
+            </tr>
+            <tr>
+              <td class="py-2.5 pr-6 font-mono text-xs text-indigo-700">--me</td>
+              <td class="py-2.5 text-slate-600">Your OpenReview tilde ID, e.g. <code>~Jane_Doe1</code>.</td>
+            </tr>
+            <tr>
+              <td class="py-2.5 pr-6 font-mono text-xs text-indigo-700">--role</td>
+              <td class="py-2.5 text-slate-600"><code>sac</code> (default) / <code>ac</code> / <code>pc</code> — scope of papers to fetch.</td>
+            </tr>
+            <tr>
+              <td class="py-2.5 pr-6 font-mono text-xs text-indigo-700">--comments-level</td>
+              <td class="py-2.5 text-slate-600"><code>none</code> / <code>basic</code> / <code>full</code> (default). Higher detail means slower runs and larger files.</td>
+            </tr>
+            <tr>
+              <td class="py-2.5 pr-6 font-mono text-xs text-indigo-700">--save-cache / --use-cache</td>
+              <td class="py-2.5 text-slate-600">Cache OpenReview data to disk; reload instantly on the next run.</td>
+            </tr>
+            <tr>
+              <td class="py-2.5 pr-6 font-mono text-xs text-indigo-700">--impersonate [GROUP_ID]</td>
+              <td class="py-2.5 text-slate-600">Lets PCs inspect another SAC's view. Requires PC-level permission on the venue.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Troubleshooting -->
+    <section class="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
+      <h2 class="text-2xl font-bold mb-6">Troubleshooting</h2>
+      <div class="grid lg:grid-cols-2 gap-6 text-sm text-slate-600 leading-7">
+        <div>
+          <h3 class="font-semibold text-slate-900">No papers found</h3>
+          <p class="mt-1">Double-check the venue ID, your tilde ID, and the role flag. In non-PC review mode the script only includes papers in your SAC batch.</p>
+        </div>
+        <div>
+          <h3 class="font-semibold text-slate-900">The run is slow</h3>
+          <p class="mt-1">PC mode and full comment threading can be slow on large venues. Use <code>--comments-level basic</code> or cache the data with <code>--save-cache</code>.</p>
+        </div>
+        <div>
+          <h3 class="font-semibold text-slate-900">I want to edit the UI</h3>
+          <p class="mt-1">All layout files live in <code>templates/</code> as plain Jinja2 HTML. Add columns, change styling, or restructure tabs without touching any Python.</p>
+        </div>
+        <div>
+          <h3 class="font-semibold text-slate-900">Review issues are not appearing</h3>
+          <p class="mt-1">Make sure you run with <code>--comments-level</code> as "basic" or "full", otherwise the script cannot extract the presence of review issues.</p>
+        </div>
+        <div>
+          <h3 class="font-semibold text-slate-900">Low-confidence threshold</h3>
+          <p class="mt-1">The default is <strong>2</strong>. Edit the class variable near the top of <code>arr_report_generator.py</code>:</p>
+          <pre class="mt-2 rounded-xl bg-slate-900 text-slate-100 p-3 text-xs overflow-x-auto"><code>LOW_CONF_THRESHOLD = 2  # ← change this</code></pre>
+        </div>
+        <div>
+          <h3 class="font-semibold text-slate-900">AC Progress columns</h3>
+          <table class="mt-2 text-xs w-full border-collapse">
+            <tbody class="divide-y divide-slate-100">
+              <tr><td class="py-1.5 pr-4 font-medium text-slate-700">Late Rev.</td><td>Completed reviews &lt; expected — reviews still missing.</td></tr>
+              <tr><td class="py-1.5 pr-4 font-medium text-slate-700">⚡ Emerg.</td><td>Papers where an emergency review has been declared.</td></tr>
+              <tr><td class="py-1.5 pr-4 font-medium text-slate-700">⚡ Unmet</td><td>Emergency declared but no emergency reviewer assigned yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Divider before dev section -->
+    <hr class="border-slate-200" />
+
+    <!-- Dev section: cache + impersonation -->
+    <section class="space-y-6">
+      <div>
+        <h2 class="text-xl font-bold text-slate-700">For developers</h2>
+        <p class="text-sm text-slate-500 mt-1">Tools for iterating on templates and inspecting other users' views.</p>
+      </div>
+
+      <div class="grid lg:grid-cols-2 gap-6">
+        <!-- Fast iteration / cache -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <h3 class="font-semibold text-slate-900 mb-1">Fast local iteration (cache)</h3>
+          <p class="text-sm text-slate-600 leading-6 mb-4">
+            When tweaking templates, fetch once and save a cache. Subsequent runs skip all OpenReview API calls
+            and complete in seconds, not minutes.
+          </p>
+          <pre class="rounded-xl bg-slate-900 text-slate-100 p-4 text-xs overflow-x-auto"><code># Fetch + save (do once)
+python generate_review_report.py ... --save-cache
+
+# Iterate quickly from cache
+python generate_review_report.py ... --use-cache
+
+# Separate caches per venue or SAC
+python generate_review_report.py ... \
+  --use-cache --cache-dir .cache_acl_feb</code></pre>
+          <p class="mt-3 text-xs text-slate-500">
+            The cache is <strong>not venue-aware</strong> — switching venues requires a different
+            <code>--cache-dir</code> or deleting the existing one.
+            <code>--save-cache</code> and <code>--use-cache</code> are mutually exclusive.
+          </p>
+        </div>
+
+        <!-- Impersonation -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <h3 class="font-semibold text-slate-900 mb-1">Impersonation</h3>
+          <p class="text-sm text-slate-600 leading-6 mb-4">
+            Requires <strong>PC-level permission</strong>. Lets you view the report exactly as a target SAC would see it.
+            Your own credentials authenticate; data is fetched under the target user's identity.
+          </p>
+          <pre class="rounded-xl bg-slate-900 text-slate-100 p-4 text-xs overflow-x-auto"><code># Default: use the venue's Program Chairs group
+python generate_review_report.py \
+  --me "~Target_SAC_Name1" \
+  --impersonate
+
+# Or specify a group explicitly
+python generate_review_report.py \
+  --me "~Target_SAC_Name1" \
+  --impersonate "aclweb.org/ACL/ARR/2025/October/Program_Chairs"</code></pre>
+          <p class="mt-3 text-xs text-slate-500">
+            <strong>NOTE:</strong> Not available in <code>generate_pc_report.py</code>, which already fetches all papers anyway.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer card -->
+    <hr />
+
+    <section>
+      <p class="mt-4 text-muted text-xs">
+        Based on the <a href="https://ymcui.com" class="underline hover:text-gray-800" target="_blank">ARR Tool by Yiming Cui</a> 
+        ·
+        Source on <a href="https://github.com/mtreviso/arr-report-generator" class="underline" target="_blank">Github</a> ·
+        MIT License
+      </p>
+    </section>
+
+  </main>
+</body>
+</html>
