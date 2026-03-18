@@ -50,23 +50,23 @@
     </div>
 
     <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-        <div class="bg-red-50 rounded-lg p-3 border border-red-100 text-center">
+        <div class="bg-red-50 rounded-lg p-3 border border-red-100 text-center" title="Papers with at least one review issue flag, such as missing reviews, conflicting recommendations, or other review-process anomalies that may need attention.">
             <div class="text-xl font-bold text-red-600">{{ s.review_issues }}</div>
             <div class="text-xs text-red-400 uppercase tracking-wide mt-1">Review Issues</div>
         </div>
-        <div class="bg-orange-50 rounded-lg p-3 border border-orange-100 text-center">
+        <div class="bg-orange-50 rounded-lg p-3 border border-orange-100 text-center" title="Papers for which at least one reviewer or area chair indicated that an ethics review may be needed.">
             <div class="text-xl font-bold text-orange-600">{{ s.ethics_papers }}</div>
             <div class="text-xs text-orange-400 uppercase tracking-wide mt-1">Ethics Flagged</div>
         </div>
-        <div class="bg-yellow-50 rounded-lg p-3 border border-yellow-100 text-center">
+        <div class="bg-yellow-50 rounded-lg p-3 border border-yellow-100 text-center" title="Papers with at least one review submitted with low reviewer confidence, which may indicate higher uncertainty in the evaluation.">
             <div class="text-xl font-bold text-yellow-600">{{ s.low_conf_papers }}</div>
             <div class="text-xs text-yellow-500 uppercase tracking-wide mt-1">Low Confidence</div>
         </div>
-        <div class="bg-lime-50 rounded-lg p-3 border border-lime-100 text-center">
+        <div class="bg-lime-50 rounded-lg p-3 border border-lime-100 text-center" title="Papers with at least one single-blind indicator, such as a declared public preprint or reviewer-reported knowledge of author identity.">
             <div class="text-xl font-bold text-lime-600">{{ s.sb_papers | default(0) }}</div>
             <div class="text-xs text-lime-400 uppercase tracking-wide mt-1">Single-blind (SB)</div>
         </div>
-        <div class="bg-blue-50 rounded-lg p-3 border border-blue-100 text-center">
+        <div class="bg-blue-50 rounded-lg p-3 border border-blue-100 text-center" title="Papers with at least one emergency declaration from an assigned reviewer, indicating a reviewer may be unable to complete the review on time.">
             <div class="text-xl font-bold text-blue-600">{{ s.emergency_declared | default(0) }}</div>
             <div class="text-xs text-blue-500 uppercase tracking-wide mt-1">Emergency Papers</div>
         </div>
