@@ -86,12 +86,12 @@
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:160px;">Affiliation</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;" title="Completed reviewer assignments divided by expected reviewer assignments across this AC's papers">Reviews</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Percentage of expected reviews that have been completed across this AC's papers">Review %</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:95px;" title="Meta-reviews completed by this AC, divided by total papers handled by this AC">Meta Reviews</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:85px;" title="Whether every paper handled by this AC already has a meta-review">Meta Ready</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:85px;" title="Number of papers with fewer completed reviews than expected">Late Papers</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Number of papers with an emergency review request or declaration">Emergency Requested</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:95px;" title="Meta-reviews completed by this AC, divided by total papers handled by this AC">Meta <br /> Reviews</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:85px;" title="Whether every paper handled by this AC already has a meta-review">Meta <br /> Ready</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:85px;" title="Number of papers with fewer completed reviews than expected">Late</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Average reviewer confidence score across this AC's papers">Avg Conf</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:60px;" title="Papers with a reviewer who indicated they know the authors (single-blind)">SB</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Number of papers with an emergency review request or declaration">Emergency <br /> Requested</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -140,9 +140,6 @@
                     <td class="whitespace-nowrap {% if ac['Late_Papers'] > 0 %}text-red-600 font-medium{% else %}text-gray-400{% endif %}">
                         {{ ac["Late_Papers"] if ac["Late_Papers"] > 0 else "–" }}
                     </td>
-                    <td class="whitespace-nowrap {% if ac.get('Emergency_Declared',0) > 0 %}text-blue-600{% else %}text-gray-400{% endif %}">
-                        {% if ac.get("Emergency_Declared",0) > 0 %}{{ ac["Emergency_Declared"] }}{% else %}–{% endif %}
-                    </td>
                     <td class="whitespace-nowrap text-gray-500">
                         {% set avg_conf = ac.get("Avg_Confidence") %}
                         {% if avg_conf is not none %}
@@ -151,6 +148,9 @@
                     </td>
                     <td class="whitespace-nowrap {% if ac.get('SB_Papers',0) > 0 %}text-orange-600 font-medium{% else %}text-gray-400{% endif %}">
                         {{ ac.get('SB_Papers', 0) if ac.get('SB_Papers', 0) > 0 else '–' }}
+                    </td>
+                    <td class="whitespace-nowrap {% if ac.get('Emergency_Declared',0) > 0 %}text-blue-600{% else %}text-gray-400{% endif %}">
+                        {% if ac.get("Emergency_Declared",0) > 0 %}{{ ac["Emergency_Declared"] }}{% else %}–{% endif %}
                     </td>
                 </tr>
                 {% endfor %}

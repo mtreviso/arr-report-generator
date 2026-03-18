@@ -88,14 +88,14 @@
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:70px;" title="Total papers handled by this Senior Area Chair">Papers</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;" title="Completed reviewer assignments divided by expected reviewer assignments across this SAC's papers">Reviews</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Percentage of expected reviews that have been completed">Review %</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:110px;" title="Meta-reviews completed divided by total papers handled by this SAC">Meta Reviews</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Whether every paper handled by this SAC already has a meta-review">Meta Ready</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:85px;" title="Number of papers with fewer completed reviews than expected">Late Papers</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:110px;" title="Meta-reviews completed divided by total papers handled by this SAC">Meta <br /> Reviews</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Whether every paper handled by this SAC already has a meta-review">Meta <br /> Ready</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:85px;" title="Number of papers with fewer completed reviews than expected">Late</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:70px;" title="Papers with at least one review issue report">Issues</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Number of papers with an emergency review request or declaration">Emergency Requested</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Papers containing at least one low-confidence review">Low Conf</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:70px;" title="Papers with an ethics concern flag">Ethics</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:55px;" title="Papers with a reviewer who indicated they know the authors (single-blind)">SB</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Number of papers with an emergency review request or declaration">Emergency <br /> Requested</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -138,9 +138,6 @@
                     <td class="whitespace-nowrap {% if sac['Review_Issues'] > 0 %}text-red-600 font-medium{% else %}text-gray-400{% endif %}">
                         {{ sac["Review_Issues"] if sac["Review_Issues"] > 0 else "–" }}
                     </td>
-                    <td class="whitespace-nowrap {% if sac.get('Emergency_Declared',0) > 0 %}text-blue-600{% else %}text-gray-400{% endif %}">
-                        {% if sac.get("Emergency_Declared",0) > 0 %}{{ sac["Emergency_Declared"] }}{% else %}–{% endif %}
-                    </td>
                     <td class="whitespace-nowrap {% if sac['Low_Conf_Papers'] > 0 %}text-yellow-600{% else %}text-gray-400{% endif %}">
                         {{ sac["Low_Conf_Papers"] if sac["Low_Conf_Papers"] > 0 else "–" }}
                     </td>
@@ -149,6 +146,9 @@
                     </td>
                     <td class="whitespace-nowrap {% if sac.get('SB_Papers',0) > 0 %}text-orange-600 font-medium{% else %}text-gray-400{% endif %}">
                         {{ sac.get("SB_Papers", 0) if sac.get("SB_Papers", 0) > 0 else "–" }}
+                    </td>
+                    <td class="whitespace-nowrap {% if sac.get('Emergency_Declared',0) > 0 %}text-blue-600{% else %}text-gray-400{% endif %}">
+                        {% if sac.get("Emergency_Declared",0) > 0 %}{{ sac["Emergency_Declared"] }}{% else %}–{% endif %}
                     </td>
                 </tr>
                 {% endfor %}

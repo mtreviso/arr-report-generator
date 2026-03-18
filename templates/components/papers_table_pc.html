@@ -195,16 +195,16 @@
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:36px;width:36px;" title="Paper number">#</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:200px;">Title</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:48px;width:48px;">Type</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:110px;">SAC</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:110px;">AC</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:72px;width:72px;" title="Issue, ethics, emergency, and other paper flags">Flags</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">SAC</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">AC</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:60px;width:60px;" title="Completed reviews divided by expected reviews for this paper">Reviews</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:42px;width:42px;" title="Whether this paper already has all expected reviews">Ready</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:110px;" title="Average reviewer confidence score">Confidence</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;" title="Average reviewer soundness score">Soundness</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;" title="Average reviewer excitement or significance score">Excitement</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;" title="Average reviewer overall assessment score">Overall</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Average reviewer confidence score">Conf.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Average reviewer soundness score">Sound.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Average reviewer excitement or significance score">Excit.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Average reviewer overall assessment score">Overall</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:55px;width:55px;" title="Area Chair or meta-review score for this paper">Meta</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:72px;width:72px;" title="Issue, ethics, emergency, and other paper flags">Flags</th>
                 </tr>
             </thead>
         </table>
@@ -346,14 +346,14 @@
                 { title: 'Type', data: 'Paper Type', className: 'whitespace-nowrap text-gray-500' },
                 { title: 'SAC', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (row['Senior Area Chair'] || '') : personLink(row['Senior Area Chair'], row['Senior Area Chair ID'], row['Senior Area Chair Affiliation']); } },
                 { title: 'AC', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (row['Area Chair'] || '') : personLink(row['Area Chair'], row['Area Chair ID'], row['Area Chair Affiliation']); } },
-                { title: 'Flags', data: null, orderable: false, searchable: false, render: function(_, __, row) { return flagsCell(row); } },
                 { title: 'Reviews', data: null, render: function(_, __, row) { return (row['Completed Reviews'] || 0) + '/' + (row['Expected Reviews'] || 0); } },
                 { title: 'Ready', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? row.__ready : (row.__ready === '1' ? '<span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-medium bg-green-100 text-green-700">&#10003;</span>' : '<span class="text-gray-300">&#8211;</span>'); } },
-                { title: 'Confidence', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (parseAvg(row['Reviewer Confidence']) ?? -1) : scoreCell(row['Reviewer Confidence'], row['Confidence List']); } },
-                { title: 'Soundness', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (parseAvg(row['Soundness Score']) ?? -1) : scoreCell(row['Soundness Score'], row['Soundness List']); } },
-                { title: 'Excitement', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (parseAvg(row['Excitement Score']) ?? -1) : scoreCell(row['Excitement Score'], row['Excitement List']); } },
+                { title: 'Conf.', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (parseAvg(row['Reviewer Confidence']) ?? -1) : scoreCell(row['Reviewer Confidence'], row['Confidence List']); } },
+                { title: 'Sound.', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (parseAvg(row['Soundness Score']) ?? -1) : scoreCell(row['Soundness Score'], row['Soundness List']); } },
+                { title: 'Excit.', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (parseAvg(row['Excitement Score']) ?? -1) : scoreCell(row['Excitement Score'], row['Excitement List']); } },
                 { title: 'Overall', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (row.__overall ?? -1) : scoreCell(row['Overall Assessment'], row['Overall List']); } },
-                { title: 'Meta', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (parseAvg(row['Meta Review Score']) ?? -1) : (row['Meta Review Score'] ? '<span class="font-semibold">'+esc(row['Meta Review Score'])+'</span>' : '&#8211;'); } }
+                { title: 'Meta', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (parseAvg(row['Meta Review Score']) ?? -1) : (row['Meta Review Score'] ? '<span class="font-semibold">'+esc(row['Meta Review Score'])+'</span>' : '&#8211;'); } },
+                { title: 'Flags', data: null, orderable: true, searchable: false, render: function(_, __, row) { return flagsCell(row); } },
             ],
             createdRow: function(row) { row.classList.add('text-gray-500'); },
             columnDefs: [
