@@ -26,21 +26,15 @@ class CommitmentReportGenerator(ARRReportGenerator):
                  impersonate_group=None, comments_level='basic', skip_api_init=False):
         if role not in VALID_ROLES:
             raise ValueError(f"role must be one of {VALID_ROLES}, got {role!r}")
-        self.role = role
-        self.comments_level = (comments_level or 'basic').lower()
-        if self.comments_level not in {'none', 'basic', 'full'}:
-            raise ValueError(f"comments_level must be one of ('none', 'basic', 'full'), got {comments_level!r}")
-        self.reply_details = 'replies' if self.comments_level == 'full' else 'directReplies'
 
-        # Direct init — different flow from ARRReportGenerator.__init__
-        self.username  = username
-        self.password  = password
-        self.venue_id  = venue_id
-        self.me        = me
-        self.client = None
-        self.venue_group = None
-        self.submission_name = 'Submission'
-        self.submissions = []
+        super().__init__(username=username, password=password,
+                         venue_id=venue_id, me=me, role=role,
+                         impersonate_group=impersonate_group,
+                         comments_level=comments_level,
+                         skip_api_init=skip_api_init)
+
+        self.linked_note_cache = {}
+        self.linked_replies_cache = {}
 
         if skip_api_init:
             return
@@ -53,30 +47,14 @@ class CommitmentReportGenerator(ARRReportGenerator):
 
         # Impersonate BEFORE any data fetching
         if impersonate_group:
+            if not impersonate_group.strip() or impersonate_group == "__DEFAULT_PROGRAM_CHAIRS__":
+                impersonate_group = venue_id.rstrip('/') + '/Program_Chairs'
             self._apply_impersonation(impersonate_group)
 
-        self.venue_group     = self.client.get_group(venue_id)
+        self.venue_group = self.client.get_group(venue_id)
         self.submission_name = self.venue_group.content['submission_name']['value']
 
-        # Data containers
-        self.papers_data         = []
-        self.comments_data       = []
-        self.ac_meta_data        = []
-        self.correlation_data    = None
-        self.score_distributions = {'overall_assessment': [], 'meta_review': []}
-
-        # Caches
-        self.ac_email_cache       = {}
-        self.profile_cache        = {}
-        self.linked_note_cache    = {}
-        self.linked_replies_cache = {}
-        self._papers_df_cache = None
-        self._papers_df_cache_sig = None
-
         # Build group index then find assigned submissions
-        self.group_index = {}
-        self.group_index_complete = False
-        self.missing_group_ids = set()
         self._build_group_index()
         print(f"Role: {role.upper()} | Venue: {venue_id} | Me: {me}")
         self._find_submissions()
@@ -100,9 +78,29 @@ class CommitmentReportGenerator(ARRReportGenerator):
             self.group_index = {}
             self.group_index_complete = False
 
-    def _is_me_in_group(self, group_id):
+    def _group_contains_member(self, group_id, member_id, visited=None):
+        if not group_id or not member_id:
+            return False
+        if visited is None:
+            visited = set()
+        if group_id in visited:
+            return False
+        visited.add(group_id)
+
         group = self._get_group_cached(group_id)
-        return bool(getattr(group, 'members', None)) and self.me in group.members
+        members = getattr(group, 'members', None) or []
+        for candidate in members:
+            if candidate == member_id:
+                return True
+            if isinstance(candidate, str) and (candidate.startswith('~') or '@' in candidate):
+                continue
+            if isinstance(candidate, str) and '/' in candidate:
+                if self._group_contains_member(candidate, member_id, visited):
+                    return True
+        return False
+
+    def _is_me_in_group(self, group_id):
+        return self._group_contains_member(group_id, self.me)
 
     def _find_submissions(self):
         """Fetch all submissions, then filter by role-based assignment."""
@@ -120,34 +118,46 @@ class CommitmentReportGenerator(ARRReportGenerator):
 
         self.submissions = []
         role = self.role
+        linked_count = 0
+        withdrawn_count = 0
+        role_matched_count = 0
 
         for sub in tqdm(all_subs, desc="Filtering assigned papers"):
             # Must have a linked ARR submission to be processable
             link = sub.content.get("paper_link", {}).get("value", "").strip()
             if not link:
                 continue
+            linked_count += 1
 
             # Skip withdrawn / desk-rejected
             try:
                 venue_val = sub.content.get('venue', {}).get('value', '').lower()
                 if 'withdrawn' in venue_val or 'desk rejected' in venue_val:
+                    withdrawn_count += 1
                     continue
                 if sub.content.get('withdrawal_confirmation', {}).get('value', '').strip():
+                    withdrawn_count += 1
                     continue
             except Exception:
                 pass
 
             num = sub.number
+            matched = False
             if role == 'pc':
-                self.submissions.append(sub)
+                matched = True
             elif role == 'sac':
-                if self._is_me_in_group(f"{self.venue_id}/{self.submission_name}{num}/Senior_Area_Chairs"):
-                    self.submissions.append(sub)
+                matched = self._is_me_in_group(f"{self.venue_id}/{self.submission_name}{num}/Senior_Area_Chairs")
             elif role == 'ac':
-                if self._is_me_in_group(f"{self.venue_id}/{self.submission_name}{num}/Area_Chairs"):
-                    self.submissions.append(sub)
+                matched = self._is_me_in_group(f"{self.venue_id}/{self.submission_name}{num}/Area_Chairs")
 
-        print(f"Found {len(self.submissions)} papers for role={role}")
+            if matched:
+                self.submissions.append(sub)
+                role_matched_count += 1
+
+        print(
+            f"Found {len(self.submissions)} papers for role={role} "
+            f"(linked={linked_count}, skipped_withdrawn={withdrawn_count}, role_matched={role_matched_count})"
+        )
 
     # -----------------------------------------------------------------------
     # Note/reply predicates (override base class which expects dicts)
@@ -508,8 +518,10 @@ class CommitmentReportGenerator(ARRReportGenerator):
     def process_data(self):
         try:
             self.process_papers_data()
+            self.compute_ac_meta_data()
             if self.papers_data:
                 self.compute_correlation_data()
+            self.compute_attention_papers()
             if self.comments_level != 'none':
                 self.process_comments_data()
             else:
@@ -541,7 +553,8 @@ class CommitmentReportGenerator(ARRReportGenerator):
             return self._write_error_report(output_dir, filename, "No papers found",
                 f"No papers found for role={self.role}, user={self.me}, venue={self.venue_id}.<br>"
                 f"SAC role: ensure you appear in a Senior_Area_Chairs group.<br>"
-                f"AC role: ensure you appear in an Area_Chairs group.")
+                f"AC role: ensure you appear in an Area_Chairs group.<br>"
+                f"Only commitment submissions with a non-empty paper_link are included.")
 
         self.process_data()
 
