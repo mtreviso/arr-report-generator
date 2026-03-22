@@ -23,7 +23,7 @@ VALID_ROLES = ('sac', 'ac', 'pc')
 class CommitmentReportGenerator(ARRReportGenerator):
 
     def __init__(self, username, password, venue_id, me, role='sac',
-                 impersonate_group=None, comments_level='basic', skip_api_init=False):
+                 impersonate_group=None, comments_level='basic', skip_api_init=True):
         if role not in VALID_ROLES:
             raise ValueError(f"role must be one of {VALID_ROLES}, got {role!r}")
 
@@ -31,7 +31,7 @@ class CommitmentReportGenerator(ARRReportGenerator):
                          venue_id=venue_id, me=me, role=role,
                          impersonate_group=impersonate_group,
                          comments_level=comments_level,
-                         skip_api_init=skip_api_init)
+                         skip_api_init=True)
 
         self.linked_note_cache = {}
         self.linked_replies_cache = {}

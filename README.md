@@ -34,14 +34,30 @@ Requires Python 3.9+.
 
 ```bash
 python generate_review_report.py \
-  --username your@email.com \
-  --password yourpassword \
-  --venue_id aclweb.org/ACL/ARR/2025/February \
+  --username "your@email.com" \
+  --password "yourpassword" \
+  --venue_id "aclweb.org/ACL/ARR/2026/January" \
   --me "~Your_Name1"
 ```
 
 `--role sac` (default): only papers in your SAC batch.  
+`--role ac`: papers where you are AC.
 `--role pc`: all papers in the venue (PC/test mode, may take several minutes).
+
+### Commitment Report (ACL/EMNLP/etc. venue)
+
+Add the `--phase commitment` flag to fetch the commitment phase data instead of the review phase.
+Note that SACs are now ACs, so the `--role ac` flag is required to see any papers at all.
+
+```bash
+python generate_review_report.py \
+  --username "your@email.com" \
+  --password "yourpassword" \
+  --venue_id "aclweb.org/ACL/2026/Conference" \
+  --me "~Your_Name1" \
+  --phase "commitment" \
+  --role "ac"
+```
 
 ### PC Dashboard (ARR venue)
 
@@ -51,24 +67,10 @@ Fetches **all** papers across all SAC batches. Intended for Program Chairs. May 
 python generate_pc_report.py \
   --username "your@email.com" \
   --password "yourpassword" \
-  --venue_id "aclweb.org/ACL/ARR/2025/February" \
+  --venue_id "aclweb.org/ACL/ARR/2026/January" \
   --me "~Your_Name1"
 ```
 
-### Commitment Report (ACL/EMNLP/etc. venue)
-
-```bash
-python generate_commitment_report.py \
-  --username "your@email.com" \
-  --password "yourpassword" \
-  --venue_id "aclweb.org/ACL/2025/Conference" \
-  --me "~Your_Name1" \
-  --role sac
-```
-
-`--role sac` (default): papers where you are SAC.  
-`--role ac`: papers where you are AC.  
-`--role pc`: all papers.
 
 ### Credentials via environment variables
 
@@ -92,11 +94,10 @@ All report scripts support `--comments-level none|basic|full`.
 
 ### Output files
 
-| Script | Output |
-|--------|--------|
-| `generate_review_report.py` | `reports/review_report.html` |
-| `generate_pc_report.py` | `reports/pc_report.html` |
-| `generate_commitment_report.py` | `reports/commitment_report.html` |
+| Script | Output                                               |
+|--------|------------------------------------------------------|
+| `generate_review_report.py` | `reports/review_report.html` or `reports/commitment_report.html` |
+| `generate_pc_report.py` | `reports/pc_report.html`  |
 
 Open in any browser — fully self-contained, no server needed.
 
@@ -131,8 +132,8 @@ The review and commitment reports support impersonating another OpenReview user 
 
 ```bash
 
-python generate_review_report.py ... --me "~Target_SAC_Name1" --impersonate
-python generate_commitment_report.py ... --me "~Target_SAC_Name1" --impersonate
+python generate_review_report.py ... --phase "reivew" --me "~Target_SAC_Name1" --impersonate
+python generate_review_report.py ... --phase "commitment" --me "~Target_SAC_Name1" --impersonate
 ```
 
 You can pass a `GROUP_ID` after the `--impersonate` flag, which corresponds to the authorization group, e.g., `aclweb.org/ACL/ARR/2025/October/Program_Chairs`. If `GROUP_ID` is empty, it will assume to be `<venue_id>/Program_Chairs`. Your own credentials are used to authenticate, and all data is then fetched as the target user. 
