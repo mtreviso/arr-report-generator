@@ -5,6 +5,7 @@ from __future__ import annotations
 import getpass
 import os
 import sys
+from pathlib import Path
 
 from dev_cache import cache_exists
 
@@ -59,8 +60,8 @@ def add_args(
     )
     g.add_argument(
         "--cache-dir",
-        default=".dev_cache",
-        help="Directory for pickle cache files.",
+        default="",
+        help="Directory for pickle cache files. Defaults to an auto-generated path under .dev_cache/.",
     )
 
     if include_impersonate:
@@ -111,3 +112,34 @@ def validate_cache_args(args) -> None:
     if args.use_cache and not cache_exists(args.cache_dir):
         print(f"Error: No cache found in '{args.cache_dir}/'. Run once with --save-cache first.")
         sys.exit(1)
+
+
+def _slugify_cache_part(value: str) -> str:
+    value = (value or "").strip().replace("/", "__")
+    return "".join(ch if ch.isalnum() or ch in "._-=" else "_" for ch in value) or "unknown"
+
+
+def resolve_cache_dir(args, report_kind: str) -> str:
+    """Resolve the effective cache dir.
+
+    If --cache-dir is omitted, build a phase- and report-aware path like:
+      .dev_cache/<report_kind>/<phase>/<venue_id>[/role-<role>]
+    This avoids collisions between review vs commitment and review vs PC runs.
+    """
+    if getattr(args, "cache_dir", ""):
+        return args.cache_dir
+
+    parts = [".dev_cache", _slugify_cache_part(report_kind)]
+    phase = getattr(args, "phase", "")
+    if phase:
+        parts.append(_slugify_cache_part(phase))
+    venue_id = getattr(args, "venue_id", "")
+    if venue_id:
+        parts.append(_slugify_cache_part(venue_id))
+    role = getattr(args, "role", "")
+    if role and report_kind != "pc_report":
+        parts.append(f"role-{_slugify_cache_part(role)}")
+    impersonate = getattr(args, "impersonate", "")
+    if impersonate:
+        parts.append(f"impersonate-{_slugify_cache_part(impersonate)}")
+    return str(Path(*parts))

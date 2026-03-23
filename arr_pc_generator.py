@@ -607,6 +607,46 @@ class PCReportGenerator(ARRReportGenerator):
                 return p
         raise FileNotFoundError("Cannot find templates/ with pc_report.html")
 
+    def report_title(self):
+        return f"PC Dashboard: {self.venue_id}"
+
+    def build_template_data(self):
+        ac_scoring_data = self.generate_ac_scoring_data()
+        score_by_type_data = self.generate_score_by_type_data()
+        reviewer_load_quality = self.generate_reviewer_load_quality_data()
+        return {
+            "title": self.report_title(),
+            "generated_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "venue_id": self.venue_id,
+            "overview_stats": self.compute_overview_stats(),
+            "papers": self.papers_data,
+            "ac_meta": self.ac_meta_data,
+            "sac_meta": self.sac_meta_data,
+            "track_data": self.track_data,
+            "attention_papers": self.attention_papers,
+            **self.attention_template_flags(),
+            "comments_count": len(self.comments_data),
+            "comments": self.comments_data,
+            "comments_level": self.comments_level,
+            "comments_enabled": self.comments_level != 'none',
+            "histogram_data": self.generate_histogram_data(),
+            "correlation_data": self.correlation_data,
+            "paper_type_distribution": self.generate_paper_type_distribution(),
+            "contribution_type_distribution": self.generate_contribution_type_distribution(),
+            "review_completion_data": self.generate_review_completion_data(),
+            "score_scatter_data": self.generate_score_scatter_data(),
+            "ac_scoring_data": ac_scoring_data,
+            "score_outliers": self.compute_score_outliers(),
+            "high_disagreement": self.compute_high_disagreement_papers(),
+            "reviewer_load": self.compute_reviewer_load_histogram(),
+            "ac_load": self.compute_ac_load_histogram(),
+            "sac_load": self.compute_sac_load_histogram(),
+            "ac_scoring_top": ac_scoring_data[:15],
+            "sac_scoring_top": self.compute_sac_scoring_data(),
+            "score_by_type_data": score_by_type_data,
+            "reviewer_load_quality": reviewer_load_quality,
+        }
+
     def generate_report(self, output_dir=".", filename="pc_report.html"):
         os.makedirs(output_dir, exist_ok=True)
         self.process_data()
@@ -618,49 +658,12 @@ class PCReportGenerator(ARRReportGenerator):
             p.write_text(html)
             return p
 
-        ac_scoring_data      = self.generate_ac_scoring_data()
-        score_by_type_data   = self.generate_score_by_type_data()
-        reviewer_load_quality = self.generate_reviewer_load_quality_data()
-
-        template_data = {
-            "title":                   f"PC Dashboard: {self.venue_id}",
-            "generated_date":          datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "venue_id":                self.venue_id,
-            "overview_stats":          self.compute_overview_stats(),
-            "papers":                  self.papers_data,
-            "ac_meta":                 self.ac_meta_data,
-            "sac_meta":                self.sac_meta_data,
-            "track_data":              self.track_data,
-            "attention_papers":        self.attention_papers,
-            **self.attention_template_flags(),
-            "comments_count":          len(self.comments_data),
-            "comments":                self.comments_data,
-            "comments_level":          self.comments_level,
-            "comments_enabled":        self.comments_level != 'none',
-            "histogram_data":          self.generate_histogram_data(),
-            "correlation_data":        self.correlation_data,
-            "paper_type_distribution": self.generate_paper_type_distribution(),
-            "contribution_type_distribution": self.generate_contribution_type_distribution(),
-            "review_completion_data":  self.generate_review_completion_data(),
-            "score_scatter_data":      self.generate_score_scatter_data(),
-            "ac_scoring_data":         ac_scoring_data,
-            "score_outliers":          self.compute_score_outliers(),
-            "high_disagreement":       self.compute_high_disagreement_papers(),
-            "reviewer_load":           self.compute_reviewer_load_histogram(),
-            "ac_load":                 self.compute_ac_load_histogram(),
-            "sac_load":                self.compute_sac_load_histogram(),
-            "ac_scoring_top":          ac_scoring_data[:15],
-            "sac_scoring_top":         self.compute_sac_scoring_data(),
-            "score_by_type_data":      score_by_type_data,
-            "reviewer_load_quality":   reviewer_load_quality,
-        }
-
         template_dir = self._resolve_template_dir()
         env = jinja2.Environment(
             loader=jinja2.FileSystemLoader(str(template_dir)),
             autoescape=jinja2.select_autoescape(['html', 'xml'])
         )
-        html = env.get_template("pc_report.html").render(**template_data)
+        html = env.get_template("pc_report.html").render(**self.build_template_data())
         output_path = Path(output_dir) / filename
         output_path.write_text(html, encoding="utf-8")
         return output_path

@@ -62,10 +62,10 @@
 <pre class="text-xs leading-6"><code>pip install -r requirements.txt
 
 python generate_review_report.py \
-  --username your@email.com \
-  --password 'yourpassword' \
-  --venue_id aclweb.org/ACL/ARR/2025/February \
-  --me '~Your_Name1'</code></pre>
+  --username "your@email.com" \
+  --password "yourpassword" \
+  --venue_id "aclweb.org/ACL/ARR/2025/February" \
+  --me "~Your_Name1"</code></pre>
         </div>
       </div>
     </section>
@@ -110,8 +110,8 @@ export OPENREVIEW_ID='~Your_Name1'</code></pre>
             </div>
             <p class="mt-2 text-sm text-slate-600 leading-6">Use during the ARR review phase. Default role is SAC; pass <code>--role pc</code> to fetch all papers across the venue.</p>
             <pre class="mt-4 rounded-xl bg-slate-900 text-slate-100 p-4 text-xs overflow-x-auto"><code>python generate_review_report.py \
-  --venue_id aclweb.org/ACL/ARR/2025/February \
-  --me '~Your_Name1'</code></pre>
+  --venue_id "aclweb.org/ACL/ARR/2025/February" \
+  --me "~Your_Name1"</code></pre>
             <div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
               <span class="text-sm">📄 reports/review_report.html</span>
             </div>
@@ -123,12 +123,13 @@ export OPENREVIEW_ID='~Your_Name1'</code></pre>
               <h4 class="font-semibold text-slate-900">PC dashboard</h4>
               <span class="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-600 font-medium">PC only</span>
             </div>
-            <p class="mt-2 text-sm text-slate-600 leading-6">Fetches all papers across all SAC batches. Intended for Program Chairs. Can take several minutes on large venues.</p>
+            <p class="mt-2 text-sm text-slate-600 leading-6">Fetches all papers across all SAC batches. Intended for Program Chairs. Also supports the commitment phase with <code>--phase commitment</code>. Can take several minutes on large venues.</p>
             <pre class="mt-4 rounded-xl bg-slate-900 text-slate-100 p-4 text-xs overflow-x-auto"><code>python generate_pc_report.py \
-  --venue_id aclweb.org/ACL/ARR/2025/February \
-  --me '~Your_Name1'</code></pre>
+  --venue_id "aclweb.org/ACL/ARR/2025/February" \
+  --me "~Your_Name1"
+  --phase "review"</code></pre>
             <div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
-              <span class="text-sm">📄 reports/pc_report.html</span>
+              <span class="text-sm">📄 reports/pc_report.html or reports/pc_commitment_report.html</span>
             </div>
           </div>
 
@@ -138,11 +139,12 @@ export OPENREVIEW_ID='~Your_Name1'</code></pre>
               <h4 class="font-semibold text-slate-900">Commitment report</h4>
               <span class="rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-600 font-medium">ACL / EMNLP</span>
             </div>
-            <p class="mt-2 text-sm text-slate-600 leading-6">Use for the commitment phase of a downstream venue. Roles supported: SAC, AC, and PC.</p>
-            <pre class="mt-4 rounded-xl bg-slate-900 text-slate-100 p-4 text-xs overflow-x-auto"><code>python generate_commitment_report.py \
-  --venue_id aclweb.org/ACL/2025/Conference \
-  --me '~Your_Name1' \
-  --role sac</code></pre>
+            <p class="mt-2 text-sm text-slate-600 leading-6">Use for the commitment phase of a downstream venue. Roles supported: AC and PC. Use <code>--role ac</code> for an individual AC view.</p>
+            <pre class="mt-4 rounded-xl bg-slate-900 text-slate-100 p-4 text-xs overflow-x-auto"><code>python generate_review_report.py \
+  --venue_id "aclweb.org/ACL/2025/Conference" \
+  --me "~Your_Name1" \
+  --phase "commitment" \
+  --role "ac"</code></pre>
             <div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
               <span class="text-sm">📄 reports/commitment_report.html</span>
             </div>
@@ -263,8 +265,9 @@ python generate_review_report.py ... --use-cache
 python generate_review_report.py ... \
   --use-cache --cache-dir .cache_acl_feb</code></pre>
           <p class="mt-3 text-xs text-slate-500">
-            The cache is <strong>not venue-aware</strong> — switching venues requires a different
-            <code>--cache-dir</code> or deleting the existing one.
+            If you omit <code>--cache-dir</code>, the tool now creates an automatic cache path under
+            <code>.dev_cache/</code> that is separated by report type, phase, venue, and role when relevant,
+            so review vs commitment and review vs PC runs do not collide.
             <code>--save-cache</code> and <code>--use-cache</code> are mutually exclusive.
           </p>
         </div>

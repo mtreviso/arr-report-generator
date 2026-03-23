@@ -59,7 +59,7 @@ python generate_review_report.py \
   --role "ac"
 ```
 
-### PC Dashboard (ARR venue)
+### PC Dashboard (ARR review phase)
 
 Fetches **all** papers across all SAC batches. Intended for Program Chairs. May take several minutes for large venues (6000+ papers).
 
@@ -71,6 +71,18 @@ python generate_pc_report.py \
   --me "~Your_Name1"
 ```
 
+### PC Commitment Dashboard (ACL/EMNLP/etc. commitment phase)
+
+`generate_pc_report.py` now also supports the commitment phase via `--phase commitment`. This generates the full PC dashboard across all linked commitment submissions and writes `pc_commitment_report.html`.
+
+```bash
+python generate_pc_report.py \
+  --username "your@email.com" \
+  --password "yourpassword" \
+  --venue_id "aclweb.org/ACL/2026/Conference" \
+  --me "~Your_Name1" \
+  --phase "commitment"
+```
 
 ### Credentials via environment variables
 
@@ -97,7 +109,7 @@ All report scripts support `--comments-level none|basic|full`.
 | Script | Output                                               |
 |--------|------------------------------------------------------|
 | `generate_review_report.py` | `reports/review_report.html` or `reports/commitment_report.html` |
-| `generate_pc_report.py` | `reports/pc_report.html`  |
+| `generate_pc_report.py` | `reports/pc_report.html` or `reports/pc_commitment_report.html` |
 
 Open in any browser — fully self-contained, no server needed.
 
@@ -115,14 +127,14 @@ python generate_review_report.py ... --save-cache
 python generate_review_report.py ... --use-cache
 ```
 
-`--cache-dir .dev_cache` (default) controls where the pickle files go. You can maintain multiple named caches, e.g. one per SAC:
+`--cache-dir` controls where the pickle files go. If you omit it, the tool now auto-generates a phase- and report-aware cache path under `.dev_cache/` so review vs commitment and review vs PC runs do not collide. You can still maintain multiple named caches manually, e.g. one per SAC:
 
 ```bash
 python generate_review_report.py ... --impersonate "~SAC_Name1" --save-cache --cache-dir .cache_sac1
 python generate_review_report.py ... --use-cache --cache-dir .cache_sac1
 ```
 
-The cache stores three files: `submissions.pkl`, `group_index.pkl`, and `processed.pkl`. It is **not** venue-aware — if you switch venues, use a different `--cache-dir` or delete the existing one.
+The cache stores three files: `submissions.pkl`, `group_index.pkl`, and `processed.pkl`. By default, cache directories are now automatically separated by report type, phase, venue, and role/impersonation where relevant.
 
 > `--save-cache` and `--use-cache` are mutually exclusive.
 
