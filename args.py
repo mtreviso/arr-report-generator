@@ -30,9 +30,20 @@ def add_args(
             choices=["review", "commitment"],
             help="review=ARR review phase, commitment=ACL commitment phase",
         )
+        parser.add_argument(
+            "--linked-venue-id",
+            default="",
+            help=(
+                "ARR venue ID that commitment papers link back to, "
+                "e.g. aclweb.org/ACL/ARR/2026/February. "
+                "When provided for --phase commitment, all linked ARR reviews and notes are "
+                "bulk-fetched upfront instead of one per paper — significantly faster. "
+                "If omitted, the venue is auto-detected from the first paper link."
+            ),
+        )
 
     parser.add_argument(
-        "--venue_id",
+        "--venue-id",
         required=require_venue,
         help="OpenReview venue ID, e.g. aclweb.org/ACL/ARR/2025/May",
     )
@@ -45,7 +56,7 @@ def add_args(
     if default_role is not None:
         parser.add_argument("--role", default=default_role, help="Role filter.")
 
-    parser.add_argument("--output_dir", default="./reports")
+    parser.add_argument("--output-dir", default="./reports")
 
     g = parser.add_argument_group("developer cache (skip slow API calls)")
     g.add_argument(

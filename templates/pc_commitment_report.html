@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="logo.png">
+    <title>{{ title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.3.7/css/dataTables.dataTables.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.datatables.net/2.3.7/js/dataTables.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.2/marked.min.js"></script>
+    {% include 'components/_shared_styles.html' %}
+</head>
+<body class="bg-gray-50 min-h-screen">
+<div class="relative">
+    <header class="bg-indigo-900 shadow-md">
+        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+            <div class="flex items-center gap-3 min-w-0">
+                <img src="logo.png" alt="ARR logo" class="h-10 w-auto object-contain shrink-0" onerror="this.style.display='none'">
+                <div>
+                    <h1 class="text-3xl font-bold text-white truncate">ARR PC Commitment Dashboard</h1>
+                    <p class="text-indigo-300 text-xs mt-0.5">Program Chair view &mdash; commitment phase</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="text-white text-sm">{{ venue_id }}</p>
+                <p class="text-white text-sm opacity-80">Generated at {{ generated_date }}</p>
+            </div>
+        </div>
+    </header>
+
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-center overflow-x-auto">
+                <ul class="flex space-x-6 whitespace-nowrap">
+                    <li><button class="tab-button active py-4 px-1 text-center border-b-2 border-indigo-500 text-indigo-600 font-medium transition-colors duration-200 focus:outline-none" data-tab="overview-tab">Overview</button></li>
+                    <li><button class="tab-button py-4 px-1 text-center border-b-2 border-transparent hover:border-indigo-500 font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none" data-tab="papers-tab">All Papers</button></li>
+                    <li><button class="tab-button py-4 px-1 text-center border-b-2 border-transparent hover:border-indigo-500 font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none" data-tab="attention-tab">Needs Attention{% if attention_papers %}<span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">{{ attention_papers|length }}</span>{% endif %}</button></li>
+                    <li><button class="tab-button py-4 px-1 text-center border-b-2 border-transparent hover:border-indigo-500 font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none" data-tab="sac-tab">SAC Progress</button></li>
+                    <li><button class="tab-button py-4 px-1 text-center border-b-2 border-transparent hover:border-indigo-500 font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none" data-tab="ac-tab">AC Progress</button></li>
+                    <li><button class="tab-button py-4 px-1 text-center border-b-2 border-transparent hover:border-indigo-500 font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none" data-tab="track-tab">Track Breakdown</button></li>
+                    {% if comments_enabled %}<li><button class="tab-button py-4 px-1 text-center border-b-2 border-transparent hover:border-indigo-500 font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none" data-tab="comments-tab">Comments ({{ comments_count }})</button></li>{% endif %}
+                    <li><button class="tab-button py-4 px-1 text-center border-b-2 border-transparent hover:border-indigo-500 font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none" data-tab="analytics-tab">Analytics</button></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+
+        <!-- ================================================================
+             Overview Tab
+             ================================================================ -->
+        <div id="overview-tab" class="tab-content active">
+
+            <!-- Top stat cards -->
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Venue Overview</h2>
+                    <p class="mt-1 text-sm text-gray-500">High-level statistics across all {{ overview_stats.total_papers }} committed papers.</p>
+                </div>
+                <div class="px-4 py-5 sm:p-6">
+                    {% set s = overview_stats %}
+
+                    <!-- Row 1: paper counts & review progress -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                        <div class="bg-indigo-50 rounded-lg p-4 border border-indigo-100">
+                            <div class="text-2xl font-bold text-indigo-700">{{ s.total_papers }}</div>
+                            <div class="text-xs text-indigo-500 uppercase tracking-wide mt-1">Committed Papers</div>
+                            {% if s.type_counts %}
+                            <div class="text-xs text-indigo-400 mt-0.5">
+                                {% for ptype, cnt in s.type_counts.items() %}{{ cnt }} {{ ptype }}{% if not loop.last %} + {% endif %}{% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                            <div class="text-2xl font-bold text-blue-700">{{ s.review_pct }}%</div>
+                            <div class="text-xs text-blue-500 uppercase tracking-wide mt-1">Reviews Submitted</div>
+                            <div class="text-xs text-blue-400 mt-0.5">{{ s.reviews_done }} / {{ s.reviews_expected }}</div>
+                        </div>
+                        <div class="bg-green-50 rounded-lg p-4 border border-green-100">
+                            <div class="text-2xl font-bold text-green-700">{{ s.recommendations_pct }}%</div>
+                            <div class="text-xs text-green-500 uppercase tracking-wide mt-1">Recommendations Done</div>
+                            <div class="text-xs text-green-400 mt-0.5">{{ s.recommendations_done }} / {{ s.total_papers }}</div>
+                        </div>
+                        <div class="bg-yellow-50 rounded-lg p-4 border border-yellow-100">
+                            <div class="text-2xl font-bold text-yellow-700">{{ s.awards_count }}</div>
+                            <div class="text-xs text-yellow-600 uppercase tracking-wide mt-1">Award Nominations</div>
+                        </div>
+                    </div>
+
+                    <!-- Row 2: score averages + people counts -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                        <div class="bg-violet-50 rounded-lg p-4 border border-violet-100">
+                            <div class="text-2xl font-bold text-violet-700">{{ s.avg_overall if s.avg_overall is not none else '–' }}</div>
+                            <div class="text-xs text-violet-500 uppercase tracking-wide mt-1">Avg. Overall Score</div>
+                        </div>
+                        <div class="bg-pink-50 rounded-lg p-4 border border-pink-100">
+                            <div class="text-2xl font-bold text-pink-700">{{ s.avg_meta if s.avg_meta is not none else '–' }}</div>
+                            <div class="text-xs text-pink-500 uppercase tracking-wide mt-1">Avg. AC Score</div>
+                        </div>
+                        <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                            <div class="text-2xl font-bold text-slate-600">{{ s.sac_count }}</div>
+                            <div class="text-xs text-slate-400 uppercase tracking-wide mt-1">Senior Area Chairs</div>
+                        </div>
+                        <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                            <div class="text-2xl font-bold text-slate-600">{{ s.ac_count }}</div>
+                            <div class="text-xs text-slate-400 uppercase tracking-wide mt-1">Area Chairs</div>
+                        </div>
+                    </div>
+
+                    <!-- Row 3: issue/flag counters -->
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                        <div class="bg-red-50 rounded-lg p-3 border border-red-100 text-center" title="Papers with at least one review issue report.">
+                            <div class="text-xl font-bold text-red-600">{{ s.review_issues }}</div>
+                            <div class="text-xs text-red-400 uppercase tracking-wide mt-1">Review Issues</div>
+                        </div>
+                        <div class="bg-rose-50 rounded-lg p-3 border border-rose-100 text-center" title="Papers with at least one meta-review issue report.">
+                            <div class="text-xl font-bold text-rose-600">{{ s.meta_review_issues }}</div>
+                            <div class="text-xs text-rose-400 uppercase tracking-wide mt-1">Meta Issues</div>
+                        </div>
+                        <div class="bg-orange-50 rounded-lg p-3 border border-orange-100 text-center" title="Papers for which at least one reviewer or AC flagged an ethics concern.">
+                            <div class="text-xl font-bold text-orange-600">{{ s.ethics_papers }}</div>
+                            <div class="text-xs text-orange-400 uppercase tracking-wide mt-1">Ethics Flagged</div>
+                        </div>
+                        <div class="bg-yellow-50 rounded-lg p-3 border border-yellow-100 text-center" title="Papers with at least one low-confidence review (confidence ≤ 2).">
+                            <div class="text-xl font-bold text-yellow-600">{{ s.low_conf_papers }}</div>
+                            <div class="text-xs text-yellow-500 uppercase tracking-wide mt-1">Low Confidence</div>
+                        </div>
+                        <div class="bg-blue-50 rounded-lg p-3 border border-blue-100 text-center" title="Papers with at least one emergency declaration.">
+                            <div class="text-xl font-bold text-blue-600">{{ s.emergency_declared | default(0) }}</div>
+                            <div class="text-xs text-blue-500 uppercase tracking-wide mt-1">Emergency Papers</div>
+                        </div>
+                    </div>
+
+                    <!-- Row 4: recommendation breakdown + presentation distribution -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {% if s.recommendation_dist %}
+                        <div>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Recommendation Breakdown</p>
+                            <div class="space-y-1">
+                                {% set rec_total = s.recommendation_dist.values() | sum %}
+                                {% for label, count in s.recommendation_dist.items() | sort(attribute='1', reverse=True) %}
+                                <div class="flex items-center gap-2">
+                                    <div class="text-xs text-gray-600 w-40 truncate" title="{{ label }}">{{ label }}</div>
+                                    <div class="flex-1 bg-gray-100 rounded-full h-2">
+                                        <div class="bg-indigo-400 h-2 rounded-full" style="width:{{ (count / rec_total * 100) | round(1) }}%"></div>
+                                    </div>
+                                    <div class="text-xs text-gray-500 w-12 text-right">{{ count }}</div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if s.presentation_dist %}
+                        <div>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Presentation Mode Breakdown</p>
+                            <div class="space-y-1">
+                                {% set pres_total = s.presentation_dist.values() | sum %}
+                                {% for label, count in s.presentation_dist.items() | sort(attribute='1', reverse=True) %}
+                                <div class="flex items-center gap-2">
+                                    <div class="text-xs text-gray-600 w-40 truncate" title="{{ label }}">{{ label }}</div>
+                                    <div class="flex-1 bg-gray-100 rounded-full h-2">
+                                        <div class="bg-teal-400 h-2 rounded-full" style="width:{{ (count / pres_total * 100) | round(1) }}%"></div>
+                                    </div>
+                                    <div class="text-xs text-gray-500 w-12 text-right">{{ count }}</div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- SAC progress mini-table -->
+                    {% if sac_meta %}
+                    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">SAC Progress — Bottom 20 by Recommendation Completion</p>
+                            <table class="min-w-full text-xs">
+                                <thead>
+                                    <tr class="text-gray-400 uppercase text-left border-b border-gray-100">
+                                        <th class="pb-1 pr-3 font-medium">SAC</th>
+                                        <th class="pb-1 pr-3 font-medium" title="Total papers">Papers</th>
+                                        <th class="pb-1 pr-3 font-medium" title="Review completion %">Rev.%</th>
+                                        <th class="pb-1 font-medium" title="Recommendations done / total">Rec.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for sac in sac_meta | sort(attribute='Review_Pct') | list %}
+                                    {% if loop.index <= 20 %}
+                                    <tr class="border-b border-gray-50">
+                                        <td class="py-1 pr-3 text-gray-700 truncate" style="max-width:160px;">
+                                            {% set sac_id = sac.get('Senior Area Chair ID') %}
+                                            {% if sac_id %}<a href="https://openreview.net/profile?id={{ sac_id }}" target="_blank" class="text-gray-700 hover:underline" style="text-decoration:none;"{% if sac.get('Senior Area Chair Affiliation', '') %} title="{{ sac.get('Senior Area Chair Affiliation', '') }}"{% endif %}>{{ sac['Senior Area Chair'] }}</a>
+                                            {% else %}<span>{{ sac['Senior Area Chair'] }}</span>{% endif %}
+                                        </td>
+                                        <td class="py-1 pr-3 text-gray-500">{{ sac['Num_Papers'] }}</td>
+                                        <td class="py-1 pr-3">
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs {% if sac['Review_Pct'] == 100 %}bg-green-100 text-green-700{% elif sac['Review_Pct'] >= 80 %}bg-yellow-100 text-yellow-700{% else %}bg-red-100 text-red-700{% endif %}">
+                                                {{ sac['Review_Pct'] }}%
+                                            </span>
+                                        </td>
+                                        <td class="py-1 text-gray-500">{{ sac['Recommendations_Done'] }}{% if sac['All_Recommendations_Done'] %} <span class="text-green-600">✓</span>{% endif %}</td>
+                                    </tr>
+                                    {% endif %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Disagreement & divergence -->
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Disagreement &amp; Divergence</h2>
+                    <p class="mt-1 text-sm text-gray-500">High-disagreement papers and AC vs reviewer score gaps.</p>
+                </div>
+                {% include 'components/pc_overview_divergence.html' %}
+            </div>
+
+            <!-- Load distribution -->
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Paper Load Distribution</h2>
+                    <p class="mt-1 text-sm text-gray-500">Assignment load per reviewer, AC, and SAC.</p>
+                </div>
+                {% include 'components/pc_overview_load.html' %}
+            </div>
+        </div>
+
+        <!-- ================================================================
+             All Papers Tab
+             ================================================================ -->
+        <div id="papers-tab" class="tab-content">
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">All Committed Papers</h2>
+                    <p class="mt-1 text-sm text-gray-500">All {{ papers|length }} committed papers with scores, flags, SAC/AC assignments, and recommendations.</p>
+                </div>
+                {% include 'components/papers_table_pc_commitment.html' %}
+            </div>
+        </div>
+
+        <!-- ================================================================
+             Needs Attention Tab
+             ================================================================ -->
+        <div id="attention-tab" class="tab-content">
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Needs Attention</h2>
+                    <p class="mt-1 text-sm text-gray-500">Papers with review issues, meta-review issues, ethics flags, or incomplete review sets.</p>
+                </div>
+                {% include 'components/attention_queue.html' %}
+            </div>
+        </div>
+
+        <!-- ================================================================
+             SAC Progress Tab (commitment-aware)
+             ================================================================ -->
+        <div id="sac-tab" class="tab-content">
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Senior Area Chair Progress</h2>
+                    <p class="mt-1 text-sm text-gray-500">Review completion and recommendation progress per Senior Area Chair.</p>
+                </div>
+
+                <style>
+                  #pcc-sac-table th, #pcc-sac-table td {
+                    padding: 5px 6px !important; outline: none !important; text-align: left !important;
+                  }
+                  #pcc-sac-table thead th { padding-top: 10px !important; padding-bottom: 10px !important; font-weight: 400 !important; }
+                  .dt-column-order { display: none !important; }
+                  #pcc-sac-table thead th::after { content: ' ↕'; font-size: 0.65rem; color: #9ca3af; opacity: 0.6; }
+                  #pcc-sac-table thead th.dt-ordering-asc::after  { content: ' ↑'; color: #4f46e5; opacity: 1; }
+                  #pcc-sac-table thead th.dt-ordering-desc::after { content: ' ↓'; color: #4f46e5; opacity: 1; }
+                </style>
+
+                <div class="px-2 py-4 sm:p-5">
+                    {% if not sac_meta %}
+                    <p class="text-gray-500 text-sm">No Senior Area Chair data available for this venue.</p>
+                    {% else %}
+
+                    <!-- Filters -->
+                    <div class="bg-gray-50 rounded-lg border border-gray-200 p-4 mb-4">
+                        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Filters</h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">All Recs Done</label>
+                                <select id="pcc-sac-recdone-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                                    <option value="">All</option>
+                                    <option value="1">✓ All done</option>
+                                    <option value="0">Pending</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Issues</label>
+                                <select id="pcc-sac-issues-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                                    <option value="">All</option>
+                                    <option value="1">Has issues</option>
+                                    <option value="0">No issues</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Meta Issues</label>
+                                <select id="pcc-sac-metaissues-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                                    <option value="">All</option>
+                                    <option value="1">Has meta issues</option>
+                                    <option value="0">None</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Emergency</label>
+                                <select id="pcc-sac-emergency-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                                    <option value="">All</option>
+                                    <option value="declared">Requested</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Per page</label>
+                                <select id="pcc-sac-length" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                                    <option value="25" selected>25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                    <option value="-1">All</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table id="pcc-sac-table" class="min-w-full divide-y divide-gray-200 text-xs">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:140px;">SAC</th>
+                                    <th class="text-xs text-gray-500 uppercase tracking-wider" title="Total papers">Papers</th>
+                                    <th class="text-xs text-gray-500 uppercase tracking-wider" title="Review completion %">Rev.%</th>
+                                    <th class="text-xs text-gray-500 uppercase tracking-wider" title="Recommendations done / total papers">Recs Done</th>
+                                    <th class="text-xs text-gray-500 uppercase tracking-wider" title="All recommendations submitted">All Recs ✓</th>
+                                    <th class="text-xs text-gray-500 uppercase tracking-wider" title="Review issue reports">Rev. Issues</th>
+                                    <th class="text-xs text-gray-500 uppercase tracking-wider" title="Meta-review issue reports">Meta Issues</th>
+                                    <th class="text-xs text-gray-500 uppercase tracking-wider" title="Papers with low-confidence reviewers">Low Conf.</th>
+                                    <th class="text-xs text-gray-500 uppercase tracking-wider" title="Papers with ethics flags">Ethics</th>
+                                    <th class="text-xs text-gray-500 uppercase tracking-wider" title="Papers with award nominations">Awards</th>
+                                    <th class="text-xs text-gray-500 uppercase tracking-wider" title="Emergency declarations">Emergency</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-100">
+                                {% for sac in sac_meta %}
+                                <tr
+                                    data-rec-done="{{ 1 if sac['All_Recommendations_Done'] else 0 }}"
+                                    data-issues="{{ 1 if sac['Review_Issues'] > 0 else 0 }}"
+                                    data-meta-issues="{{ 1 if sac.get('Meta_Review_Issues', 0) > 0 else 0 }}"
+                                    data-emergency="{{ 1 if sac.get('Emergency_Declared', 0) > 0 else 0 }}"
+                                >
+                                    <td class="whitespace-nowrap text-gray-700 truncate" style="max-width:180px;">
+                                        {% set sac_id = sac.get('Senior Area Chair ID') %}
+                                        {% if sac_id %}
+                                        <a href="https://openreview.net/profile?id={{ sac_id }}" target="_blank"
+                                           class="text-gray-700 hover:underline" style="text-decoration:none;"
+                                           {% if sac.get('Senior Area Chair Affiliation', '') %}title="{{ sac.get('Senior Area Chair Affiliation', '') }}"{% endif %}>
+                                           {{ sac['Senior Area Chair'] }}
+                                        </a>
+                                        {% else %}<span>{{ sac['Senior Area Chair'] }}</span>{% endif %}
+                                    </td>
+                                    <td class="whitespace-nowrap text-gray-500">{{ sac['Num_Papers'] }}</td>
+                                    <td class="whitespace-nowrap">
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs
+                                            {% if sac['Review_Pct'] == 100 %}bg-green-100 text-green-800
+                                            {% elif sac['Review_Pct'] >= 80 %}bg-yellow-100 text-yellow-800
+                                            {% else %}bg-red-100 text-red-700{% endif %}">
+                                            {{ sac['Review_Pct'] }}%
+                                        </span>
+                                    </td>
+                                    <td class="whitespace-nowrap text-gray-500">{{ sac['Recommendations_Done'] }}</td>
+                                    <td class="whitespace-nowrap text-center">
+                                        {% if sac['All_Recommendations_Done'] %}
+                                        <span class="text-green-600 font-medium">✓</span>
+                                        {% else %}<span class="text-gray-300">–</span>{% endif %}
+                                    </td>
+                                    <td class="whitespace-nowrap {% if sac['Review_Issues'] > 0 %}text-red-600 font-medium{% else %}text-gray-400{% endif %}">
+                                        {{ sac['Review_Issues'] if sac['Review_Issues'] > 0 else '–' }}
+                                    </td>
+                                    <td class="whitespace-nowrap {% if sac.get('Meta_Review_Issues', 0) > 0 %}text-rose-600 font-medium{% else %}text-gray-400{% endif %}">
+                                        {{ sac['Meta_Review_Issues'] if sac.get('Meta_Review_Issues', 0) > 0 else '–' }}
+                                    </td>
+                                    <td class="whitespace-nowrap {% if sac['Low_Conf_Papers'] > 0 %}text-yellow-600{% else %}text-gray-400{% endif %}">
+                                        {{ sac['Low_Conf_Papers'] if sac['Low_Conf_Papers'] > 0 else '–' }}
+                                    </td>
+                                    <td class="whitespace-nowrap {% if sac['Ethics_Papers'] > 0 %}text-orange-600 font-medium{% else %}text-gray-400{% endif %}">
+                                        {{ sac['Ethics_Papers'] if sac['Ethics_Papers'] > 0 else '–' }}
+                                    </td>
+                                    <td class="whitespace-nowrap {% if sac.get('Awards', 0) > 0 %}text-yellow-600 font-medium{% else %}text-gray-400{% endif %}">
+                                        {{ sac['Awards'] if sac.get('Awards', 0) > 0 else '–' }}
+                                    </td>
+                                    <td class="whitespace-nowrap {% if sac.get('Emergency_Declared', 0) > 0 %}text-blue-600{% else %}text-gray-400{% endif %}">
+                                        {% if sac.get('Emergency_Declared', 0) > 0 %}{{ sac['Emergency_Declared'] }}{% else %}–{% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <script>
+                    (function() {
+                        function initPccSacTable() {
+                            const dt = $('#pcc-sac-table').DataTable({
+                                pageLength: 25,
+                                autoWidth: false,
+                                order: [[1, 'desc']],
+                                layout: { topStart: null, topEnd: null, bottomStart: 'info', bottomEnd: 'paging' },
+                                columnDefs: [{ type: 'num', targets: [1, 2, 5, 6, 7, 8, 9, 10] }]
+                            });
+                            function applyFilters() {
+                                const recDone   = $('#pcc-sac-recdone-filter').val();
+                                const issues    = $('#pcc-sac-issues-filter').val();
+                                const metaIssues = $('#pcc-sac-metaissues-filter').val();
+                                const emergency = $('#pcc-sac-emergency-filter').val();
+                                $('#pcc-sac-table tbody tr').each(function() {
+                                    const row = $(this);
+                                    let show = true;
+                                    if (recDone    && row.data('rec-done')   != recDone)    show = false;
+                                    if (issues     && row.data('issues')     != issues)     show = false;
+                                    if (metaIssues && row.data('meta-issues')!= metaIssues) show = false;
+                                    if (emergency === 'declared' && row.data('emergency') != '1') show = false;
+                                    row.toggle(show);
+                                });
+                            }
+                            $('#pcc-sac-recdone-filter, #pcc-sac-issues-filter, #pcc-sac-metaissues-filter, #pcc-sac-emergency-filter').on('change', applyFilters);
+                            $('#pcc-sac-length').on('change', function() { dt.page.len(this.value).draw(); });
+                        }
+                        document.addEventListener('report:tabshown', function(e) {
+                            if (e.detail.tabId !== 'sac-tab') return;
+                            window.ReportCommon.initOnce('pcc-sac-table', initPccSacTable);
+                        });
+                    })();
+                    </script>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ================================================================
+             AC Progress Tab
+             ================================================================ -->
+        <div id="ac-tab" class="tab-content">
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Area Chair Progress</h2>
+                    <p class="mt-1 text-sm text-gray-500">Review and meta-review completion per Area Chair.</p>
+                </div>
+                {% include 'components/ac_dashboard.html' %}
+            </div>
+        </div>
+
+        <!-- ================================================================
+             Track Breakdown Tab (commitment-aware)
+             ================================================================ -->
+        <div id="track-tab" class="tab-content">
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Track / Area Breakdown</h2>
+                    <p class="mt-1 text-sm text-gray-500">Paper counts, recommendation completion, and average scores by track.</p>
+                </div>
+
+                <style>
+                  #pcc-track-table th, #pcc-track-table td {
+                    padding: 5px 6px !important; outline: none !important; text-align: left !important;
+                  }
+                  #pcc-track-table thead th { padding-top: 10px !important; padding-bottom: 10px !important; font-weight: 400 !important; }
+                </style>
+
+                <div class="px-2 py-4 sm:p-5">
+                    {% if not track_data %}
+                    <p class="text-gray-500 text-sm">No track/area data available for this venue.</p>
+                    {% else %}
+                    <div class="space-y-6">
+                        <div class="w-full rounded-lg border border-gray-200 bg-white p-4">
+                            <div style="height:500px;"><canvas id="pcc-track-chart"></canvas></div>
+                        </div>
+                        <div class="w-full overflow-x-auto">
+                            <table id="pcc-track-table" class="min-w-full divide-y divide-gray-200 text-xs">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:160px;">Track / Area</th>
+                                        <th class="text-xs text-gray-500 uppercase tracking-wider" title="Total papers in this track">Papers</th>
+                                        <th class="text-xs text-gray-500 uppercase tracking-wider" title="Recommendations done / total papers">Recs Done</th>
+                                        <th class="text-xs text-gray-500 uppercase tracking-wider" title="Recommendation completion %">Rec %</th>
+                                        <th class="text-xs text-gray-500 uppercase tracking-wider" title="Average reviewer overall score">Avg Overall</th>
+                                        <th class="text-xs text-gray-500 uppercase tracking-wider" title="Average AC meta-review score">Avg Meta</th>
+                                        <th class="text-xs text-gray-500 uppercase tracking-wider" title="Review issue reports">Issues</th>
+                                        <th class="text-xs text-gray-500 uppercase tracking-wider" title="Meta-review issue reports">Meta Issues</th>
+                                        <th class="text-xs text-gray-500 uppercase tracking-wider" title="Award nominations">Awards</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    {% for row in track_data %}
+                                    <tr>
+                                        <td class="whitespace-nowrap text-gray-900">{{ row["Track"] }}</td>
+                                        <td class="whitespace-nowrap text-gray-500">{{ row["Papers"] }}</td>
+                                        <td class="whitespace-nowrap text-gray-500">{{ row["Recommendations"] }}</td>
+                                        <td class="whitespace-nowrap">
+                                            <span class="inline-flex items-center px-2 py-0.5 text-xs rounded-full
+                                                {% if row['Rec_Pct'] == 100 %}bg-green-100 text-green-800
+                                                {% elif row['Rec_Pct'] >= 80 %}bg-yellow-100 text-yellow-800
+                                                {% else %}bg-red-100 text-red-700{% endif %}">
+                                                {{ row["Rec_Pct"] }}%
+                                            </span>
+                                        </td>
+                                        <td class="whitespace-nowrap text-gray-500">{{ row["Avg Overall"] if row["Avg Overall"] != "" else "–" }}</td>
+                                        <td class="whitespace-nowrap text-gray-500">{{ row["Avg Meta"] if row["Avg Meta"] != "" else "–" }}</td>
+                                        <td class="whitespace-nowrap {% if row['Issues'] > 0 %}text-red-600 font-medium{% else %}text-gray-400{% endif %}">
+                                            {{ row["Issues"] if row["Issues"] > 0 else "–" }}
+                                        </td>
+                                        <td class="whitespace-nowrap {% if row.get('Meta Issues', 0) > 0 %}text-rose-600 font-medium{% else %}text-gray-400{% endif %}">
+                                            {{ row["Meta Issues"] if row.get("Meta Issues", 0) > 0 else "–" }}
+                                        </td>
+                                        <td class="whitespace-nowrap {% if row.get('Awards', 0) > 0 %}text-yellow-600 font-medium{% else %}text-gray-400{% endif %}">
+                                            {{ row["Awards"] if row.get("Awards", 0) > 0 else "–" }}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <script>
+                (function() {
+                    function initPccTrackChart() {
+                        const ctx = document.getElementById('pcc-track-chart');
+                        if (!ctx) return;
+                        const trackData = {{ track_data | tojson }};
+                        if (!trackData.length) return;
+                        const palette = ['#4F46E5','#0EA5E9','#14B8A6','#10B981','#84CC16','#EAB308','#F59E0B','#F97316','#EF4444','#EC4899','#D946EF','#A855F7','#8B5CF6','#6366F1','#3B82F6','#06B6D4','#22C55E','#65A30D','#CA8A04','#DC2626'];
+                        const colors = trackData.map((_, i) => palette[i % palette.length]);
+                        window.ReportCommon.replaceChart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: trackData.map(r => { const t = r.Track || ''; return t.length > 33 ? t.slice(0,30)+'...' : t; }),
+                                datasets: [{ label: 'Papers', data: trackData.map(r => r.Papers), backgroundColor: colors, borderColor: colors, borderWidth: 1, borderRadius: 6, maxBarThickness: 36 }]
+                            },
+                            options: {
+                                responsive: true, maintainAspectRatio: false,
+                                scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45, font: { size: 10 } } } },
+                                plugins: { legend: { display: false }, tooltip: { callbacks: { label(ctx) { const total = ctx.dataset.data.reduce((a,b)=>a+b,0); return `${ctx.label}: ${ctx.raw} papers (${Math.round(ctx.raw/total*100)}%)`; } } } }
+                            }
+                        });
+                    }
+                    document.addEventListener('report:tabshown', function(e) {
+                        if (e.detail.tabId !== 'track-tab') return;
+                        window.ReportCommon.initOnce('pcc-track-chart', initPccTrackChart);
+                    });
+                })();
+                </script>
+            </div>
+        </div>
+
+        <!-- ================================================================
+             Comments Tab
+             ================================================================ -->
+        {% if comments_enabled %}
+        <div id="comments-tab" class="tab-content">
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Comments &amp; Issue Reports</h2>
+                    <p class="mt-1 text-sm text-gray-500">All confidential comments, review issue reports, and meta-review issue reports.</p>
+                </div>
+                {% include 'components/comments.html' %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ================================================================
+             Analytics Tab
+             ================================================================ -->
+        <div id="analytics-tab" class="tab-content">
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Score Distribution</h2>
+                    <p class="mt-1 text-sm text-gray-500">Distribution of overall assessment and AC scores across all papers.</p>
+                </div>
+                {% include 'components/score_distribution.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Paper Type Distribution</h2>
+                </div>
+                {% include 'components/paper_type_distribution.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Contribution Type Distribution</h2>
+                </div>
+                {% include 'components/contribution_type_distribution.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Score Comparison: Overall vs AC Score</h2>
+                    <p class="mt-1 text-sm text-gray-500">Density heatmap of reviewer overall score vs AC score, plus score difference distribution.</p>
+                </div>
+                {% include 'components/score_scatter.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Score Correlation Matrix</h2>
+                    <p class="mt-1 text-sm text-gray-500">Pairwise correlation between reviewer confidence, soundness, excitement, overall assessment, and AC score.</p>
+                </div>
+                {% include 'components/correlation_matrix.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Scores by Paper Type &amp; Preprint Status</h2>
+                    <p class="mt-1 text-sm text-gray-500">Average review scores broken down by paper type and anonymity.</p>
+                </div>
+                {% include 'components/score_by_type.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Review Completion by AC</h2>
+                    <p class="mt-1 text-sm text-gray-500">Distribution of review completion rates across all Area Chairs (bucketed).</p>
+                </div>
+                {% include 'components/review_completion.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Area Chair Scoring Analysis</h2>
+                    <p class="mt-1 text-sm text-gray-500">Per-AC average review score vs AC score, sortable by any column.</p>
+                </div>
+                {% include 'components/ac_scoring.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Reviewer Load vs. Confidence</h2>
+                    <p class="mt-1 text-sm text-gray-500">Do reviewers with heavier loads give lower-confidence reviews?</p>
+                </div>
+                {% include 'components/reviewer_load_quality.html' %}
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<footer class="mt-4">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4 flex justify-center">
+        <span class="text-sm text-gray-500">Code at <a class="hover:text-gray-700" href="https://github.com/mtreviso/arr-report-generator" target="_blank">github.com/mtreviso/arr-report-generator</a></span>
+    </div>
+</footer>
+
+<script id="papers-json" type="application/json">{{ papers | tojson }}</script>
+{% if comments_enabled %}<script id="comments-json" type="application/json">{{ comments | tojson }}</script>{% endif %}
+{% include 'components/_shared_tab_js.html' %}
+
+</body>
+</html>
