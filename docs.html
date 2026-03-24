@@ -64,7 +64,7 @@
 python generate_review_report.py \
   --username "your@email.com" \
   --password "yourpassword" \
-  --venue_id "aclweb.org/ACL/ARR/2026/January" \
+  --venue-id "aclweb.org/ACL/ARR/2026/January" \
   --me "~Your_Name1"</code></pre>
         </div>
       </div>
@@ -110,7 +110,7 @@ export OPENREVIEW_ID='~Your_Name1'</code></pre>
             </div>
             <p class="mt-2 text-sm text-slate-600 leading-6">Use during the ARR review phase. Default role is SAC; pass <code>--role ac</code> or <code>--role pc</code> for other scopes.</p>
             <pre class="mt-4 rounded-xl bg-slate-900 text-slate-100 p-4 text-xs overflow-x-auto"><code>python generate_review_report.py \
-  --venue_id "aclweb.org/ACL/ARR/2026/January" \
+  --venue-id "aclweb.org/ACL/ARR/2026/January" \
   --me "~Your_Name1"</code></pre>
             <div class="mt-4 pt-4 border-t border-slate-100">
               <span class="text-sm">📄 reports/review_report.html</span>
@@ -125,7 +125,7 @@ export OPENREVIEW_ID='~Your_Name1'</code></pre>
             </div>
             <p class="mt-2 text-sm text-slate-600 leading-6">Use for the commitment phase. Use <code>--role ac</code> for an individual AC view.</p>
             <pre class="mt-4 rounded-xl bg-slate-900 text-slate-100 p-4 text-xs overflow-x-auto"><code>python generate_review_report.py \
-  --venue_id "aclweb.org/ACL/2026/Conference" \
+  --venue-id "aclweb.org/ACL/2026/Conference" \
   --me "~Your_Name1" \
   --phase "commitment" \
   --role "ac"</code></pre>
@@ -142,7 +142,7 @@ export OPENREVIEW_ID='~Your_Name1'</code></pre>
             </div>
             <p class="mt-2 text-sm text-slate-600 leading-6">Fetches all papers across all SAC batches. Intended for PCs. Can take several minutes on large venues.</p>
             <pre class="mt-4 rounded-xl bg-slate-900 text-slate-100 p-4 text-xs overflow-x-auto"><code>python generate_pc_report.py \
-  --venue_id "aclweb.org/ACL/ARR/2026/January" \
+  --venue-id "aclweb.org/ACL/ARR/2026/January" \
   --me "~Your_Name1"</code></pre>
             <div class="mt-4 pt-4 border-t border-slate-100">
               <span class="text-sm">📄 reports/pc_report.html</span>
@@ -157,7 +157,7 @@ export OPENREVIEW_ID='~Your_Name1'</code></pre>
             </div>
             <p class="mt-2 text-sm text-slate-600 leading-6">PC-level commitment dashboard with decision breakdowns, award analytics, and AC progress. No SAC tab (commitment has ACs only).</p>
             <pre class="mt-4 rounded-xl bg-slate-900 text-slate-100 p-4 text-xs overflow-x-auto"><code>python generate_pc_report.py \
-  --venue_id "aclweb.org/ACL/2026/Conference" \
+  --venue-id "aclweb.org/ACL/2026/Conference" \
   --me "~Your_Name1" \
   --phase "commitment" \
   --linked-venue-id \
