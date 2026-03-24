@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="logo.png">
+    <title>{{ title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.3.7/css/dataTables.dataTables.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.datatables.net/2.3.7/js/dataTables.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.2/marked.min.js"></script>
+    {% include 'components/_shared_styles.html' %}
+</head>
+<body class="bg-gray-50 min-h-screen">
+<div class="relative">
+    <header class="bg-indigo-900 shadow-md">
+        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+            <div class="flex items-center gap-3 min-w-0">
+                <img src="logo.png" alt="ARR logo" class="h-10 w-auto object-contain shrink-0" onerror="this.style.display='none'">
+                <h1 class="text-3xl font-bold text-white truncate">ARR PC Commitment Dashboard</h1>
+            </div>
+            <div class="text-right">
+                <p class="text-white text-sm">{{ venue_id }}</p>
+                <p class="text-white text-sm opacity-80">Generated at {{ generated_date }}</p>
+            </div>
+        </div>
+    </header>
+
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-center overflow-x-auto">
+                <ul class="flex space-x-6 whitespace-nowrap">
+                    <li><button class="tab-button active py-4 px-1 text-center border-b-2 border-indigo-500 text-indigo-600 font-medium transition-colors duration-200 focus:outline-none" data-tab="overview-tab">Overview</button></li>
+                    <li><button class="tab-button py-4 px-1 text-center border-b-2 border-transparent hover:border-indigo-500 font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none" data-tab="papers-tab">All Papers</button></li>
+                    <li><button class="tab-button py-4 px-1 text-center border-b-2 border-transparent hover:border-indigo-500 font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none" data-tab="attention-tab">Needs Attention{% if attention_papers %}<span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">{{ attention_papers|length }}</span>{% endif %}</button></li>
+                    <li><button class="tab-button py-4 px-1 text-center border-b-2 border-transparent hover:border-indigo-500 font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none" data-tab="ac-tab">AC Progress</button></li>
+                    <li><button class="tab-button py-4 px-1 text-center border-b-2 border-transparent hover:border-indigo-500 font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none" data-tab="track-tab">Track Breakdown</button></li>
+                    {% if comments_enabled %}<li><button class="tab-button py-4 px-1 text-center border-b-2 border-transparent hover:border-indigo-500 font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none" data-tab="comments-tab">Comments ({{ comments_count }})</button></li>{% endif %}
+                    <li><button class="tab-button py-4 px-1 text-center border-b-2 border-transparent hover:border-indigo-500 font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200 focus:outline-none" data-tab="analytics-tab">Analytics</button></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+
+        <!-- Overview Tab -->
+        <div id="overview-tab" class="tab-content active">
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6"><h2 class="text-xl font-semibold text-gray-800">Venue Overview</h2><p class="mt-1 text-sm text-gray-500">High-level statistics across all {{ overview_stats.total_papers }} active papers.</p></div>
+                {% include 'components/pc_commitment_overview_summary.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6"><h2 class="text-xl font-semibold text-gray-800">Decision Breakdown</h2><p class="mt-1 text-sm text-gray-500">Final recommendation and presentation mode distributions.</p></div>
+                {% include 'components/pc_commitment_decision_charts.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6"><h2 class="text-xl font-semibold text-gray-800">Paper Load Distribution</h2><p class="mt-1 text-sm text-gray-500">Assignment load per reviewer and AC.</p></div>
+                {% include 'components/pc_commitment_load.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6"><h2 class="text-xl font-semibold text-gray-800">Disagreement &amp; Divergence</h2><p class="mt-1 text-sm text-gray-500">High-disagreement papers and AC vs reviewer score gaps.</p></div>
+                {% include 'components/pc_overview_divergence.html' %}
+            </div>
+        </div>
+
+        <!-- Papers Tab -->
+        <div id="papers-tab" class="tab-content">
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">All Papers</h2>
+                    <p class="mt-1 text-sm text-gray-500">All {{ papers|length }} active commitment papers with scores, decisions, flags, and AC assignments.</p>
+                </div>
+                {% include 'components/papers_table_pc_commitment.html' %}
+            </div>
+        </div>
+
+        <!-- Attention Tab -->
+        <div id="attention-tab" class="tab-content">
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Needs Attention</h2>
+                    <p class="mt-1 text-sm text-gray-500">Papers with review issues, meta-review issues, ethics flags, emergency activity, or incomplete review sets.</p>
+                </div>
+                {% include 'components/pc_commitment_attention.html' %}
+            </div>
+        </div>
+
+        <!-- AC Tab -->
+        <div id="ac-tab" class="tab-content">
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Area Chair Progress</h2>
+                    <p class="mt-1 text-sm text-gray-500">Review and meta-review completion per Area Chair.</p>
+                </div>
+                {% include 'components/ac_dashboard.html' %}
+            </div>
+        </div>
+
+        <!-- Track Tab -->
+        <div id="track-tab" class="tab-content">
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Track / Area Breakdown</h2>
+                    <p class="mt-1 text-sm text-gray-500">Paper counts, meta-review completion and average scores by track.</p>
+                </div>
+                {% include 'components/track_dashboard.html' %}
+            </div>
+        </div>
+
+        <!-- Comments Tab -->
+        {% if comments_enabled %}
+        <div id="comments-tab" class="tab-content">
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Comments &amp; Issue Reports</h2>
+                    <p class="mt-1 text-sm text-gray-500">All confidential comments, review issue reports, and meta-review issue reports.</p>
+                </div>
+                {% include 'components/comments.html' %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Analytics Tab -->
+        <div id="analytics-tab" class="tab-content">
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Recommendation vs. Score Analysis</h2>
+                    <p class="mt-1 text-sm text-gray-500">Average reviewer overall score and AC score per recommendation category.</p>
+                </div>
+                {% include 'components/pc_commitment_rec_vs_score.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Score Distribution</h2>
+                    <p class="mt-1 text-sm text-gray-500">Distribution of overall assessment and AC scores across all papers.</p>
+                </div>
+                {% include 'components/score_distribution.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Paper Type Distribution</h2>
+                </div>
+                {% include 'components/paper_type_distribution.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Contribution Type Distribution</h2>
+                </div>
+                {% include 'components/contribution_type_distribution.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Scores by Paper Type &amp; Preprint Status</h2>
+                    <p class="mt-1 text-sm text-gray-500">Average review scores broken down by paper type and anonymity.</p>
+                </div>
+                {% include 'components/score_by_type.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Review Completion by AC</h2>
+                    <p class="mt-1 text-sm text-gray-500">Distribution of review completion rates across all Area Chairs (bucketed).</p>
+                </div>
+                {% include 'components/review_completion.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Score Comparison: Overall vs AC Score</h2>
+                    <p class="mt-1 text-sm text-gray-500">Density heatmap of reviewer overall score vs AC score, plus score difference distribution.</p>
+                </div>
+                {% include 'components/score_scatter.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Score Correlation Matrix</h2>
+                    <p class="mt-1 text-sm text-gray-500">Pairwise correlation between reviewer confidence, soundness, excitement, overall assessment, and AC score.</p>
+                </div>
+                {% include 'components/correlation_matrix.html' %}
+            </div>
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Area Chair Scoring Analysis</h2>
+                    <p class="mt-1 text-sm text-gray-500">Per-AC average review score vs AC score, sortable by any column.</p>
+                </div>
+                {% include 'components/ac_scoring.html' %}
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<footer class="mt-4">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4 flex justify-center">
+        <span class="text-sm text-gray-500">Code at <a class="hover:text-gray-700" href="https://github.com/mtreviso/arr-report-generator" target="_blank">github.com/mtreviso/arr-report-generator</a></span>
+    </div>
+</footer>
+
+<script id="papers-json" type="application/json">{{ papers | tojson }}</script>
+{% if comments_enabled %}<script id="comments-json" type="application/json">{{ comments | tojson }}</script>{% endif %}
+{% include 'components/_shared_tab_js.html' %}
+
+
+</body>
+</html>

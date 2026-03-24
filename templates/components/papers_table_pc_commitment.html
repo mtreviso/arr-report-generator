@@ -1,0 +1,522 @@
+{#
+  PC Commitment Papers Table
+  Column order:
+  0  #
+  1  Title (+ linked forum + resubmission link)
+  2  Type
+  3  AC
+  4  Flags  (orderable by flag count)
+  5  Recommendation (shortened)
+  6  Presentation (shortened)
+  7  Award (icons)
+  8  Reviews
+  9  Conf.
+  10 Sound.
+  11 Excit.
+  12 Overall
+  13 Meta
+#}
+<style>
+  #pcc-papers-table { font-size: 0.75rem; }
+  #pcc-papers-table th, #pcc-papers-table td {
+    padding: 5px 6px !important;
+    outline: none !important;
+  }
+  #pcc-papers-table thead th {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    font-weight: 400 !important;
+    text-align: left !important;
+  }
+  .dt-scroll-foot { display: none !important; }
+
+  .tip { position: relative; display: inline-flex; cursor: default; }
+  .tip::after {
+    content: attr(data-tip);
+    position: fixed;
+    top: var(--ty, 0); left: var(--tx, 0);
+    transform: translate(-50%, -100%);
+    background: #1e293b; color: #f8fafc;
+    padding: 5px 9px; border-radius: 5px;
+    font-size: 0.68rem; font-weight: 400;
+    white-space: pre-line; max-width: 240px;
+    text-align: center; pointer-events: none;
+    opacity: 0; transition: opacity 0.12s ease;
+    z-index: 99999; box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    line-height: 1.45;
+  }
+  .tip::before {
+    content: ''; position: fixed;
+    top: var(--ay, 0); left: var(--tx, 0);
+    transform: translate(-50%, -100%);
+    border: 5px solid transparent; border-top-color: #1e293b;
+    pointer-events: none; opacity: 0; transition: opacity 0.12s ease; z-index: 99999;
+  }
+  .tip:hover::after, .tip:hover::before { opacity: 1; }
+  .tip-left::after { transform: translate(0, -100%); }
+  .tip-left::before { transform: translate(0, -100%); left: calc(var(--tx, 0px) + 8px); }
+
+  .award-icon { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; font-size: 0.6rem; }
+  .award-best      { background: #fef3c7; color: #d97706; }
+  .award-outstanding { background: #dbeafe; color: #2563eb; }
+  .award-sac       { background: #f3e8ff; color: #7c3aed; }
+  .award-resource  { background: #d1fae5; color: #059669; }
+  .award-social    { background: #fce7f3; color: #db2777; }
+  .award-other     { background: #f1f5f9; color: #64748b; }
+</style>
+
+<div class="px-2 py-4 sm:p-5">
+    <!-- Filter bar -->
+    <div class="mb-5 bg-gray-50 p-4 rounded-lg">
+        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Filters</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Area Chair</label>
+                <div id="pcc-ac-filter"></div>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Paper Type</label>
+                <div id="pcc-type-filter"></div>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Recommendation</label>
+                <div id="pcc-rec-filter"></div>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Presentation</label>
+                <div id="pcc-pres-filter"></div>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Award</label>
+                <select id="pcc-award-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">All</option>
+                    <option value="best_paper">Best Paper</option>
+                    <option value="outstanding">Outstanding Paper</option>
+                    <option value="sac_highlight">SAC Highlight</option>
+                    <option value="resource">Resource Award</option>
+                    <option value="social_impact">Social Impact</option>
+                    <option value="none">No award</option>
+                    <option value="any">Has any award</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Rev. Issue</label>
+                <select id="pcc-revissue-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">All</option>
+                    <option value="1">Has issue</option>
+                    <option value="0">None</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Meta Issue</label>
+                <select id="pcc-metaissue-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">All</option>
+                    <option value="1">Has meta issue</option>
+                    <option value="0">None</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Ethics</label>
+                <select id="pcc-ethics-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">All</option>
+                    <option value="1">Ethics flagged</option>
+                    <option value="0">No flag</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Emergency</label>
+                <select id="pcc-emergency-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">All</option>
+                    <option value="declared">Requested</option>
+                    <option value="0">No emergency</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Low confidence</label>
+                <select id="pcc-lowconf-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">All</option>
+                    <option value="1">Has low conf</option>
+                    <option value="0">All high conf</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Preprint</label>
+                <select id="pcc-preprint-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">All</option>
+                    <option value="1">Has preprint</option>
+                    <option value="0">No preprint</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Meta score</label>
+                <select id="pcc-meta-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">All</option>
+                    <option value="1">Has meta</option>
+                    <option value="0">No meta yet</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Min. Overall</label>
+                <select id="pcc-overall-min-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">Any</option>
+                    <option value="1">&#8805; 1</option><option value="2">&#8805; 2</option><option value="3">&#8805; 3</option><option value="4">&#8805; 4</option><option value="5">&#8805; 5</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Max. Overall</label>
+                <select id="pcc-overall-max-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">Any</option>
+                    <option value="2">&#8804; 2</option><option value="3">&#8804; 3</option><option value="4">&#8804; 4</option><option value="5">&#8804; 5</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Per page</label>
+                <select id="pcc-papers-length" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100" selected>100</option>
+                    <option value="-1">All</option>
+                </select>
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Search</label>
+                <input id="pcc-papers-search" type="text" placeholder="Search papers..."
+                    class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+            </div>
+
+            <!-- Flag legend -->
+            <div class="lg:col-span-6 mt-1 pt-3 border-t border-gray-200">
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Flag legend</p>
+                <div class="flag-legend-rows">
+                    <div class="flag-legend-row">
+                        <div class="flag-legend-item"><span class="flag-badge flag-issue"><i class="fa-solid fa-triangle-exclamation"></i></span><span>Review issue report.</span></div>
+                        <div class="flag-legend-item"><span class="flag-badge flag-metaissue"><i class="fa-solid fa-file-circle-exclamation"></i></span><span>Meta-review issue report.</span></div>
+                        <div class="flag-legend-item"><span class="flag-badge flag-warn"><i class="fa-solid fa-circle-exclamation"></i></span><span>Low-confidence review (confidence ≤ 2).</span></div>
+                        <div class="flag-legend-item"><span class="flag-badge flag-ethics"><i class="fa-solid fa-scale-balanced"></i></span><span>Ethics concern or ethics-review request.</span></div>
+                    </div>
+                    <div class="flag-legend-row">
+                        <div class="flag-legend-item"><span class="flag-badge flag-info"><i class="fa-solid fa-lock"></i></span><span>Confidential comment present.</span></div>
+                        <div class="flag-legend-item"><span class="flag-badge flag-nonanon"><i class="fa-solid fa-link"></i></span><span>Public preprint detected.</span></div>
+                        <div class="flag-legend-item"><span class="flag-badge flag-emergency"><i class="fa-solid fa-bolt"></i><span class="flag-count">2</span></span><span>Emergency declaration count.</span></div>
+                    </div>
+                </div>
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mt-3 mb-2">Award legend</p>
+                <div class="flag-legend-rows">
+                    <div class="flag-legend-row">
+                        <div class="flag-legend-item"><span class="award-icon award-best tip" data-tip="Best Paper"><i class="fa-solid fa-trophy"></i></span><span>Best Paper</span></div>
+                        <div class="flag-legend-item"><span class="award-icon award-outstanding tip" data-tip="Outstanding Paper"><i class="fa-solid fa-trophy"></i></span><span>Outstanding Paper</span></div>
+                        <div class="flag-legend-item"><span class="award-icon award-sac tip" data-tip="SAC Highlight"><i class="fa-solid fa-trophy"></i></span><span>SAC Highlight</span></div>
+                        <div class="flag-legend-item"><span class="award-icon award-resource tip" data-tip="Resource Award"><i class="fa-solid fa-trophy"></i></span><span>Resource Award</span></div>
+                        <div class="flag-legend-item"><span class="award-icon award-social tip" data-tip="Social Impact Award"><i class="fa-solid fa-trophy"></i></span><span>Social Impact Award</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="overflow-x-auto w-full">
+        <table id="pcc-papers-table" class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:36px;width:36px;" title="Paper number">#</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:200px;">Title</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:48px;width:48px;">Type</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">AC</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:72px;width:72px;" title="Flags (sortable by count)">Flags</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:100px;min-width:100px;" title="Publication recommendation">Rec.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:60px;min-width:60px;" title="Preferred presentation format">Pres.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:44px;min-width:44px;" title="Award or nomination">Award</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:60px;width:60px;" title="Completed / expected reviews">Reviews</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:78px;" title="Average reviewer confidence">Conf.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:78px;" title="Average reviewer soundness">Sound.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:78px;" title="Average reviewer excitement">Excit.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:78px;" title="Average reviewer overall assessment">Overall</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:52px;width:52px;" title="AC meta-review score">Meta</th>
+                </tr>
+            </thead>
+        </table>
+    </div>
+</div>
+
+<script>
+(function() {
+    function boolish(v) { return !!(v && v !== '0' && v !== 'false'); }
+    function esc(v) { return window.ReportCommon.escapeHtml(v ?? ''); }
+    function parseAvg(v) { return window.ReportCommon.parseAvg(v); }
+    function icon(name) { return '<i class="fa-solid '+name+'" aria-hidden="true"></i>'; }
+    function badgeHtml(cls, iconName, tip, label) {
+        var text = label ? '<span class="flag-count">'+esc(label)+'</span>' : '';
+        return '<span class="tip flag-badge '+cls+'" data-tip="'+tip+'">'+icon(iconName)+text+'</span>';
+    }
+    function selectHtml(id, label, values) {
+        var host = document.getElementById(id);
+        if (!host) return;
+        var opts = Array.from(new Set(values.filter(Boolean))).sort(function(a,b){return String(a).localeCompare(String(b));});
+        host.innerHTML = '<select class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none"><option value="">'+label+'</option>' +
+            opts.map(function(v) { return '<option value="'+esc(v)+'">'+esc(v)+'</option>'; }).join('') + '</select>';
+    }
+    function firstSelectValue(id) {
+        var host = document.getElementById(id);
+        return host && host.querySelector('select') ? host.querySelector('select').value : '';
+    }
+    function personLink(name, id, titleText) {
+        if (!name) return '';
+        var t = titleText ? ' title="'+esc(titleText)+'"' : '';
+        return id
+            ? '<a class="whitespace-nowrap" href="https://openreview.net/profile?id='+encodeURIComponent(id)+'" target="_blank" style="text-decoration:none;"'+t+'>'+esc(name)+'</a>'
+            : '<span'+t+'>'+esc(name)+'</span>';
+    }
+    function scoreCell(displayValue, listValue) {
+        if (!displayValue) return '&#8211;';
+        var tip = listValue ? ' data-tip="Individual scores:&#10;'+esc(listValue)+'"' : '';
+        return '<span class="tip"'+tip+'>'+esc(displayValue)+'</span>';
+    }
+    function shortenRec(v) {
+        if (!v) return '';
+        return v.replace(/^Main Conference$/i, 'Main')
+                .replace(/^Borderline Findings$/i, 'Border. Findings')
+                .replace(/^Borderline Main Conference$/i, 'Border. Main')
+                .replace(/^Findings$/i, 'Findings');
+    }
+    function shortenPres(v) {
+        if (!v) return '';
+        return v.replace(/^Oral Presentation$/i, 'Oral');
+    }
+    function awardIconHtml(award) {
+        if (!award) return '&#8211;';
+        var parts = award.split(',').map(function(s){return s.trim();}).filter(Boolean);
+        /* Filter out "do not consider" / "none" */
+        var real = parts.filter(function(a) {
+            var l = a.toLowerCase();
+            return l.indexOf('do not consider') === -1 && l !== 'none';
+        });
+        if (!real.length) return '&#8211;';
+        return real.map(function(a) {
+            var lower = a.toLowerCase();
+            var cls = 'award-other';
+            if (lower.indexOf('best paper') !== -1)        cls = 'award-best';
+            else if (lower.indexOf('outstanding') !== -1)   cls = 'award-outstanding';
+            else if (lower.indexOf('sac') !== -1 || lower.indexOf('highlight') !== -1) cls = 'award-sac';
+            else if (lower.indexOf('resource') !== -1)      cls = 'award-resource';
+            else if (lower.indexOf('social') !== -1 || lower.indexOf('impact') !== -1) cls = 'award-social';
+            return '<span class="award-icon '+cls+' tip" data-tip="'+esc(a)+'"><i class="fa-solid fa-trophy"></i></span>';
+        }).join('');
+    }
+    function titleCell(row) {
+        var html = '<div class="truncate" style="max-width:220px;">' +
+            '<span class="tip tip-left" data-tip="'+esc(row['Title'] || '')+'">' +
+            '<a href="'+esc(row['Submission Link'] || ('https://openreview.net/forum?id='+(row['Paper ID']||'')))+'" target="_blank" class="text-indigo-600 hover:text-indigo-900">'+esc(row['Title'] || '')+'</a>' +
+            '</span>';
+        if (row['Linked Forum']) {
+            html += ' <a href="'+esc(row['Linked Forum'])+'" target="_blank" class="ml-0.5 text-gray-400 hover:text-gray-600 tip" data-tip="Open ARR submission" style="text-decoration:none;">&#8599;</a>';
+        }
+        html += '</div>';
+        if (row['Resubmission']) {
+            html += '<div class="text-xs text-gray-400 mt-0.5 truncate"><a href="'+esc(row['Resubmission'])+'" target="_blank" class="hover:text-gray-600 tip" data-tip="Previous submission" style="text-decoration:none;">&#8617; resubmission</a></div>';
+        }
+        return html;
+    }
+    function flagsCell(row) {
+        var parts = [];
+        if ((row['Is Anonymous'] || '').toLowerCase() === 'no')
+            parts.push(badgeHtml('flag-nonanon', 'fa-link', 'Has public preprint'));
+        if (boolish(row['Has Review Issue'])) {
+            var b = badgeHtml('flag-issue', 'fa-triangle-exclamation', esc((row['Review Issue Count']||0)+' review issue report(s)')+'&#10;Click to open');
+            parts.push(row['Review Issue Link'] ? '<a href="'+esc(row['Review Issue Link'])+'" target="_blank">'+b+'</a>' : b);
+        }
+        if (boolish(row['Has Meta Review Issue'])) {
+            var b2 = badgeHtml('flag-metaissue', 'fa-file-circle-exclamation', 'Meta-review issue report&#10;Click to open');
+            parts.push(row['Meta Review Issue Link'] ? '<a href="'+esc(row['Meta Review Issue Link'])+'" target="_blank">'+b2+'</a>' : b2);
+        }
+        if (boolish(row['Has Confidential']))
+            parts.push(badgeHtml('flag-info', 'fa-lock', 'Confidential comment present'));
+        if (boolish(row['Has Low Confidence']))
+            parts.push(badgeHtml('flag-warn', 'fa-circle-exclamation', 'Low confidence reviewer(s)&#10;'+esc(row['Low Confidence Reviewers']||'')));
+        if (row['Ethics Flag'])
+            parts.push(badgeHtml('flag-ethics', 'fa-scale-balanced', 'Ethics concern: '+esc(row['Ethics Flag'])));
+        if (boolish(row['Has Emergency Declaration'])) {
+            var cnt = row['Emergency Declaration Count']||0;
+            var b3 = badgeHtml('flag-emergency', 'fa-bolt', 'Emergency declarations: '+esc(cnt), cnt);
+            parts.push(row['Emergency Declaration Link'] ? '<a href="'+esc(row['Emergency Declaration Link'])+'" target="_blank">'+b3+'</a>' : b3);
+        }
+        if (!parts.length) return '<span class="text-gray-300">&#8211;</span>';
+        return '<div class="flags-inline">'+parts.join('')+'</div>';
+    }
+
+    /* Classify raw comma-separated award string into canonical category keys */
+    function classifyAward(raw) {
+        if (!raw) return [];
+        var parts = raw.split(',').map(function(s){return s.trim().toLowerCase();}).filter(Boolean);
+        var cats = [];
+        parts.forEach(function(p) {
+            if (p.indexOf('do not consider') !== -1 || p === 'none') return;
+            if (p.indexOf('best paper') !== -1)     cats.push('best_paper');
+            if (p.indexOf('outstanding') !== -1)    cats.push('outstanding');
+            if (p.indexOf('highlight') !== -1 || p.indexOf('sac') !== -1) cats.push('sac_highlight');
+            if (p.indexOf('resource') !== -1)       cats.push('resource');
+            if (p.indexOf('social') !== -1 || p.indexOf('impact') !== -1) cats.push('social_impact');
+        });
+        return cats;
+    }
+
+    function initPccPapers() {
+        var raw = window.ReportCommon.parseJsonScript('papers-json') || [];
+        if (!raw.length) return;
+        var rows = raw.map(function(row) {
+            return Object.assign({}, row, {
+                __rev_issue:  boolish(row['Has Review Issue']) ? '1' : '0',
+                __meta_issue: boolish(row['Has Meta Review Issue']) ? '1' : '0',
+                __low_conf:   boolish(row['Has Low Confidence']) ? '1' : '0',
+                __has_meta:   row['Meta Review Score'] ? '1' : '0',
+                __ethics:     row['Ethics Flag'] ? '1' : '0',
+                __emergency:  boolish(row['Has Emergency Declaration']) ? '1' : '0',
+                __preprint:   ((row['Is Anonymous'] || '').toLowerCase() === 'no') ? '1' : '0',
+                __overall:    parseAvg(row['Overall Assessment']),
+                __flag_count: row['Flag Count'] || 0,
+                __award_cats: classifyAward(row['Award'])
+            });
+        });
+
+        selectHtml('pcc-ac-filter', 'All ACs', rows.map(function(r){return r['Area Chair'];}));
+        selectHtml('pcc-type-filter', 'All Types', rows.map(function(r){return r['Paper Type'];}));
+        selectHtml('pcc-rec-filter', 'All', rows.map(function(r){return r['Recommendation'];}).filter(function(v){return v && v !== '–';}));
+        selectHtml('pcc-pres-filter', 'All', rows.map(function(r){return r['Presentation Mode'];}).filter(function(v){return v && v !== '–';}));
+        /* Add "Missing recommendation" option to rec filter */
+        (function() {
+            var recSel = document.querySelector('#pcc-rec-filter select');
+            if (recSel) {
+                var opt = document.createElement('option');
+                opt.value = '__missing__';
+                opt.textContent = 'Missing Recommendation';
+                recSel.insertBefore(opt, recSel.options[1]); /* after "All" */
+            }
+        })();
+
+        $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+            if (settings.nTable.id !== 'pcc-papers-table') return true;
+            var row = rows[dataIndex];
+            var revIssue  = $('#pcc-revissue-filter').val();
+            var metaIssue = $('#pcc-metaissue-filter').val();
+            var lconf     = $('#pcc-lowconf-filter').val();
+            var meta      = $('#pcc-meta-filter').val();
+            var ethics    = $('#pcc-ethics-filter').val();
+            var oMin      = $('#pcc-overall-min-filter').val();
+            var oMax      = $('#pcc-overall-max-filter').val();
+            var emergency = $('#pcc-emergency-filter').val();
+            var preprint  = $('#pcc-preprint-filter').val();
+            var ac        = firstSelectValue('pcc-ac-filter');
+            var type      = firstSelectValue('pcc-type-filter');
+            var rec       = firstSelectValue('pcc-rec-filter');
+            var pres      = firstSelectValue('pcc-pres-filter');
+            var award     = $('#pcc-award-filter').val();
+
+            if (ac && row['Area Chair'] !== ac) return false;
+            if (type && row['Paper Type'] !== type) return false;
+            if (rec === '__missing__' && row['Recommendation'] && row['Recommendation'].trim()) return false;
+            if (rec && rec !== '__missing__' && row['Recommendation'] !== rec) return false;
+            if (pres && row['Presentation Mode'] !== pres) return false;
+            if (award) {
+                var cats = row.__award_cats;
+                if (award === 'none' && cats.length > 0) return false;
+                if (award === 'any' && cats.length === 0) return false;
+                if (award !== 'none' && award !== 'any' && cats.indexOf(award) === -1) return false;
+            }
+            if (revIssue && row.__rev_issue !== revIssue) return false;
+            if (metaIssue && row.__meta_issue !== metaIssue) return false;
+            if (lconf && row.__low_conf !== lconf) return false;
+            if (meta && row.__has_meta !== meta) return false;
+            if (ethics && row.__ethics !== ethics) return false;
+            if (emergency === 'declared' && row.__emergency !== '1') return false;
+            if (emergency === '0' && row.__emergency === '1') return false;
+            if (preprint && row.__preprint !== preprint) return false;
+            if (oMin && (row.__overall === null || row.__overall < parseFloat(oMin))) return false;
+            if (oMax && (row.__overall === null || row.__overall > parseFloat(oMax))) return false;
+            return true;
+        });
+
+        var dt = $('#pcc-papers-table').DataTable({
+            data: rows,
+            deferRender: true,
+            pageLength: 100,
+            autoWidth: false,
+            order: [[0, 'asc']],
+            layout: { topStart: null, topEnd: null, bottomStart: 'info', bottomEnd: 'paging' },
+            columns: [
+                { title: '#', data: 'Paper #', className: 'whitespace-nowrap text-gray-500' },
+                { title: 'Title', data: null, render: function(_, type, row) {
+                    return (type === 'sort' || type === 'type') ? (row['Title'] || '') : titleCell(row);
+                }},
+                { title: 'Type', data: 'Paper Type', className: 'whitespace-nowrap text-gray-500' },
+                { title: 'AC', data: null, render: function(_, type, row) {
+                    return (type === 'sort' || type === 'type') ? (row['Area Chair'] || '') :
+                        personLink(row['Area Chair'], row['Area Chair ID'], row['Area Chair Affiliation']);
+                }},
+                { title: 'Flags', data: null, searchable: false,
+                    render: function(_, type, row) {
+                        if (type === 'sort' || type === 'type') return row.__flag_count;
+                        return flagsCell(row);
+                    }
+                },
+                { title: 'Rec.', data: null, className: 'whitespace-nowrap', render: function(_, type, row) {
+                    var full = row['Recommendation'] || '';
+                    if (type === 'sort' || type === 'type') return full;
+                    if (!full) return '&#8211;';
+                    var short = shortenRec(full);
+                    return '<span class="tip" data-tip="'+esc(full)+'" style="max-width:100px;display:inline-block;overflow:hidden;text-overflow:ellipsis;">'+esc(short)+'</span>';
+                }},
+                { title: 'Pres.', data: null, className: 'whitespace-nowrap', render: function(_, type, row) {
+                    var full = row['Presentation Mode'] || '';
+                    if (type === 'sort' || type === 'type') return full;
+                    if (!full) return '&#8211;';
+                    var short = shortenPres(full);
+                    return '<span class="tip" data-tip="'+esc(full)+'">'+esc(short)+'</span>';
+                }},
+                { title: 'Award', data: null, render: function(_, type, row) {
+                    if (type === 'sort' || type === 'type') return row['Award'] || '';
+                    return awardIconHtml(row['Award']);
+                }},
+                { title: 'Reviews', data: null,
+                    render: function(_, __, row) { return (row['Completed Reviews'] || 0) + '/' + (row['Expected Reviews'] || 0); }},
+                { title: 'Conf.', data: null, render: function(_, type, row) {
+                    return (type === 'sort' || type === 'type') ? (parseAvg(row['Reviewer Confidence']) ?? -1) :
+                        scoreCell(row['Reviewer Confidence'], row['Confidence List']);
+                }},
+                { title: 'Sound.', data: null, render: function(_, type, row) {
+                    return (type === 'sort' || type === 'type') ? (parseAvg(row['Soundness Score']) ?? -1) :
+                        scoreCell(row['Soundness Score'], row['Soundness List']);
+                }},
+                { title: 'Excit.', data: null, render: function(_, type, row) {
+                    return (type === 'sort' || type === 'type') ? (parseAvg(row['Excitement Score']) ?? -1) :
+                        scoreCell(row['Excitement Score'], row['Excitement List']);
+                }},
+                { title: 'Overall', data: null, render: function(_, type, row) {
+                    return (type === 'sort' || type === 'type') ? (row.__overall ?? -1) :
+                        scoreCell(row['Overall Assessment'], row['Overall List']);
+                }},
+                { title: 'Meta', data: null, render: function(_, type, row) {
+                    return (type === 'sort' || type === 'type') ? (parseAvg(row['Meta Review Score']) ?? -1) :
+                        (row['Meta Review Score'] ? '<span class="font-semibold">'+esc(row['Meta Review Score'])+'</span>' : '&#8211;');
+                }}
+            ],
+            createdRow: function(row) { row.classList.add('text-gray-500'); },
+            columnDefs: [
+                { type: 'num', targets: [0, 4] },
+                { className: 'overall-assessment', targets: [12] },
+                { className: 'meta-review', targets: [13] }
+            ]
+        });
+
+        var allSelectors = '#pcc-ac-filter select, #pcc-type-filter select, #pcc-rec-filter select, #pcc-pres-filter select';
+        $('#pcc-papers-search').on('input', function() { dt.search(this.value).draw(); });
+        $('#pcc-papers-length').on('change', function() { dt.page.len(this.value).draw(); });
+        $('#pcc-revissue-filter, #pcc-metaissue-filter, #pcc-lowconf-filter, #pcc-meta-filter, #pcc-ethics-filter, #pcc-emergency-filter, #pcc-preprint-filter, #pcc-overall-min-filter, #pcc-overall-max-filter, #pcc-award-filter').on('change', function() { dt.draw(); });
+        $(document).on('change', allSelectors, function() { dt.draw(); });
+    }
+
+    document.addEventListener('report:tabshown', function(event) {
+        if (event.detail.tabId !== 'papers-tab') return;
+        window.ReportCommon.initOnce('pcc-papers-table', initPccPapers);
+    });
+})();
+</script>

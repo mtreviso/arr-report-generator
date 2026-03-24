@@ -1,0 +1,63 @@
+<div class="px-4 py-5 sm:p-6">
+
+    <div id="commitment-load-loader" class="flex items-center justify-center gap-2 py-8 text-gray-400 text-xs">
+        <svg class="animate-spin h-4 w-4 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+        </svg>
+        Loading chart…
+    </div>
+
+    <div id="commitment-load-grid" style="display:none;">
+        <div style="max-width:600px; margin: 0 auto;">
+            <p class="text-xs text-gray-500 font-medium mb-1 text-center">AC Load Distribution</p>
+            <p class="text-xs text-gray-400 text-center mb-2" id="cmt-ac-load-meta"></p>
+            <div style="height:220px;"><canvas id="cmt-ac-load-chart"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    var acLoadData = {{ ac_load | tojson }};
+
+    function makeLoadChart(canvasId, loadData, color, metaId) {
+        var ctx = document.getElementById(canvasId);
+        if (!ctx || !loadData || !loadData.labels || !loadData.labels.length || !window.ReportCommon) return;
+        var maxBin = Math.max.apply(null, loadData.labels.concat([1]));
+        var extLabels = Array.from({ length: maxBin }, function(_, i) { return String(i + 1); });
+        var extCounts = extLabels.map(function(_, i) { return loadData.counts[i] || 0; });
+        if (metaId) {
+            var meta = document.getElementById(metaId);
+            if (meta) meta.textContent = loadData.total + ' ACs — avg ' + loadData.avg_load + ' papers each';
+        }
+        window.ReportCommon.replaceChart(ctx, {
+            type: 'bar',
+            data: { labels: extLabels, datasets: [{ label: 'Count', data: extCounts, backgroundColor: color, borderWidth: 1, barPercentage: 0.75 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(ctx) { return ctx.raw + ' ACs'; } } } },
+                scales: { x: { title: { display: true, text: 'Papers assigned' } }, y: { beginAtZero: true, title: { display: true, text: 'Number of ACs' } } }
+            }
+        });
+    }
+
+    function initCommitmentLoadCharts() {
+        var loader = document.getElementById('commitment-load-loader');
+        var grid = document.getElementById('commitment-load-grid');
+        if (!loader || !grid || !window.ReportCommon) return;
+        makeLoadChart('cmt-ac-load-chart', acLoadData, 'rgba(59,130,246,0.65)', 'cmt-ac-load-meta');
+        loader.style.display = 'none';
+        grid.style.display = '';
+    }
+
+    document.addEventListener('report:tabshown', function(event) {
+        if (event.detail.tabId !== 'overview-tab') return;
+        if (!window.ReportCommon) { setTimeout(initCommitmentLoadCharts, 100); return; }
+        window.ReportCommon.initOnce('commitment-load-charts', initCommitmentLoadCharts);
+    });
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() { if (window.ReportCommon) window.ReportCommon.initOnce('commitment-load-charts', initCommitmentLoadCharts); }, 150);
+    });
+})();
+</script>

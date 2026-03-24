@@ -23,7 +23,8 @@ VALID_ROLES = ('sac', 'ac', 'pc')
 class CommitmentReportGenerator(ARRReportGenerator):
 
     def __init__(self, username, password, venue_id, me, role='sac',
-                 impersonate_group=None, comments_level='basic', skip_api_init=True):
+                 impersonate_group=None, comments_level='basic', skip_api_init=True,
+                 linked_venue_id=None):
         if role not in VALID_ROLES:
             raise ValueError(f"role must be one of {VALID_ROLES}, got {role!r}")
 
@@ -33,8 +34,10 @@ class CommitmentReportGenerator(ARRReportGenerator):
                          comments_level=comments_level,
                          skip_api_init=True)
 
+        self.linked_venue_id = (linked_venue_id or '').strip()
         self.linked_note_cache = {}
         self.linked_replies_cache = {}
+        self.linked_forum_ids = set()
 
         if skip_api_init:
             return
@@ -58,6 +61,42 @@ class CommitmentReportGenerator(ARRReportGenerator):
         self._build_group_index()
         print(f"Role: {role.upper()} | Venue: {venue_id} | Me: {me}")
         self._find_submissions()
+
+        if self.linked_venue_id:
+            self._prefetch_linked_forum_data()
+
+
+    def _get_submission_name_for_venue(self, venue_id):
+        venue_group = self.client.get_group(venue_id)
+        submission_name = venue_group.content.get('submission_name', {}).get('value', 'Submission')
+        return venue_group, submission_name
+
+    def _prefetch_linked_forum_data(self):
+        if not self.linked_venue_id:
+            return
+        try:
+            pre_group, pre_submission_name = self._get_submission_name_for_venue(self.linked_venue_id)
+            print(f"Pre-fetching linked ARR notes from {self.linked_venue_id}...")
+            linked_notes = self.client.get_all_notes(
+                invitation=f'{self.linked_venue_id}/-/{pre_submission_name}',
+                details='replies'
+            )
+            cached = 0
+            for note in linked_notes:
+                ids = {getattr(note, 'id', None), getattr(note, 'forum', None)}
+                replies = []
+                details = getattr(note, 'details', None) or {}
+                if isinstance(details, dict):
+                    replies = details.get('replies', []) or details.get('directReplies', []) or []
+                for note_id in ids:
+                    if not note_id:
+                        continue
+                    self.linked_note_cache[note_id] = note
+                    self.linked_replies_cache[note_id] = replies
+                    cached += 1
+            print(f"Cached linked ARR data for {len(linked_notes)} submissions ({cached} note/forum keys)")
+        except Exception as e:
+            print(f"Warning: could not pre-fetch linked ARR data from {self.linked_venue_id} ({e}). Falling back to per-paper linked forum calls.")
 
     # -----------------------------------------------------------------------
     # Group index + assignment discovery

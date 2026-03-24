@@ -1,0 +1,146 @@
+<div class="px-4 py-5 sm:p-6">
+    {% set s = overview_stats %}
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        <div class="bg-indigo-50 rounded-lg p-4 border border-indigo-100">
+            <div class="text-2xl font-bold text-indigo-700">{{ s.total_papers }}</div>
+            <div class="text-xs text-indigo-500 uppercase tracking-wide mt-1">Active Papers</div>
+            {% if s.type_counts %}
+            <div class="text-xs text-indigo-400 mt-0.5">
+              {% for ptype, cnt in s.type_counts.items() %}
+                {{ cnt }} {{ ptype }}{% if not loop.last %} + {% endif %}
+              {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        <div class="bg-teal-50 rounded-lg p-4 border border-teal-100">
+            <div class="text-2xl font-bold text-teal-700">{{ s.recommended_pct }}%</div>
+            <div class="text-xs text-teal-500 uppercase tracking-wide mt-1">Recommendations Filed</div>
+            <div class="text-xs text-teal-400 mt-0.5">{{ s.recommended_papers }} / {{ s.total_papers }}</div>
+        </div>
+        <div class="bg-green-50 rounded-lg p-4 border border-green-100">
+            <div class="text-2xl font-bold text-green-700">{{ s.meta_pct }}%</div>
+            <div class="text-xs text-green-500 uppercase tracking-wide mt-1">AC Scores Submitted</div>
+            <div class="text-xs text-green-400 mt-0.5">{{ s.meta_done }} / {{ s.total_papers }}</div>
+        </div>
+        <div class="bg-blue-50 rounded-lg p-4 border border-blue-100">
+            <div class="text-2xl font-bold text-blue-700">{{ s.review_pct }}%</div>
+            <div class="text-xs text-blue-500 uppercase tracking-wide mt-1">Reviews Submitted</div>
+            <div class="text-xs text-blue-400 mt-0.5">{{ s.reviews_done }} / {{ s.reviews_expected }}</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        <div class="bg-violet-50 rounded-lg p-4 border border-violet-100">
+            <div class="text-2xl font-bold text-violet-700">{{ s.avg_overall if s.avg_overall is not none else '–' }}</div>
+            <div class="text-xs text-violet-500 uppercase tracking-wide mt-1">Avg. Overall Score</div>
+        </div>
+        <div class="bg-pink-50 rounded-lg p-4 border border-pink-100">
+            <div class="text-2xl font-bold text-pink-700">{{ s.avg_meta if s.avg_meta is not none else '–' }}</div>
+            <div class="text-xs text-pink-500 uppercase tracking-wide mt-1">Avg. AC Score</div>
+        </div>
+        <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+            <div class="text-2xl font-bold text-slate-600">{{ s.ac_count }}</div>
+            <div class="text-xs text-slate-400 uppercase tracking-wide mt-1">Area Chairs</div>
+        </div>
+        <div class="bg-amber-50 rounded-lg p-4 border border-amber-100">
+            <div class="text-2xl font-bold text-amber-600">{{ s.has_award }}</div>
+            <div class="text-xs text-amber-500 uppercase tracking-wide mt-1">Award Nominations</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        <div class="bg-red-50 rounded-lg p-3 border border-red-100 text-center" title="Papers with at least one review issue flag.">
+            <div class="text-xl font-bold text-red-600">{{ s.review_issues }}</div>
+            <div class="text-xs text-red-400 uppercase tracking-wide mt-1">Review Issues</div>
+        </div>
+        <div class="bg-orange-50 rounded-lg p-3 border border-orange-100 text-center" title="Papers flagged for ethics review.">
+            <div class="text-xl font-bold text-orange-600">{{ s.ethics_papers }}</div>
+            <div class="text-xs text-orange-400 uppercase tracking-wide mt-1">Ethics Flagged</div>
+        </div>
+        <div class="bg-yellow-50 rounded-lg p-3 border border-yellow-100 text-center" title="Papers with at least one low-confidence review.">
+            <div class="text-xl font-bold text-yellow-600">{{ s.low_conf_papers }}</div>
+            <div class="text-xs text-yellow-500 uppercase tracking-wide mt-1">Low Confidence</div>
+        </div>
+        <div class="bg-lime-50 rounded-lg p-3 border border-lime-100 text-center" title="Papers with a detected or declared public preprint.">
+            <div class="text-xl font-bold text-lime-600">{{ s.sb_papers | default(0) }}</div>
+            <div class="text-xs text-lime-400 uppercase tracking-wide mt-1">Single-blind (SB)</div>
+        </div>
+        <div class="bg-blue-50 rounded-lg p-3 border border-blue-100 text-center" title="Papers with an emergency declaration.">
+            <div class="text-xl font-bold text-blue-600">{{ s.emergency_declared | default(0) }}</div>
+            <div class="text-xs text-blue-500 uppercase tracking-wide mt-1">Emergency Papers</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {% if track_data %}
+        <div>
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Track Progress</p>
+            <table class="min-w-full text-xs">
+                <thead>
+                    <tr class="text-gray-400 uppercase text-left border-b border-gray-100">
+                        <th class="pb-1 pr-3 font-medium">Track</th>
+                        <th class="pb-1 pr-3 font-medium" title="Total papers in this group">Papers</th>
+                        <th class="pb-1 pr-3 font-medium" title="Percentage of papers with a recommendation">Rec %</th>
+                        <th class="pb-1 font-medium" title="Average overall score for this group">Avg</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in track_data %}
+                    <tr class="border-b border-gray-50">
+                        <td class="py-1 pr-3 text-gray-700 truncate" style="max-width:180px;" title="{{ t['Track'] }}">{{ t['Track'] }}</td>
+                        <td class="py-1 pr-3 text-gray-500">{{ t['Papers'] }}</td>
+                        <td class="py-1 pr-3">
+                            <div class="flex items-center gap-1">
+                                <div class="w-16 bg-gray-100 rounded-full h-1.5">
+                                    <div class="h-1.5 rounded-full {% if t['Rec Pct'] == 100 %}bg-green-500{% elif t['Rec Pct'] >= 80 %}bg-yellow-400{% else %}bg-red-400{% endif %}" style="width:{{ t['Rec Pct'] }}%"></div>
+                                </div>
+                                <span class="text-gray-500">{{ t['Rec Pct'] }}%</span>
+                            </div>
+                        </td>
+                        <td class="py-1 text-gray-500">{{ t['Avg Overall'] or '–' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        {% if ac_meta %}
+        <div>
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">AC Progress — Bottom 20 by Review Completion</p>
+            <table class="min-w-full text-xs">
+                <thead>
+                    <tr class="text-gray-400 uppercase text-left border-b border-gray-100">
+                        <th class="pb-1 pr-3 font-medium">AC</th>
+                        <th class="pb-1 pr-3 font-medium" title="Total papers for this AC">Papers</th>
+                        <th class="pb-1 pr-3 font-medium" title="Review completion percentage">Review %</th>
+                        <th class="pb-1 font-medium" title="Papers with fewer completed reviews than expected">Late</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ac in ac_meta | sort(attribute='Review_Pct') | list %}
+                    {% if loop.index <= 20 %}
+                    <tr class="border-b border-gray-50">
+                        <td class="py-1 pr-3 text-gray-700 truncate" style="max-width:160px;">
+                            {% set ac_id = ac.get('Area Chair ID') %}
+                            {% if ac_id %}<a href="https://openreview.net/profile?id={{ ac_id }}" target="_blank" class="text-gray-700 hover:underline" style="text-decoration:none;"{% if ac.get('Area Chair Affiliation', '') %} title="{{ ac.get('Area Chair Affiliation', '') }}"{% endif %}>{{ ac['Area Chair'] }}</a>
+                            {% else %}<span{% if ac.get('Area Chair Affiliation', '') %} title="{{ ac.get('Area Chair Affiliation', '') }}"{% endif %}>{{ ac['Area Chair'] }}</span>{% endif %}
+                        </td>
+                        <td class="py-1 pr-3 text-gray-500">{{ ac['Num_Papers'] }}</td>
+                        <td class="py-1 pr-3">
+                            {% set review_pct = (100.0 * ac['Completed_Reviews'] / ac['Expected_Reviews']) | round(0) | int if ac['Expected_Reviews'] else 100 %}
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs {% if review_pct == 100 %}bg-green-100 text-green-700{% elif review_pct >= 80 %}bg-yellow-100 text-yellow-700{% else %}bg-red-100 text-red-700{% endif %}">
+                                {{ review_pct }}%
+                            </span>
+                        </td>
+                        <td class="py-1 {% if ac.get('Late_Papers',0) > 0 %}text-red-600 font-medium{% else %}text-gray-300{% endif %}">{{ ac.get('Late_Papers', 0) or '–' }}</td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</div>

@@ -59,7 +59,16 @@ python generate_review_report.py \
   --role "ac"
 ```
 
-### PC Dashboard (ARR venue)
+If you know the ARR venue ID that commitment papers link back to, pass `--linked-venue-id` for significantly faster data fetching (bulk pre-fetches linked ARR data instead of per-paper lookups):
+
+```bash
+python generate_review_report.py \
+  ... \
+  --phase "commitment" \
+  --linked-venue-id "aclweb.org/ACL/ARR/2026/February"
+```
+
+### PC Dashboard (ARR review phase)
 
 Fetches **all** papers across all SAC batches. Intended for Program Chairs. May take several minutes for large venues (6000+ papers).
 
@@ -71,10 +80,23 @@ python generate_pc_report.py \
   --me "~Your_Name1"
 ```
 
+### PC Commitment Dashboard (ACL/EMNLP/etc. commitment phase)
+
+`generate_pc_report.py` also supports the commitment phase via `--phase commitment`. This generates the full PC dashboard across all linked commitment submissions and writes `pc_commitment_report.html`.
+
+```bash
+python generate_pc_report.py \
+  --username "your@email.com" \
+  --password "yourpassword" \
+  --venue_id "aclweb.org/ACL/2026/Conference" \
+  --me "~Your_Name1" \
+  --phase "commitment" \
+  --linked-venue-id "aclweb.org/ACL/ARR/2026/January"
+```
 
 ### Credentials via environment variables
 
-All three scripts read these env vars if flags are not supplied:
+All scripts read these env vars if flags are not supplied:
 
 ```bash
 export OPENREVIEW_USERNAME="your@email.com"
@@ -83,21 +105,42 @@ export OPENREVIEW_ID="~Your_Name1"
 python generate_review_report.py --venue_id aclweb.org/ACL/ARR/2025/February
 ```
 
+---
+
+## Common options
+
+| Flag | Description |
+|------|-------------|
+| `--username` / `--password` | OpenReview credentials (or set via `OPENREVIEW_USERNAME` / `OPENREVIEW_PASSWORD` env vars). |
+| `--venue-id` | Full venue group ID, e.g. `aclweb.org/ACL/ARR/2025/February`. |
+| `--me` | Your OpenReview tilde ID, e.g. `~Your_Name1` (or set via `OPENREVIEW_ID`). |
+| `--role` | `sac` (default for review) / `ac` / `pc` — scope of papers to fetch. |
+| `--phase` | `review` (default) / `commitment` — which phase to generate a report for. |
+| `--linked-venue-id` | ARR venue ID for bulk pre-fetching linked submissions (commitment phase only). |
+| `--comments-level` | `none` / `basic` / `full` (default) — higher detail means slower runs and larger files. |
+| `--output-dir` | Output directory for generated reports. Default: `./reports`. |
+| `--append-date` | Append today's date (YYYY-MM-DD) to the output filename to avoid overwriting. |
+| `--save-cache` / `--use-cache` | Cache OpenReview data to disk; reload instantly on the next run. |
+| `--cache-dir` | Custom directory for cache files. Auto-generated under `.dev_cache/` if omitted. |
+| `--impersonate [GROUP_ID]` | Lets PCs inspect another SAC's view. Requires PC-level permission. |
+
 ## Comments levels
 
 All report scripts support `--comments-level none|basic|full`.
 
 - `none`: omit comments tab and skip comment processing
 - `basic`: direct replies only 
-- `full` (default): full reply threads --- slowest / largest output
+- `full` (default): full reply threads — slowest / largest output
 
 
 ### Output files
 
-| Script | Output                                               |
-|--------|------------------------------------------------------|
-| `generate_review_report.py` | `reports/review_report.html` or `reports/commitment_report.html` |
-| `generate_pc_report.py` | `reports/pc_report.html`  |
+| Script | Phase | Output |
+|--------|-------|--------|
+| `generate_review_report.py` | review | `reports/<venue>_review_report.html` |
+| `generate_review_report.py` | commitment | `reports/<venue>_commitment_report.html` |
+| `generate_pc_report.py` | review | `reports/<venue>_pc_report.html` |
+| `generate_pc_report.py` | commitment | `reports/<venue>_pc_commitment_report.html` |
 
 Open in any browser — fully self-contained, no server needed.
 
@@ -115,14 +158,14 @@ python generate_review_report.py ... --save-cache
 python generate_review_report.py ... --use-cache
 ```
 
-`--cache-dir .dev_cache` (default) controls where the pickle files go. You can maintain multiple named caches, e.g. one per SAC:
+`--cache-dir` controls where the pickle files go. If you omit it, the tool auto-generates a phase- and report-aware cache path under `.dev_cache/` so review vs commitment and review vs PC runs do not collide. You can still maintain multiple named caches manually, e.g. one per SAC:
 
 ```bash
 python generate_review_report.py ... --impersonate "~SAC_Name1" --save-cache --cache-dir .cache_sac1
 python generate_review_report.py ... --use-cache --cache-dir .cache_sac1
 ```
 
-The cache stores three files: `submissions.pkl`, `group_index.pkl`, and `processed.pkl`. It is **not** venue-aware — if you switch venues, use a different `--cache-dir` or delete the existing one.
+The cache stores three files: `submissions.pkl`, `group_index.pkl`, and `processed.pkl`. By default, cache directories are automatically separated by report type, phase, venue, and role/impersonation where relevant.
 
 > `--save-cache` and `--use-cache` are mutually exclusive.
 
@@ -131,8 +174,7 @@ The cache stores three files: `submissions.pkl`, `group_index.pkl`, and `process
 The review and commitment reports support impersonating another OpenReview user before fetching data. This requires **PC-level permission** on the venue and uses the [OpenReview impersonate API](https://docs.openreview.net/reference/api-v2/openapi-definition#post-impersonate).
 
 ```bash
-
-python generate_review_report.py ... --phase "reivew" --me "~Target_SAC_Name1" --impersonate
+python generate_review_report.py ... --phase "review" --me "~Target_SAC_Name1" --impersonate
 python generate_review_report.py ... --phase "commitment" --me "~Target_SAC_Name1" --impersonate
 ```
 

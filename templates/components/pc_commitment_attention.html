@@ -1,0 +1,284 @@
+<style>
+  #pcc-attention-table th, #pcc-attention-table td {
+    padding: 5px 6px !important; outline: none !important; text-align: left !important;
+  }
+  #pcc-attention-table thead th {
+    padding-top: 10px !important; padding-bottom: 10px !important; font-weight: 400 !important;
+  }
+  .dt-column-order { display: none !important; }
+  #pcc-attention-table thead th::after { content: ' ↕'; font-size: 0.65rem; color: #9ca3af; opacity: 0.6; }
+  #pcc-attention-table thead th.dt-ordering-asc::after  { content: ' ↑'; color: #4f46e5; opacity: 1; }
+  #pcc-attention-table thead th.dt-ordering-desc::after { content: ' ↓'; color: #4f46e5; opacity: 1; }
+  .award-icon { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; font-size: 0.6rem; }
+  .award-best      { background: #fef3c7; color: #d97706; }
+  .award-outstanding { background: #dbeafe; color: #2563eb; }
+  .award-sac       { background: #f3e8ff; color: #7c3aed; }
+  .award-resource  { background: #d1fae5; color: #059669; }
+  .award-social    { background: #fce7f3; color: #db2777; }
+  .award-other     { background: #f1f5f9; color: #64748b; }
+</style>
+
+<div class="px-2 py-4 sm:p-5">
+    {% set has_ac = attention_has_ac | default(true) %}
+    {% if not attention_papers %}
+    <div class="flex items-center gap-2 text-green-700 bg-green-50 rounded-lg p-4 border border-green-200">
+        <span class="text-lg">✓</span>
+        <span class="text-sm">No papers currently require attention.</span>
+    </div>
+    {% else %}
+
+    <div class="bg-gray-50 rounded-lg border border-gray-200 p-4 mb-4">
+        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Filters</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Issues</label>
+                <select id="pcc-attn-issues-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="">All</option><option value="1">Has issue</option><option value="0">No issue</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Ethics</label>
+                <select id="pcc-attn-ethics-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="">All</option><option value="1">Ethics flagged</option><option value="0">No flag</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Missing Reviews</label>
+                <select id="pcc-attn-missing-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="">All</option><option value="1">Has missing</option><option value="0">Complete</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Recommendation</label>
+                <div id="pcc-attn-rec-filter"></div>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Presentation</label>
+                <div id="pcc-attn-pres-filter"></div>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Award</label>
+                <select id="pcc-attn-award-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="">All</option>
+                    <option value="best_paper">Best Paper</option>
+                    <option value="outstanding">Outstanding Paper</option>
+                    <option value="sac_highlight">SAC Highlight</option>
+                    <option value="resource">Resource Award</option>
+                    <option value="social_impact">Social Impact</option>
+                    <option value="none">No award</option>
+                    <option value="any">Has any award</option>
+                </select>
+            </div>
+        </div>
+        <div class="mt-3 flex items-center gap-3">
+            <div class="flex-1" style="max-width:360px;">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Search</label>
+                <input id="pcc-attn-search" type="text" placeholder="Title, AC…"
+                    class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+            </div>
+            <div class="flex items-end gap-2">
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Per page</label>
+                    <select id="pcc-attn-length" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs focus:outline-none">
+                        <option value="25" selected>25</option><option value="50">50</option><option value="100">100</option><option value="-1">All</option>
+                    </select>
+                </div>
+                <button id="pcc-attn-reset" class="py-2 px-3 text-xs bg-white border border-gray-300 rounded-md text-gray-600 hover:bg-gray-100 focus:outline-none">Reset</button>
+            </div>
+        </div>
+
+        <div class="lg:col-span-6 mt-6 pt-3 border-t border-gray-200">
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Flag legend</p>
+            <div class="flag-legend-rows">
+                <div class="flag-legend-row">
+                    <div class="flag-legend-item"><span class="flag-badge flag-issue"><i class="fa-solid fa-triangle-exclamation"></i></span><span>Review issue report.</span></div>
+                    <div class="flag-legend-item"><span class="flag-badge flag-metaissue"><i class="fa-solid fa-file-circle-exclamation"></i></span><span>Meta-review issue report.</span></div>
+                    <div class="flag-legend-item"><span class="flag-badge flag-ethics"><i class="fa-solid fa-scale-balanced"></i></span><span>Ethics concern.</span></div>
+                    <div class="flag-legend-item"><span class="flag-badge flag-emergency"><i class="fa-solid fa-bolt"></i><span class="flag-count">2</span></span><span>Emergency declaration count.</span></div>
+                    <div class="flag-legend-item"><span class="flag-badge flag-missing"><i class="fa-solid fa-clock"></i><span class="flag-count">2</span></span><span>Missing reviews.</span></div>
+                </div>
+            </div>
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mt-3 mb-2">Award legend</p>
+            <div class="flag-legend-rows">
+                <div class="flag-legend-row">
+                    <div class="flag-legend-item"><span class="award-icon award-best"><i class="fa-solid fa-trophy"></i></span><span>Best Paper</span></div>
+                    <div class="flag-legend-item"><span class="award-icon award-outstanding"><i class="fa-solid fa-trophy"></i></span><span>Outstanding Paper</span></div>
+                    <div class="flag-legend-item"><span class="award-icon award-sac"><i class="fa-solid fa-trophy"></i></span><span>SAC Highlight</span></div>
+                    <div class="flag-legend-item"><span class="award-icon award-resource"><i class="fa-solid fa-trophy"></i></span><span>Resource Award</span></div>
+                    <div class="flag-legend-item"><span class="award-icon award-social"><i class="fa-solid fa-trophy"></i></span><span>Social Impact Award</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="overflow-x-auto w-full">
+        <table id="pcc-attention-table" class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:50px;">#</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:200px;">Title</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:72px;">Type</th>
+                    {% if has_ac %}<th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:120px;">AC</th>{% endif %}
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">Reviews</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:140px;">Flags</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:100px;min-width:100px;">Rec.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:60px;min-width:60px;">Pres.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:44px;min-width:44px;">Award</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for p in attention_papers %}
+                <tr
+                    data-has-issue="{{ 1 if p['Has Review Issue'] else 0 }}"
+                    data-ethics="{{ 1 if p.get('Ethics Flag') else 0 }}"
+                    data-missing="{{ 1 if p.get('Has Missing Reviews', p['Completed Reviews'] < p['Expected Reviews']) else 0 }}"
+                    data-rec="{{ p.get('Recommendation', '') | e }}"
+                    data-pres="{{ p.get('Presentation Mode', '') | e }}"
+                    data-award="{{ p.get('Award', '') | e }}"
+                >
+                    <td class="whitespace-nowrap text-gray-700">{{ p['Paper #'] }}</td>
+                    <td class="text-gray-700" style="max-width:240px;"><div class="truncate"><a href="https://openreview.net/forum?id={{ p['Paper ID'] }}" target="_blank" class="text-indigo-600 hover:text-indigo-900 tip tip-left" data-tip="{{ p['Title'] }}">{{ p['Title'] }}</a></div></td>
+                    <td class="whitespace-nowrap text-gray-500">{{ p.get('Paper Type', '') }}</td>
+                    {% if has_ac %}
+                    <td class="whitespace-nowrap text-gray-500">
+                        {% set ac_id = p.get('Area Chair ID') %}
+                        {% if ac_id %}<a href="https://openreview.net/profile?id={{ ac_id }}" target="_blank" class="text-gray-500 hover:underline" style="text-decoration:none;"{% if p.get('Area Chair Affiliation', '') %} title="{{ p.get('Area Chair Affiliation', '') }}"{% endif %}>{{ p.get('Area Chair','') }}</a>
+                        {% else %}{{ p.get('Area Chair','') }}{% endif %}
+                    </td>
+                    {% endif %}
+                    <td class="whitespace-nowrap {% if p['Completed Reviews'] < p['Expected Reviews'] %}text-red-600{% else %}text-gray-500{% endif %}">{{ p['Completed Reviews'] }}/{{ p['Expected Reviews'] }}</td>
+                    <td class="whitespace-nowrap">
+                        <div class="flags-inline">
+                        {% if p['Has Review Issue'] %}<a href="{{ p['Review Issue Link'] }}" target="_blank"><span class="flag-badge flag-issue tip" data-tip="{{ p['Review Issue Count'] }} review issue(s)"><i class="fa-solid fa-triangle-exclamation"></i></span></a>{% endif %}
+                        {% if p.get('Has Meta Review Issue') %}{% if p.get('Meta Review Issue Link') %}<a href="{{ p['Meta Review Issue Link'] }}" target="_blank">{% endif %}<span class="flag-badge flag-metaissue tip" data-tip="{{ p.get('Meta Review Issue Count', 1) }} meta-review issue(s)"><i class="fa-solid fa-file-circle-exclamation"></i></span>{% if p.get('Meta Review Issue Link') %}</a>{% endif %}{% endif %}
+                        {% if p.get('Ethics Flag') %}<span class="flag-badge flag-ethics tip" data-tip="Ethics: {{ p['Ethics Flag'] }}"><i class="fa-solid fa-scale-balanced"></i></span>{% endif %}
+                        {% if p.get('Has Emergency Declaration') %}{% if p.get('Emergency Declaration Link') %}<a href="{{ p['Emergency Declaration Link'] }}" target="_blank">{% endif %}<span class="flag-badge flag-emergency tip" data-tip="Emergency: {{ p.get('Emergency Declaration Count', 0) }}"><i class="fa-solid fa-bolt"></i><span class="flag-count">{{ p.get('Emergency Declaration Count', 0) }}</span></span>{% if p.get('Emergency Declaration Link') %}</a>{% endif %}{% endif %}
+                        {% if p.get('Missing Reviews', 0) > 0 %}<span class="flag-badge flag-missing tip" data-tip="{{ p.get('Missing Reviews') }} review(s) missing"><i class="fa-solid fa-clock"></i><span class="flag-count">{{ p.get('Missing Reviews') }}</span></span>{% endif %}
+                        </div>
+                    </td>
+                    <td class="whitespace-nowrap text-gray-500">
+                        {% set rec = p.get('Recommendation', '') %}
+                        {% if rec %}<span class="tip" data-tip="{{ rec }}" style="max-width:100px;display:inline-block;overflow:hidden;text-overflow:ellipsis;">{{ rec | replace("Main Conference", "Main") | replace("Borderline Findings", "Border. Findings") | replace("Borderline Main Conference", "Border. Main") | replace("Oral Presentation", "Oral") }}</span>{% else %}–{% endif %}
+                    </td>
+                    <td class="whitespace-nowrap text-gray-500">
+                        {% set pres = p.get('Presentation Mode', '') %}
+                        {% if pres %}<span class="tip" data-tip="{{ pres }}">{{ pres | replace("Oral Presentation", "Oral") }}</span>{% else %}–{% endif %}
+                    </td>
+                    <td class="whitespace-nowrap">
+                        {% set aw = p.get('Award', '') %}
+                        {% if aw %}
+                            {% set award_parts = aw.split(',') %}
+                            {% set ns = namespace(has_real=false) %}
+                            {% for apart in award_parts %}
+                                {% set a = apart.strip() %}
+                                {% set al = a | lower %}
+                                {% if a and 'do not consider' not in al and al != 'none' %}
+                                    {% set ns.has_real = true %}
+                                    {% if 'best paper' in al %}<span class="award-icon award-best tip" data-tip="{{ a }}"><i class="fa-solid fa-trophy"></i></span>
+                                    {% elif 'outstanding' in al %}<span class="award-icon award-outstanding tip" data-tip="{{ a }}"><i class="fa-solid fa-trophy"></i></span>
+                                    {% elif 'highlight' in al or 'sac' in al %}<span class="award-icon award-sac tip" data-tip="{{ a }}"><i class="fa-solid fa-trophy"></i></span>
+                                    {% elif 'resource' in al %}<span class="award-icon award-resource tip" data-tip="{{ a }}"><i class="fa-solid fa-trophy"></i></span>
+                                    {% elif 'social' in al or 'impact' in al %}<span class="award-icon award-social tip" data-tip="{{ a }}"><i class="fa-solid fa-trophy"></i></span>
+                                    {% else %}<span class="award-icon award-other tip" data-tip="{{ a }}"><i class="fa-solid fa-trophy"></i></span>
+                                    {% endif %}
+                                {% endif %}
+                            {% endfor %}
+                            {% if not ns.has_real %}–{% endif %}
+                        {% else %}–{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+$(document).ready(function() {
+    if (!$('#pcc-attention-table tbody tr').length) return;
+    function esc(v) { return window.ReportCommon ? window.ReportCommon.escapeHtml(v ?? '') : String(v ?? ''); }
+    function selectHtml(id, label, values) {
+        var host = document.getElementById(id);
+        if (!host) return;
+        var opts = Array.from(new Set(values.filter(Boolean))).sort();
+        host.innerHTML = '<select class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none"><option value="">'+label+'</option>' +
+            opts.map(function(v) { return '<option value="'+esc(v)+'">'+esc(v)+'</option>'; }).join('') + '</select>';
+    }
+    function classifyAward(raw) {
+        if (!raw) return [];
+        var parts = raw.split(',').map(function(s){return s.trim().toLowerCase();}).filter(Boolean);
+        var cats = [];
+        parts.forEach(function(p) {
+            if (p.indexOf('do not consider') !== -1 || p === 'none') return;
+            if (p.indexOf('best paper') !== -1)     cats.push('best_paper');
+            if (p.indexOf('outstanding') !== -1)    cats.push('outstanding');
+            if (p.indexOf('highlight') !== -1 || p.indexOf('sac') !== -1) cats.push('sac_highlight');
+            if (p.indexOf('resource') !== -1)       cats.push('resource');
+            if (p.indexOf('social') !== -1 || p.indexOf('impact') !== -1) cats.push('social_impact');
+        });
+        return cats;
+    }
+
+    var recs=[], preses=[];
+    $('#pcc-attention-table tbody tr').each(function() {
+        var r=$(this).attr('data-rec'), p=$(this).attr('data-pres');
+        if (r) recs.push(r); if (p) preses.push(p);
+    });
+    selectHtml('pcc-attn-rec-filter', 'All', recs);
+    selectHtml('pcc-attn-pres-filter', 'All', preses);
+    /* Add "Missing rec." option */
+    (function() {
+        var recSel = document.querySelector('#pcc-attn-rec-filter select');
+        if (recSel) {
+            var opt = document.createElement('option');
+            opt.value = '__missing__';
+            opt.textContent = 'Missing Recommendation';
+            recSel.insertBefore(opt, recSel.options[1]);
+        }
+    })();
+    /* Award filter is already a static <select>, no need to populate */
+
+    var attnDt = $('#pcc-attention-table').DataTable({
+        deferRender: true, pageLength: 25, autoWidth: false,
+        layout: { topStart: null, topEnd: null, bottomStart: 'info', bottomEnd: 'paging' },
+        order: [[0, 'asc']],
+    });
+    $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+        if (settings.nTable.id !== 'pcc-attention-table') return true;
+        var row = $(settings.aoData[dataIndex].nTr);
+        var issues=$('#pcc-attn-issues-filter').val(), ethics=$('#pcc-attn-ethics-filter').val(), missingF=$('#pcc-attn-missing-filter').val();
+        var recHost=document.getElementById('pcc-attn-rec-filter');
+        var presHost=document.getElementById('pcc-attn-pres-filter');
+        var rec=recHost&&recHost.querySelector('select')?recHost.querySelector('select').value:'';
+        var pres=presHost&&presHost.querySelector('select')?presHost.querySelector('select').value:'';
+        var award=$('#pcc-attn-award-filter').val();  /* static <select>, read directly */
+
+        if (issues && row.attr('data-has-issue')!==issues) return false;
+        if (ethics && row.attr('data-ethics')!==ethics) return false;
+        if (missingF && row.attr('data-missing')!==missingF) return false;
+        /* Recommendation filter with __missing__ support */
+        if (rec === '__missing__' && (row.attr('data-rec') || '').trim()) return false;
+        if (rec && rec !== '__missing__' && row.attr('data-rec') !== rec) return false;
+        if (pres && row.attr('data-pres')!==pres) return false;
+        /* Award filter using canonical categories */
+        if (award) {
+            var cats = classifyAward(row.attr('data-award') || '');
+            if (award === 'none' && cats.length > 0) return false;
+            if (award === 'any' && cats.length === 0) return false;
+            if (award !== 'none' && award !== 'any' && cats.indexOf(award) === -1) return false;
+        }
+        return true;
+    });
+    $('#pcc-attn-issues-filter, #pcc-attn-ethics-filter, #pcc-attn-missing-filter, #pcc-attn-award-filter').on('change', function(){attnDt.draw();});
+    $('#pcc-attn-rec-filter, #pcc-attn-pres-filter').on('change','select',function(){attnDt.draw();});
+    $('#pcc-attn-search').on('input', function(){attnDt.search(this.value).draw();});
+    $('#pcc-attn-length').on('change', function(){attnDt.page.len(this.value).draw();});
+    $('#pcc-attn-reset').on('click', function(){
+        $('#pcc-attn-issues-filter, #pcc-attn-ethics-filter, #pcc-attn-missing-filter, #pcc-attn-award-filter').val('');
+        ['pcc-attn-rec-filter','pcc-attn-pres-filter'].forEach(function(id){var s=document.querySelector('#'+id+' select');if(s)s.value='';});
+        $('#pcc-attn-search').val(''); $('#pcc-attn-length').val('25');
+        attnDt.search('').page.len(25).draw();
+    });
+});
+</script>

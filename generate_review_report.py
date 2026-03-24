@@ -18,7 +18,7 @@ import requests
 
 from arr_commitment_generator import CommitmentReportGenerator
 from arr_report_generator import ARRReportGenerator
-from args import add_args, prompt_for_missing_credentials, validate_cache_args
+from args import add_args, prompt_for_missing_credentials, validate_cache_args, resolve_cache_dir
 from dev_cache import load_cache, save_cache
 from utils import make_filename
 
@@ -285,13 +285,15 @@ def main():
     )
     add_args(
         parser,
-        include_phase=True,
         include_impersonate=True,
         require_venue=True,
         default_comments="full",
         default_role="sac",
     )
     args = parser.parse_args()
+    args.venue_id = args.venue_id.rstrip("/")
+    args.linked_venue_id = args.linked_venue_id.rstrip("/")
+    args.cache_dir = resolve_cache_dir(args, "review_report")
 
     cfg = _resolve_phase_config(args.phase)
     _validate_args(args, parser, cfg)
@@ -314,6 +316,7 @@ def main():
 
         filename = make_filename(args.venue_id, cfg["report_slug"], args.append_date)
         print(f"Output filename: {filename}")
+        print(f"Cache directory: {args.cache_dir}")
 
         if args.use_cache:
             print(f"[cache] Loading from '{args.cache_dir}/' (skipping API calls)...")

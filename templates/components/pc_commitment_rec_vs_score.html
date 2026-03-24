@@ -1,0 +1,101 @@
+<div class="px-4 py-5 sm:p-6">
+    <div id="rec-score-loader" class="flex items-center justify-center py-8">
+        <svg class="animate-spin h-6 w-6 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+        </svg>
+        <span class="ml-3 text-sm text-gray-500">Loading…</span>
+    </div>
+    <div id="rec-score-content" style="display:none;">
+        <div style="height:220px;"><canvas id="rec-vs-score-chart"></canvas></div>
+        <div class="mt-6 overflow-x-auto">
+            <table id="rec-score-table" class="min-w-full text-xs">
+                <thead>
+                    <tr class="text-gray-400 uppercase text-left border-b border-gray-200">
+                        <th class="pb-2 pr-4 font-medium">Recommendation</th>
+                        <th class="pb-2 pr-4 font-medium">Papers</th>
+                        <th class="pb-2 pr-4 font-medium">Avg. Overall</th>
+                        <th class="pb-2 font-medium">Avg. AC Score</th>
+                    </tr>
+                </thead>
+                <tbody id="rec-score-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    var recVsScoreData = {{ rec_vs_score | tojson }};
+
+    function initRecVsScore() {
+        var loader = document.getElementById('rec-score-loader');
+        var content = document.getElementById('rec-score-content');
+        if (!loader || !content || !window.ReportCommon) return;
+
+        if (!recVsScoreData || !recVsScoreData.length) {
+            loader.innerHTML = '<span class="text-gray-400 text-sm">No recommendation data available yet.</span>';
+            return;
+        }
+
+        // Build table
+        var tbody = document.getElementById('rec-score-tbody');
+        if (tbody) {
+            recVsScoreData.forEach(function(r) {
+                var tr = document.createElement('tr');
+                tr.className = 'border-b border-gray-50';
+                tr.innerHTML =
+                    '<td class="py-1.5 pr-4 text-gray-700">' + window.ReportCommon.escapeHtml(r.recommendation) + '</td>' +
+                    '<td class="py-1.5 pr-4 text-gray-500">' + r.count + '</td>' +
+                    '<td class="py-1.5 pr-4 text-gray-500">' + (r.avg_overall != null ? r.avg_overall : '–') + '</td>' +
+                    '<td class="py-1.5 text-gray-500">' + (r.avg_meta != null ? r.avg_meta : '–') + '</td>';
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Build chart
+        var ctx = document.getElementById('rec-vs-score-chart');
+        if (ctx) {
+            var labels = recVsScoreData.map(function(r){return r.recommendation;});
+            var overallVals = recVsScoreData.map(function(r){return r.avg_overall;});
+            var metaVals = recVsScoreData.map(function(r){return r.avg_meta;});
+            var counts = recVsScoreData.map(function(r){return r.count;});
+
+            window.ReportCommon.replaceChart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Avg. Overall Score', data: overallVals, backgroundColor: 'rgba(59,130,246,0.65)', borderWidth: 1 },
+                        { label: 'Avg. AC Score', data: metaVals, backgroundColor: 'rgba(220,38,38,0.55)', borderWidth: 1 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    animation: { duration: 300 },
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                afterTitle: function(ctx) { return counts[ctx[0].dataIndex] + ' papers'; }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, title: { display: true, text: 'Score' } },
+                        x: { title: { display: true, text: 'Recommendation' } }
+                    }
+                }
+            });
+        }
+
+        loader.style.display = 'none';
+        content.style.display = '';
+    }
+
+    document.addEventListener('report:tabshown', function(event) {
+        if (event.detail.tabId !== 'analytics-tab') return;
+        window.ReportCommon.initOnce('rec-vs-score', function() { setTimeout(initRecVsScore, 40); });
+    });
+})();
+</script>
