@@ -1,0 +1,132 @@
+<div class="px-4 py-5 sm:p-6">
+    {% set s = overview_stats %}
+
+    <div id="decision-charts-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div>
+            <p class="text-xs text-gray-500 font-medium mb-1 text-center">Final Recommendation Breakdown</p>
+            <p class="text-xs text-gray-400 text-center mb-2">{{ s.recommended_papers }} of {{ s.total_papers }} papers have a recommendation</p>
+            <div style="height:240px;"><canvas id="rec-breakdown-chart"></canvas></div>
+        </div>
+        <div>
+            <p class="text-xs text-gray-500 font-medium mb-1 text-center">Presentation Mode Breakdown</p>
+            <p class="text-xs text-gray-400 text-center mb-2">{{ s.has_presentation }} of {{ s.total_papers }} papers have a mode assigned</p>
+            <div style="height:240px;"><canvas id="pres-breakdown-chart"></canvas></div>
+        </div>
+        <div>
+            <p class="text-xs text-gray-500 font-medium mb-1 text-center">Award Nominations</p>
+            <p class="text-xs text-gray-400 text-center mb-2">{{ s.has_award }} papers nominated</p>
+            <div style="height:240px;"><canvas id="award-breakdown-chart"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    var recBreakdown = {{ overview_stats.rec_breakdown | tojson }};
+    var presBreakdown = {{ overview_stats.pres_breakdown | tojson }};
+    var awardBreakdown = {{ overview_stats.award_breakdown | tojson }};
+
+    var PALETTE = [
+        'rgba(99,102,241,0.75)', 'rgba(16,185,129,0.75)', 'rgba(245,158,11,0.75)',
+        'rgba(239,68,68,0.75)', 'rgba(59,130,246,0.75)', 'rgba(168,85,247,0.75)',
+        'rgba(20,184,166,0.75)', 'rgba(251,146,60,0.75)', 'rgba(236,72,153,0.75)',
+        'rgba(34,197,94,0.75)', 'rgba(139,92,246,0.75)', 'rgba(244,63,94,0.75)',
+    ];
+
+    /* Award-specific palette keyed by canonical name */
+    var AWARD_CATEGORIES = ['Best Paper', 'Outstanding Paper', 'SAC Highlight', 'Resource Award', 'Social Impact Award'];
+    var AWARD_COLORS = {
+        'best paper':        '#d97706',
+        'outstanding paper': '#2563eb',
+        'sac highlight':     '#7c3aed',
+        'resource award':    '#059669',
+        'social impact award': '#db2777'
+    };
+
+    function makePieChart(canvasId, data) {
+        var ctx = document.getElementById(canvasId);
+        if (!ctx || !window.ReportCommon) return;
+        /* Sort entries by value descending */
+        var entries = Object.entries(data).sort(function(a,b){ return b[1] - a[1]; });
+        var labels = entries.map(function(e){ return e[0]; });
+        var values = entries.map(function(e){ return e[1]; });
+        if (!labels.length) {
+            ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-gray-400 text-sm">No data available</div>';
+            return;
+        }
+        var colors = labels.map(function(_, i) { return PALETTE[i % PALETTE.length]; });
+        window.ReportCommon.replaceChart(ctx, {
+            type: 'pie',
+            data: { labels: labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 1, borderColor: '#fff' }] },
+            options: {
+                responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 12, padding: 8 } },
+                    tooltip: { callbacks: { label: function(ctx) {
+                        var total = ctx.dataset.data.reduce(function(a,b){return a+b;},0);
+                        var pct = total ? ((ctx.raw/total)*100).toFixed(1) : 0;
+                        return ctx.label+': '+ctx.raw+' ('+pct+'%)';
+                    }}}
+                }
+            }
+        });
+    }
+
+    function makeAwardChart(canvasId, data) {
+        var ctx = document.getElementById(canvasId);
+        if (!ctx || !window.ReportCommon) return;
+
+        /* Map raw award data into the 5 canonical categories */
+        var buckets = {};
+        AWARD_CATEGORIES.forEach(function(c) { buckets[c] = 0; });
+        var otherCount = 0;
+        Object.keys(data).forEach(function(rawLabel) {
+            var lower = rawLabel.toLowerCase();
+            var matched = false;
+            if (lower.indexOf('best paper') !== -1)        { buckets['Best Paper'] += data[rawLabel]; matched = true; }
+            if (lower.indexOf('outstanding') !== -1)       { buckets['Outstanding Paper'] += data[rawLabel]; matched = true; }
+            if (lower.indexOf('highlight') !== -1 || lower.indexOf('sac') !== -1) { buckets['SAC Highlight'] += data[rawLabel]; matched = true; }
+            if (lower.indexOf('resource') !== -1)          { buckets['Resource Award'] += data[rawLabel]; matched = true; }
+            if (lower.indexOf('social') !== -1 || lower.indexOf('impact') !== -1) { buckets['Social Impact Award'] += data[rawLabel]; matched = true; }
+            if (!matched) otherCount += data[rawLabel];
+        });
+
+        var labels = AWARD_CATEGORIES.filter(function(c) { return buckets[c] > 0; });
+        var values = labels.map(function(c) { return buckets[c]; });
+        var colors = labels.map(function(c) { return AWARD_COLORS[c.toLowerCase()] || '#64748b'; });
+
+        if (otherCount > 0) { labels.push('Other'); values.push(otherCount); colors.push('#64748b'); }
+
+        if (!labels.length) {
+            ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-gray-400 text-sm">No award nominations yet</div>';
+            return;
+        }
+
+        window.ReportCommon.replaceChart(ctx, {
+            type: 'bar',
+            data: { labels: labels, datasets: [{ label: 'Nominations', data: values, backgroundColor: colors.map(function(c){return c+'cc';}), borderColor: colors, borderWidth: 1 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
+                indexAxis: 'y',
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(ctx) { return ctx.raw + ' paper' + (ctx.raw !== 1 ? 's' : ''); } } } },
+                scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } }, y: { ticks: { font: { size: 10 } } } }
+            }
+        });
+    }
+
+    function initDecisionCharts() {
+        if (!window.ReportCommon) return;
+        makePieChart('rec-breakdown-chart', recBreakdown);
+        makePieChart('pres-breakdown-chart', presBreakdown);
+        makeAwardChart('award-breakdown-chart', awardBreakdown);
+    }
+
+    document.addEventListener('report:tabshown', function(event) {
+        if (event.detail.tabId !== 'overview-tab') return;
+        window.ReportCommon.initOnce('decision-charts', initDecisionCharts);
+    });
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() { if (window.ReportCommon) window.ReportCommon.initOnce('decision-charts', initDecisionCharts); }, 100);
+    });
+})();
+</script>

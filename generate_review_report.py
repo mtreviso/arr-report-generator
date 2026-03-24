@@ -285,13 +285,14 @@ def main():
     )
     add_args(
         parser,
-        include_phase=True,
         include_impersonate=True,
         require_venue=True,
         default_comments="full",
         default_role="sac",
     )
     args = parser.parse_args()
+    args.venue_id = args.venue_id.rstrip("/")
+    args.linked_venue_id = args.linked_venue_id.rstrip("/")
     args.cache_dir = resolve_cache_dir(args, "review_report")
 
     cfg = _resolve_phase_config(args.phase)

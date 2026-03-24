@@ -25,7 +25,7 @@ def _render_report(gen, output_dir, filename, phase):
         loader=jinja2.FileSystemLoader(str(gen._resolve_template_dir())),
         autoescape=jinja2.select_autoescape(["html", "xml"]),
     )
-    template_name = getattr(gen, "TEMPLATE_NAME", "pc_report.html")
+    template_name = "pc_commitment_report.html" if phase == "commitment" else "pc_report.html"
     html = env.get_template(template_name).render(**gen.build_template_data())
     output_path = Path(output_dir) / filename
     output_path.write_text(html, encoding="utf-8")
@@ -39,13 +39,14 @@ def main():
     )
     add_args(
         parser,
-        include_phase=True,
         include_impersonate=False,
         require_venue=True,
         default_comments="full",
         default_role=None,
     )
     args = parser.parse_args()
+    args.venue_id = args.venue_id.rstrip("/")
+    args.linked_venue_id = args.linked_venue_id.rstrip("/")
     args.cache_dir = resolve_cache_dir(args, "pc_report")
 
     validate_cache_args(args)
@@ -57,17 +58,15 @@ def main():
 
     try:
         generator_cls = PCCommitmentGenerator if args.phase == "commitment" else PCReportGenerator
-        kwargs = dict(
+        gen = generator_cls(
             username=args.username,
             password=args.password,
             venue_id=args.venue_id,
             me=args.me,
             comments_level=args.comments_level,
             skip_api_init=args.use_cache,
+            linked_venue_id=args.linked_venue_id if args.phase == 'commitment' else None,
         )
-        if args.phase == "commitment":
-            kwargs["linked_venue_id"] = getattr(args, "linked_venue_id", "")
-        gen = generator_cls(**kwargs)
 
         report_slug = "pc_commitment_report" if args.phase == "commitment" else "pc_report"
         filename = make_filename(args.venue_id, report_slug, args.append_date)

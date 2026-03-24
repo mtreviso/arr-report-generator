@@ -102,6 +102,7 @@
                 <div class="flag-legend-row">
                     <div class="flag-legend-item"><span class="flag-badge flag-issue"><i class="fa-solid fa-triangle-exclamation"></i></span><span>Review issue report.</span></div>
                     <div class="flag-legend-item"><span class="flag-badge flag-ethics"><i class="fa-solid fa-scale-balanced"></i></span><span>Ethics concern.</span></div>
+                    <div class="flag-legend-item"><span class="flag-badge flag-issue"><i class="fa-solid fa-clipboard-check"></i></span><span>Meta-review issue report.</span></div>
                 </div>
                 <div class="flag-legend-row">
                     <div class="flag-legend-item"><span class="flag-badge flag-emergency"><i class="fa-solid fa-bolt"></i><span class="flag-count">2</span></span><span>Emergency declaration count on the paper.</span></div>
@@ -113,7 +114,7 @@
     </div>
 
     <p class="text-xs text-gray-500 mb-3">
-        Papers flagged for one or more of: review issue reported, ethics concern, emergency declaration activity, or fewer reviews than expected.
+        Papers flagged for one or more of: review issue reported, meta-review issue reported, ethics concern, emergency declaration activity, or fewer reviews than expected.
     </p>
 
     <div class="overflow-x-auto w-full">
@@ -135,6 +136,7 @@
                     data-has-issue="{{ 1 if p['Has Review Issue'] else 0 }}"
                     data-ethics="{{ 1 if p.get('Ethics Flag') else 0 }}"
                     data-missing="{{ 1 if p.get('Has Missing Reviews', p['Completed Reviews'] < p['Expected Reviews']) else 0 }}"
+                    data-meta-issue="{{ 1 if p.get('Has Meta Review Issue') else 0 }}"
                     data-emergency="{{ 1 if p.get('Has Emergency Declaration') else 0 }}"
                     data-type="{{ p.get('Paper Type', '') | e }}"
                 >
@@ -171,6 +173,12 @@
                             <a href="{{ p['Review Issue Link'] }}" target="_blank">
                                 <span class="flag-badge flag-issue tip" data-tip="{{ p['Review Issue Count'] }} review issue(s) — click to open"><i class="fa-solid fa-triangle-exclamation"></i></span>
                             </a>
+                        {% endif %}
+                        {% if p.get('Has Meta Review Issue') %}
+                            {% set meta_issue_count = p.get('Meta Review Issue Count', 1) %}
+                            {% if p.get('Meta Review Issue Link') %}<a href="{{ p['Meta Review Issue Link'] }}" target="_blank">{% endif %}
+                                <span class="flag-badge flag-issue tip" data-tip="{{ meta_issue_count }} meta-review issue(s) — click to open"><i class="fa-solid fa-clipboard-check"></i>{% if meta_issue_count %}<span class="flag-count">{{ meta_issue_count }}</span>{% endif %}</span>
+                            {% if p.get('Meta Review Issue Link') %}</a>{% endif %}
                         {% endif %}
                         {% if p.get('Ethics Flag') %}
                             <span class="flag-badge flag-ethics tip"

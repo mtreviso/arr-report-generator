@@ -13,7 +13,6 @@ from dev_cache import cache_exists
 def add_args(
     parser,
     *,
-    include_phase: bool = False,
     include_impersonate: bool = False,
     require_venue: bool = True,
     default_comments: str = "full",
@@ -23,24 +22,23 @@ def add_args(
     parser.add_argument("--username", default=os.environ.get("OPENREVIEW_USERNAME", ""))
     parser.add_argument("--password", default=os.environ.get("OPENREVIEW_PASSWORD", ""))
 
-    if include_phase:
-        parser.add_argument(
-            "--phase",
-            default="review",
-            choices=["review", "commitment"],
-            help="review=ARR review phase, commitment=ACL commitment phase",
-        )
-        parser.add_argument(
-            "--linked-venue-id",
-            default="",
-            help=(
-                "ARR venue ID that commitment papers link back to, "
-                "e.g. aclweb.org/ACL/ARR/2026/February. "
-                "When provided for --phase commitment, all linked ARR reviews and notes are "
-                "bulk-fetched upfront instead of one per paper — significantly faster. "
-                "If omitted, the venue is auto-detected from the first paper link."
-            ),
-        )
+    parser.add_argument(
+        "--phase",
+        default="review",
+        choices=["review", "commitment"],
+        help="review=ARR review phase, commitment=ACL commitment phase",
+    )
+    parser.add_argument(
+        "--linked-venue-id",
+        default="",
+        help=(
+            "ARR venue ID that commitment papers link back to, "
+            "e.g. aclweb.org/ACL/ARR/2026/February. "
+            "When provided for --phase commitment, all linked ARR reviews and notes are "
+            "bulk-fetched upfront instead of one per paper — significantly faster. "
+            "If omitted, the venue is auto-detected from the first paper link."
+        ),
+    )
 
     parser.add_argument(
         "--venue-id",
