@@ -36,7 +36,7 @@ Requires Python 3.9+.
 python generate_review_report.py \
   --username "your@email.com" \
   --password "yourpassword" \
-  --venue_id "aclweb.org/ACL/ARR/2026/January" \
+  --venue-id "aclweb.org/ACL/ARR/2026/January" \
   --me "~Your_Name1"
 ```
 
@@ -53,7 +53,7 @@ Note that SACs are now ACs, so the `--role ac` flag is required to see any paper
 python generate_review_report.py \
   --username "your@email.com" \
   --password "yourpassword" \
-  --venue_id "aclweb.org/ACL/2026/Conference" \
+  --venue-id "aclweb.org/ACL/2026/Conference" \
   --me "~Your_Name1" \
   --phase "commitment" \
   --role "ac"
@@ -76,7 +76,7 @@ Fetches **all** papers across all SAC batches. Intended for Program Chairs. May 
 python generate_pc_report.py \
   --username "your@email.com" \
   --password "yourpassword" \
-  --venue_id "aclweb.org/ACL/ARR/2026/January" \
+  --venue-id "aclweb.org/ACL/ARR/2026/January" \
   --me "~Your_Name1"
 ```
 
@@ -88,7 +88,7 @@ python generate_pc_report.py \
 python generate_pc_report.py \
   --username "your@email.com" \
   --password "yourpassword" \
-  --venue_id "aclweb.org/ACL/2026/Conference" \
+  --venue-id "aclweb.org/ACL/2026/Conference" \
   --me "~Your_Name1" \
   --phase "commitment" \
   --linked-venue-id "aclweb.org/ACL/ARR/2026/January"
@@ -102,7 +102,7 @@ All scripts read these env vars if flags are not supplied:
 export OPENREVIEW_USERNAME="your@email.com"
 export OPENREVIEW_PASSWORD="yourpassword"
 export OPENREVIEW_ID="~Your_Name1"
-python generate_review_report.py --venue_id aclweb.org/ACL/ARR/2025/February
+python generate_review_report.py --venue-id aclweb.org/ACL/ARR/2025/February
 ```
 
 ---
@@ -178,7 +178,7 @@ python generate_review_report.py ... --phase "review" --me "~Target_SAC_Name1" -
 python generate_review_report.py ... --phase "commitment" --me "~Target_SAC_Name1" --impersonate
 ```
 
-You can pass a `GROUP_ID` after the `--impersonate` flag, which corresponds to the authorization group, e.g., `aclweb.org/ACL/ARR/2025/October/Program_Chairs`. If `GROUP_ID` is empty, it will assume to be `<venue_id>/Program_Chairs`. Your own credentials are used to authenticate, and all data is then fetched as the target user. 
+You can pass a `GROUP_ID` after the `--impersonate` flag, which corresponds to the authorization group, e.g., `aclweb.org/ACL/ARR/2025/October/Program_Chairs`. If `GROUP_ID` is empty, it will assume to be `<venue-id>/Program_Chairs`. Your own credentials are used to authenticate, and all data is then fetched as the target user. 
 
 This is useful for verifying exactly what a SAC sees without asking them to run the script themselves. Can be combined with `--save-cache` / `--use-cache` for fast iteration.
 
