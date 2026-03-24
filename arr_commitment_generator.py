@@ -585,6 +585,45 @@ class CommitmentReportGenerator(ARRReportGenerator):
             hd['meta_review']['counts'] = hist.tolist()
         return hd
 
+    def _compute_decision_stats(self):
+        """Compute recommendation, presentation, and award breakdowns for the template."""
+        rec_breakdown = {}
+        pres_breakdown = {}
+        award_breakdown = {}
+        recommended_papers = 0
+        has_presentation = 0
+        has_award = 0
+        for p in self.papers_data:
+            rec = str(p.get('Recommendation', '')).strip()
+            if rec:
+                rec_breakdown[rec] = rec_breakdown.get(rec, 0) + 1
+                recommended_papers += 1
+            pres = str(p.get('Presentation Mode', '')).strip()
+            if pres:
+                pres_breakdown[pres] = pres_breakdown.get(pres, 0) + 1
+                has_presentation += 1
+            raw_award = str(p.get('Award', '')).strip()
+            if raw_award:
+                individual = [a.strip() for a in raw_award.split(',') if a.strip()]
+                real_awards = [a for a in individual
+                               if 'do not consider' not in a.lower()
+                               and 'none' not in a.lower()]
+                if real_awards:
+                    has_award += 1
+                for a in real_awards:
+                    award_breakdown[a] = award_breakdown.get(a, 0) + 1
+        total = len(self.papers_data)
+        return {
+            'total_papers': total,
+            'recommended_papers': recommended_papers,
+            'recommended_pct': round(100 * recommended_papers / total, 1) if total else 0,
+            'has_presentation': has_presentation,
+            'has_award': has_award,
+            'rec_breakdown': rec_breakdown,
+            'pres_breakdown': pres_breakdown,
+            'award_breakdown': award_breakdown,
+        }
+
     def generate_report(self, output_dir=".", filename="commitment_report.html"):
         os.makedirs(output_dir, exist_ok=True)
 
@@ -619,6 +658,7 @@ class CommitmentReportGenerator(ARRReportGenerator):
             "paper_type_distribution": self.generate_paper_type_distribution(),
             "contribution_type_distribution": self.generate_contribution_type_distribution(),
             "score_scatter_data":      self.generate_score_scatter_data(),
+            "decision_stats":          self._compute_decision_stats(),
         }
 
         template_dir = self._resolve_template_dir()

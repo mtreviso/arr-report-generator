@@ -1,0 +1,243 @@
+{# Commitment-phase attention queue with rec/pres/award columns #}
+<style>
+  #cmt-attention-table th, #cmt-attention-table td {
+    padding: 5px 6px !important; outline: none !important; text-align: left !important;
+  }
+  #cmt-attention-table thead th {
+    padding-top: 10px !important; padding-bottom: 10px !important; font-weight: 400 !important;
+  }
+  .dt-column-order { display: none !important; }
+  #cmt-attention-table thead th::after { content: ' ↕'; font-size: 0.65rem; color: #9ca3af; opacity: 0.6; }
+  #cmt-attention-table thead th.dt-ordering-asc::after  { content: ' ↑'; color: #4f46e5; opacity: 1; }
+  #cmt-attention-table thead th.dt-ordering-desc::after { content: ' ↓'; color: #4f46e5; opacity: 1; }
+  .award-icon { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; font-size: 0.6rem; }
+  .award-best      { background: #fef3c7; color: #d97706; }
+  .award-outstanding { background: #dbeafe; color: #2563eb; }
+  .award-sac       { background: #f3e8ff; color: #7c3aed; }
+  .award-resource  { background: #d1fae5; color: #059669; }
+  .award-social    { background: #fce7f3; color: #db2777; }
+  .award-other     { background: #f1f5f9; color: #64748b; }
+</style>
+
+<div class="px-2 py-4 sm:p-5">
+    {% set has_ac = attention_has_ac | default(true) %}
+    {% if not attention_papers %}
+    <div class="flex items-center gap-2 text-green-700 bg-green-50 rounded-lg p-4 border border-green-200">
+        <span class="text-lg">✓</span>
+        <span class="text-sm">No papers currently require attention.</span>
+    </div>
+    {% else %}
+
+    <div class="bg-gray-50 rounded-lg border border-gray-200 p-4 mb-4">
+        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Filters</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Issues</label>
+                <select id="cmt-attn-issues" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">All</option><option value="1">Has issue</option><option value="0">No issue</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Ethics</label>
+                <select id="cmt-attn-ethics" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">All</option><option value="1">Ethics flagged</option><option value="0">No flag</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Missing Reviews</label>
+                <select id="cmt-attn-missing" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">All</option><option value="1">Has missing</option><option value="0">Complete</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Recommendation</label>
+                <div id="cmt-attn-rec-filter"></div>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Award</label>
+                <select id="cmt-attn-award" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">All</option>
+                    <option value="best_paper">Best Paper</option><option value="outstanding">Outstanding Paper</option>
+                    <option value="sac_highlight">SAC Highlight</option><option value="resource">Resource Award</option>
+                    <option value="social_impact">Social Impact</option><option value="none">No award</option><option value="any">Has any award</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Per page</label>
+                <select id="cmt-attn-length" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="25" selected>25</option><option value="50">50</option><option value="100">100</option><option value="-1">All</option>
+                </select>
+            </div>
+        </div>
+        <div class="mt-3 flex items-center gap-3">
+            <div class="flex-1" style="max-width:360px;">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Search</label>
+                <input id="cmt-attn-search" type="text" placeholder="Title, AC…" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+            </div>
+            <div class="flex items-end gap-2">
+                <button id="cmt-attn-reset" class="mt-4 py-2 px-3 text-xs bg-white border border-gray-300 rounded-md text-gray-600 hover:bg-gray-100">Reset</button>
+            </div>
+        </div>
+
+        <div class="mt-6 pt-3 border-t border-gray-200">
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Flag legend</p>
+            <div class="flag-legend-rows">
+                <div class="flag-legend-row">
+                    <div class="flag-legend-item"><span class="flag-badge flag-issue"><i class="fa-solid fa-triangle-exclamation"></i></span><span>Review issue.</span></div>
+                    <div class="flag-legend-item"><span class="flag-badge flag-metaissue"><i class="fa-solid fa-file-circle-exclamation"></i></span><span>Meta-review issue.</span></div>
+                    <div class="flag-legend-item"><span class="flag-badge flag-ethics"><i class="fa-solid fa-scale-balanced"></i></span><span>Ethics concern.</span></div>
+                    <div class="flag-legend-item"><span class="flag-badge flag-emergency"><i class="fa-solid fa-bolt"></i><span class="flag-count">2</span></span><span>Emergency declarations.</span></div>
+                    <div class="flag-legend-item"><span class="flag-badge flag-missing"><i class="fa-solid fa-clock"></i><span class="flag-count">2</span></span><span>Missing reviews.</span></div>
+                </div>
+            </div>
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mt-3 mb-2">Award legend</p>
+            <div class="flag-legend-rows">
+                <div class="flag-legend-row">
+                    <div class="flag-legend-item"><span class="award-icon award-best"><i class="fa-solid fa-trophy"></i></span><span>Best Paper</span></div>
+                    <div class="flag-legend-item"><span class="award-icon award-outstanding"><i class="fa-solid fa-trophy"></i></span><span>Outstanding</span></div>
+                    <div class="flag-legend-item"><span class="award-icon award-sac"><i class="fa-solid fa-trophy"></i></span><span>SAC Highlight</span></div>
+                    <div class="flag-legend-item"><span class="award-icon award-resource"><i class="fa-solid fa-trophy"></i></span><span>Resource</span></div>
+                    <div class="flag-legend-item"><span class="award-icon award-social"><i class="fa-solid fa-trophy"></i></span><span>Social Impact</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="overflow-x-auto w-full">
+        <table id="cmt-attention-table" class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:50px;">#</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:200px;">Title</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:72px;">Type</th>
+                    {% if has_ac %}<th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:120px;">AC</th>{% endif %}
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">Reviews</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:140px;">Flags</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:100px;min-width:100px;">Rec.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:60px;min-width:60px;">Pres.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:44px;min-width:44px;">Award</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for p in attention_papers %}
+                <tr data-has-issue="{{ 1 if p['Has Review Issue'] else 0 }}"
+                    data-ethics="{{ 1 if p.get('Ethics Flag') else 0 }}"
+                    data-missing="{{ 1 if p.get('Has Missing Reviews', p['Completed Reviews'] < p['Expected Reviews']) else 0 }}"
+                    data-rec="{{ p.get('Recommendation', '') | e }}"
+                    data-pres="{{ p.get('Presentation Mode', '') | e }}"
+                    data-award="{{ p.get('Award', '') | e }}">
+                    <td class="whitespace-nowrap text-gray-700">{{ p['Paper #'] }}</td>
+                    <td class="text-gray-700" style="max-width:240px;"><div class="truncate"><a href="https://openreview.net/forum?id={{ p['Paper ID'] }}" target="_blank" class="text-indigo-600 hover:text-indigo-900 tip tip-left" data-tip="{{ p['Title'] }}">{{ p['Title'] }}</a></div></td>
+                    <td class="whitespace-nowrap text-gray-500">{{ p.get('Paper Type', '') }}</td>
+                    {% if has_ac %}
+                    <td class="whitespace-nowrap text-gray-500">
+                        {% set ac_id = p.get('Area Chair ID') %}
+                        {% if ac_id %}<a href="https://openreview.net/profile?id={{ ac_id }}" target="_blank" class="text-gray-500 hover:underline" style="text-decoration:none;">{{ p.get('Area Chair','') }}</a>
+                        {% else %}{{ p.get('Area Chair','') }}{% endif %}
+                    </td>
+                    {% endif %}
+                    <td class="whitespace-nowrap {% if p['Completed Reviews'] < p['Expected Reviews'] %}text-red-600{% else %}text-gray-500{% endif %}">{{ p['Completed Reviews'] }}/{{ p['Expected Reviews'] }}</td>
+                    <td class="whitespace-nowrap">
+                        <div class="flags-inline">
+                        {% if p['Has Review Issue'] %}<a href="{{ p['Review Issue Link'] }}" target="_blank"><span class="flag-badge flag-issue tip" data-tip="{{ p['Review Issue Count'] }} review issue(s)"><i class="fa-solid fa-triangle-exclamation"></i></span></a>{% endif %}
+                        {% if p.get('Has Meta Review Issue') %}{% if p.get('Meta Review Issue Link') %}<a href="{{ p['Meta Review Issue Link'] }}" target="_blank">{% endif %}<span class="flag-badge flag-metaissue tip" data-tip="Meta-review issue"><i class="fa-solid fa-file-circle-exclamation"></i></span>{% if p.get('Meta Review Issue Link') %}</a>{% endif %}{% endif %}
+                        {% if p.get('Ethics Flag') %}<span class="flag-badge flag-ethics tip" data-tip="Ethics: {{ p['Ethics Flag'] }}"><i class="fa-solid fa-scale-balanced"></i></span>{% endif %}
+                        {% if p.get('Has Emergency Declaration') %}{% if p.get('Emergency Declaration Link') %}<a href="{{ p['Emergency Declaration Link'] }}" target="_blank">{% endif %}<span class="flag-badge flag-emergency tip" data-tip="Emergency: {{ p.get('Emergency Declaration Count', 0) }}"><i class="fa-solid fa-bolt"></i><span class="flag-count">{{ p.get('Emergency Declaration Count', 0) }}</span></span>{% if p.get('Emergency Declaration Link') %}</a>{% endif %}{% endif %}
+                        {% if p.get('Missing Reviews', 0) > 0 %}<span class="flag-badge flag-missing tip" data-tip="{{ p.get('Missing Reviews') }} review(s) missing"><i class="fa-solid fa-clock"></i><span class="flag-count">{{ p.get('Missing Reviews') }}</span></span>{% endif %}
+                        </div>
+                    </td>
+                    <td class="whitespace-nowrap text-gray-500">
+                        {% set rec = p.get('Recommendation', '') %}
+                        {% if rec %}<span class="tip" data-tip="{{ rec }}" style="max-width:100px;display:inline-block;overflow:hidden;text-overflow:ellipsis;">{{ rec | replace("Main Conference", "Main") | replace("Borderline Findings", "Border. Findings") | replace("Borderline Main Conference", "Border. Main") }}</span>{% else %}–{% endif %}
+                    </td>
+                    <td class="whitespace-nowrap text-gray-500">
+                        {% set pres = p.get('Presentation Mode', '') %}
+                        {% if pres %}<span class="tip" data-tip="{{ pres }}">{{ pres | replace("Oral Presentation", "Oral") }}</span>{% else %}–{% endif %}
+                    </td>
+                    <td class="whitespace-nowrap">
+                        {% set aw = p.get('Award', '') %}
+                        {% if aw %}
+                            {% set award_parts = aw.split(',') %}
+                            {% set ns = namespace(has_real=false) %}
+                            {% for apart in award_parts %}
+                                {% set a = apart.strip() %}
+                                {% set al = a | lower %}
+                                {% if a and 'do not consider' not in al and al != 'none' %}
+                                    {% set ns.has_real = true %}
+                                    {% if 'best paper' in al %}<span class="award-icon award-best tip" data-tip="{{ a }}"><i class="fa-solid fa-trophy"></i></span>
+                                    {% elif 'outstanding' in al %}<span class="award-icon award-outstanding tip" data-tip="{{ a }}"><i class="fa-solid fa-trophy"></i></span>
+                                    {% elif 'highlight' in al or 'sac' in al %}<span class="award-icon award-sac tip" data-tip="{{ a }}"><i class="fa-solid fa-trophy"></i></span>
+                                    {% elif 'resource' in al %}<span class="award-icon award-resource tip" data-tip="{{ a }}"><i class="fa-solid fa-trophy"></i></span>
+                                    {% elif 'social' in al or 'impact' in al %}<span class="award-icon award-social tip" data-tip="{{ a }}"><i class="fa-solid fa-trophy"></i></span>
+                                    {% else %}<span class="award-icon award-other tip" data-tip="{{ a }}"><i class="fa-solid fa-trophy"></i></span>
+                                    {% endif %}
+                                {% endif %}
+                            {% endfor %}
+                            {% if not ns.has_real %}–{% endif %}
+                        {% else %}–{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+$(document).ready(function() {
+    if (!$('#cmt-attention-table tbody tr').length) return;
+    function esc(v){return window.ReportCommon?window.ReportCommon.escapeHtml(v??''):String(v??'');}
+    function selectHtml(id,label,values){
+        var h=document.getElementById(id);if(!h)return;
+        var opts=Array.from(new Set(values.filter(Boolean))).sort();
+        h.innerHTML='<select class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none"><option value="">'+label+'</option>'+
+            opts.map(function(v){return '<option value="'+esc(v)+'">'+esc(v)+'</option>';}).join('')+'</select>';
+    }
+    function classifyAward(raw){
+        if(!raw)return[];var parts=raw.split(',').map(function(s){return s.trim().toLowerCase();}).filter(Boolean);var cats=[];
+        parts.forEach(function(p){if(p.indexOf('do not consider')!==-1||p==='none')return;
+            if(p.indexOf('best paper')!==-1)cats.push('best_paper');if(p.indexOf('outstanding')!==-1)cats.push('outstanding');
+            if(p.indexOf('highlight')!==-1||p.indexOf('sac')!==-1)cats.push('sac_highlight');
+            if(p.indexOf('resource')!==-1)cats.push('resource');if(p.indexOf('social')!==-1||p.indexOf('impact')!==-1)cats.push('social_impact');
+        });return cats;
+    }
+    var recs=[];
+    $('#cmt-attention-table tbody tr').each(function(){var r=$(this).attr('data-rec');if(r)recs.push(r);});
+    selectHtml('cmt-attn-rec-filter','All',recs);
+    (function(){var s=document.querySelector('#cmt-attn-rec-filter select');
+        if(s){var o=document.createElement('option');o.value='__missing__';o.textContent='\u26A0 Missing rec.';s.insertBefore(o,s.options[1]);}
+    })();
+
+    var dt=$('#cmt-attention-table').DataTable({deferRender:true,pageLength:25,autoWidth:false,
+        layout:{topStart:null,topEnd:null,bottomStart:'info',bottomEnd:'paging'},order:[[0,'asc']]});
+
+    $.fn.dataTable.ext.search.push(function(settings,data,dataIndex){
+        if(settings.nTable.id!=='cmt-attention-table')return true;
+        var row=$(settings.aoData[dataIndex].nTr);
+        var issues=$('#cmt-attn-issues').val(),ethics=$('#cmt-attn-ethics').val(),missing=$('#cmt-attn-missing').val();
+        var rH=document.getElementById('cmt-attn-rec-filter');
+        var rec=rH&&rH.querySelector('select')?rH.querySelector('select').value:'';
+        var award=$('#cmt-attn-award').val();
+        if(issues&&row.attr('data-has-issue')!==issues)return false;
+        if(ethics&&row.attr('data-ethics')!==ethics)return false;
+        if(missing&&row.attr('data-missing')!==missing)return false;
+        if(rec==='__missing__'&&(row.attr('data-rec')||'').trim())return false;
+        if(rec&&rec!=='__missing__'&&row.attr('data-rec')!==rec)return false;
+        if(award){var cats=classifyAward(row.attr('data-award')||'');
+            if(award==='none'&&cats.length>0)return false;if(award==='any'&&cats.length===0)return false;
+            if(award!=='none'&&award!=='any'&&cats.indexOf(award)===-1)return false;}
+        return true;
+    });
+    $('#cmt-attn-issues,#cmt-attn-ethics,#cmt-attn-missing,#cmt-attn-award').on('change',function(){dt.draw();});
+    $('#cmt-attn-rec-filter').on('change','select',function(){dt.draw();});
+    $('#cmt-attn-search').on('input',function(){dt.search(this.value).draw();});
+    $('#cmt-attn-length').on('change',function(){dt.page.len(this.value).draw();});
+    $('#cmt-attn-reset').on('click',function(){
+        $('#cmt-attn-issues,#cmt-attn-ethics,#cmt-attn-missing,#cmt-attn-award').val('');
+        var s=document.querySelector('#cmt-attn-rec-filter select');if(s)s.value='';
+        $('#cmt-attn-search').val('');$('#cmt-attn-length').val('25');
+        dt.search('').page.len(25).draw();
+    });
+});
+</script>
