@@ -85,6 +85,7 @@ def _build_commitment_template_data(gen):
         "paper_type_distribution": gen.generate_paper_type_distribution(),
         "contribution_type_distribution": gen.generate_contribution_type_distribution(),
         "score_scatter_data": gen.generate_score_scatter_data(),
+        "decision_stats": gen._compute_decision_stats(),
     }
 
 

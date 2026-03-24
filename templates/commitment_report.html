@@ -62,7 +62,7 @@
                     <h2 class="text-xl font-semibold text-gray-800">Needs Attention</h2>
                     <p class="mt-1 text-sm text-gray-500">Papers with issue reports, emergency activity, ethics flags, or incomplete review sets.</p>
                 </div>
-                {% include 'components/attention_queue.html' %}
+                {% include 'components/commitment_attention.html' %}
             </div>
         </div>
 
@@ -81,6 +81,13 @@
 
         <!-- Analytics Tab -->
         <div id="analytics-tab" class="tab-content">
+            <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
+                <div class="px-4 pt-5 sm:px-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Decision Breakdown</h2>
+                    <p class="mt-1 text-sm text-gray-500">Recommendation, presentation mode, and award nomination distributions.</p>
+                </div>
+                {% include 'components/commitment_decision_charts.html' %}
+            </div>
             <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
                 <div class="px-4 pt-5 sm:px-6">
                     <h2 class="text-xl font-semibold text-gray-800">Score Distribution</h2>

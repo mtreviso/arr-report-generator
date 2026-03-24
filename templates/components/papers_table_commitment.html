@@ -1,106 +1,90 @@
 {#
-  Columns (0-indexed):
+  Commitment Papers Table (AC/SAC view)
+  Column order:
   0  #
   1  Title
   2  Type
-  3  Flags   ← Preprint + Rev.Issue + Meta Issue + Confidential + Low Confidence
-  4  Reviews
-  5  Ready
-  6  Confidence
-  7  Soundness
-  8  Excitement
-  9  Overall
-  10 Meta
-  11 Ethics
-  12 Preprint
-  13 Recommendation
-  14 Presentation
-  15 Award
+  3  Flags (orderable by count)
+  4  Recommendation (shortened)
+  5  Presentation (shortened)
+  6  Award (icons)
+  7  Reviews
+  8  Confidence
+  9  Soundness
+  10 Excitement
+  11 Overall
+  12 Meta
 #}
 <style>
   #papers-table { font-size: 0.75rem; }
   #papers-table th, #papers-table td {
-    padding: 5px 6px !important;
-    outline: none !important;
+    padding: 5px 6px !important; outline: none !important;
   }
   #papers-table thead th {
-    padding-top: 10px !important;
-    padding-bottom: 10px !important;
-    font-weight: 400 !important;
-    text-align: left !important;
+    padding-top: 10px !important; padding-bottom: 10px !important;
+    font-weight: 400 !important; text-align: left !important;
   }
-  /* Hide DT2's horizontal scrollbar bar div */
   .dt-scroll-foot { display: none !important; }
 
-  /* Tooltip */
-  .tip {
-    position: relative;
-    display: inline-flex;
-    cursor: default;
-  }
+  .tip { position: relative; display: inline-flex; cursor: default; }
   .tip::after {
-    content: attr(data-tip);
-    position: fixed;
-    top: var(--ty, 0);
-    left: var(--tx, 0);
+    content: attr(data-tip); position: fixed;
+    top: var(--ty, 0); left: var(--tx, 0);
     transform: translate(-50%, -100%);
-    background: #1e293b;
-    color: #f8fafc;
-    padding: 5px 9px;
-    border-radius: 5px;
-    font-size: 0.68rem;
-    font-weight: 400;
-    white-space: pre-line;
-    max-width: 240px;
-    text-align: center;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.12s ease;
-    z-index: 99999;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-    line-height: 1.45;
+    background: #1e293b; color: #f8fafc;
+    padding: 5px 9px; border-radius: 5px;
+    font-size: 0.68rem; font-weight: 400;
+    white-space: pre-line; max-width: 240px;
+    text-align: center; pointer-events: none;
+    opacity: 0; transition: opacity 0.12s ease;
+    z-index: 99999; box-shadow: 0 2px 8px rgba(0,0,0,0.25); line-height: 1.45;
   }
   .tip::before {
-    content: '';
-    position: fixed;
-    top: var(--ay, 0);
-    left: var(--tx, 0);
+    content: ''; position: fixed;
+    top: var(--ay, 0); left: var(--tx, 0);
     transform: translate(-50%, -100%);
-    border: 5px solid transparent;
-    border-top-color: #1e293b;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.12s ease;
-    z-index: 99999;
+    border: 5px solid transparent; border-top-color: #1e293b;
+    pointer-events: none; opacity: 0; transition: opacity 0.12s ease; z-index: 99999;
   }
-  .tip:hover::after,
-  .tip:hover::before { opacity: 1; }
+  .tip:hover::after, .tip:hover::before { opacity: 1; }
+  .tip-left::after { transform: translate(0, -100%); }
+
+  .award-icon { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; font-size: 0.6rem; }
+  .award-best      { background: #fef3c7; color: #d97706; }
+  .award-outstanding { background: #dbeafe; color: #2563eb; }
+  .award-sac       { background: #f3e8ff; color: #7c3aed; }
+  .award-resource  { background: #d1fae5; color: #059669; }
+  .award-social    { background: #fce7f3; color: #db2777; }
+  .award-other     { background: #f1f5f9; color: #64748b; }
 </style>
 
 <div class="px-2 py-4 sm:p-5">
-    <!-- Filter bar -->
     <div class="mb-5 bg-gray-50 p-4 rounded-lg">
         <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Filters</h3>
         <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Paper Type</label>
                 <div id="paper-type-filter"></div>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Ready</label>
-                <select id="ready-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
-                    <option value="">All</option>
-                    <option value="1">&#10003; Ready</option>
-                    <option value="0">Not ready</option>
-                </select>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Recommendation</label>
+                <div id="recommendation-filter"></div>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Preprint</label>
-                <select id="preprint-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Presentation</label>
+                <div id="presentation-filter"></div>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Award</label>
+                <select id="award-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
                     <option value="">All</option>
-                    <option value="1">Has preprint</option>
-                    <option value="0">No preprint</option>
+                    <option value="best_paper">Best Paper</option>
+                    <option value="outstanding">Outstanding Paper</option>
+                    <option value="sac_highlight">SAC Highlight</option>
+                    <option value="resource">Resource Award</option>
+                    <option value="social_impact">Social Impact</option>
+                    <option value="none">No award</option>
+                    <option value="any">Has any award</option>
                 </select>
             </div>
             <div>
@@ -128,67 +112,23 @@
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Confidential</label>
-                <select id="conf-comment-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
-                    <option value="">All</option>
-                    <option value="1">Has confidential</option>
-                    <option value="0">None</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Recommendation</label>
-                <div id="recommendation-filter"></div>
-            </div>
-            <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Min. Overall</label>
                 <select id="overall-min-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
                     <option value="">Any</option>
-                    <option value="1">&#8805; 1</option>
-                    <option value="2">&#8805; 2</option>
-                    <option value="3">&#8805; 3</option>
-                    <option value="4">&#8805; 4</option>
-                    <option value="5">&#8805; 5</option>
+                    <option value="1">&#8805; 1</option><option value="2">&#8805; 2</option><option value="3">&#8805; 3</option><option value="4">&#8805; 4</option><option value="5">&#8805; 5</option>
                 </select>
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Max. Overall</label>
                 <select id="overall-max-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
                     <option value="">Any</option>
-                    <option value="2">&#8804; 2</option>
-                    <option value="3">&#8804; 3</option>
-                    <option value="4">&#8804; 4</option>
-                    <option value="5">&#8804; 5</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Min. Excitement</label>
-                <select id="exc-min-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
-                    <option value="">Any</option>
-                    <option value="1">&#8805; 1</option>
-                    <option value="2">&#8805; 2</option>
-                    <option value="3">&#8805; 3</option>
-                    <option value="4">&#8805; 4</option>
-                    <option value="5">&#8805; 5</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Min. Confidence</label>
-                <select id="conf-min-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
-                    <option value="">Any</option>
-                    <option value="1">&#8805; 1</option>
-                    <option value="2">&#8805; 2</option>
-                    <option value="3">&#8805; 3</option>
-                    <option value="4">&#8805; 4</option>
-                    <option value="5">&#8805; 5</option>
+                    <option value="2">&#8804; 2</option><option value="3">&#8804; 3</option><option value="4">&#8804; 4</option><option value="5">&#8804; 5</option>
                 </select>
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Per page</label>
                 <select id="papers-length-select" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
-                    <option value="25">25</option>
-                    <option value="50">50</option>
-                    <option value="100" selected>100</option>
-                    <option value="-1">All</option>
+                    <option value="25">25</option><option value="50">50</option><option value="100" selected>100</option><option value="-1">All</option>
                 </select>
             </div>
             <div class="md:col-span-2">
@@ -196,21 +136,26 @@
                 <input id="papers-search-input" type="text" placeholder="Search papers..." class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
             </div>
 
-            <!-- Flag legend -->
             <div class="lg:col-span-6 mt-1 pt-3 border-t border-gray-200">
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Flag legend</p>
                 <div class="flag-legend-rows">
                     <div class="flag-legend-row">
                         <div class="flag-legend-item"><span class="flag-badge flag-issue"><i class="fa-solid fa-triangle-exclamation"></i></span><span>Review issue report.</span></div>
-                        <div class="flag-legend-item"><span class="flag-badge flag-warn"><i class="fa-solid fa-circle-exclamation"></i></span><span>Low-confidence review detected (confidence ≤ 2).</span></div>
-                        <div class="flag-legend-item"><span class="flag-badge flag-info"><i class="fa-solid fa-lock"></i></span><span>Confidential comment present.</span></div>
                         <div class="flag-legend-item"><span class="flag-badge flag-metaissue"><i class="fa-solid fa-file-circle-exclamation"></i></span><span>Meta-review issue report.</span></div>
+                        <div class="flag-legend-item"><span class="flag-badge flag-warn"><i class="fa-solid fa-circle-exclamation"></i></span><span>Low-confidence review.</span></div>
+                        <div class="flag-legend-item"><span class="flag-badge flag-info"><i class="fa-solid fa-lock"></i></span><span>Confidential comment.</span></div>
+                        <div class="flag-legend-item"><span class="flag-badge flag-nonanon"><i class="fa-solid fa-link"></i></span><span>Public preprint.</span></div>
+                        <div class="flag-legend-item"><span class="flag-badge flag-emergency"><i class="fa-solid fa-bolt"></i><span class="flag-count">2</span></span><span>Emergency declarations.</span></div>
                     </div>
+                </div>
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mt-3 mb-2">Award legend</p>
+                <div class="flag-legend-rows">
                     <div class="flag-legend-row">
-                        <div class="flag-legend-item"><span class="flag-badge flag-nonanon"><i class="fa-solid fa-link"></i></span><span>Public preprint detected.</span></div>
-                    </div>
-                    <div class="flag-legend-row">
-                        <div class="flag-legend-item"><span class="flag-badge flag-emergency"><i class="fa-solid fa-bolt"></i><span class="flag-count">2</span></span><span>Emergency declaration count on the paper.</span></div>
+                        <div class="flag-legend-item"><span class="award-icon award-best"><i class="fa-solid fa-trophy"></i></span><span>Best Paper</span></div>
+                        <div class="flag-legend-item"><span class="award-icon award-outstanding"><i class="fa-solid fa-trophy"></i></span><span>Outstanding Paper</span></div>
+                        <div class="flag-legend-item"><span class="award-icon award-sac"><i class="fa-solid fa-trophy"></i></span><span>SAC Highlight</span></div>
+                        <div class="flag-legend-item"><span class="award-icon award-resource"><i class="fa-solid fa-trophy"></i></span><span>Resource Award</span></div>
+                        <div class="flag-legend-item"><span class="award-icon award-social"><i class="fa-solid fa-trophy"></i></span><span>Social Impact Award</span></div>
                     </div>
                 </div>
             </div>
@@ -221,22 +166,19 @@
         <table id="papers-table" class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:36px;width:36px;" title="Paper number">#</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:36px;width:36px;">#</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:220px;">Title</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:48px;width:48px;">Type</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;width:80px;" title="Issue, ethics, emergency, preprint, and other paper flags">Flags</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:60px;width:60px;" title="Completed reviews divided by expected reviews for this paper">Reviews</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:42px;width:42px;" title="Whether this paper already has all expected reviews">Ready</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:110px;" title="Average reviewer confidence score">Confidence</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;" title="Average reviewer soundness score">Soundness</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;" title="Average reviewer excitement or significance score">Excitement</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;" title="Average reviewer overall assessment score">Overall</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:65px;width:65px;" title="Area Chair or meta-review score for this paper">AC Score</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:70px;width:70px;" title="Ethics concern flag for this paper">Ethics</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:75px;width:75px;" title="Whether the paper has a detected or declared preprint">Preprint</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:105px;" title="Publication recommendation or decision-related field">Recommendation</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;" title="Preferred or assigned presentation format">Presentation</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Award or award-nomination indicator">Award</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;width:80px;" title="Flags (sortable by count)">Flags</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:100px;min-width:100px;">Rec.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:60px;min-width:60px;">Pres.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:44px;min-width:44px;">Award</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:60px;width:60px;">Reviews</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">Confidence</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">Soundness</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">Excitement</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">Overall</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:65px;width:65px;">AC Score</th>
                 </tr>
             </thead>
         </table>
@@ -249,157 +191,191 @@
     function esc(v) { return window.ReportCommon.escapeHtml(v ?? ''); }
     function parseAvg(v) { return window.ReportCommon.parseAvg(v); }
     function icon(name) { return '<i class="fa-solid '+name+'" aria-hidden="true"></i>'; }
-    function badgeHtml(cls, iconName, tip, label='') {
-        const text = label ? '<span class="flag-count">'+esc(label)+'</span>' : '';
+    function badgeHtml(cls, iconName, tip, label) {
+        var text = label ? '<span class="flag-count">'+esc(label)+'</span>' : '';
         return '<span class="tip flag-badge '+cls+'" data-tip="'+tip+'">'+icon(iconName)+text+'</span>';
     }
     function selectHtml(id, label, values) {
-        const host = document.getElementById(id);
+        var host = document.getElementById(id);
         if (!host) return;
-        const opts = Array.from(new Set(values.filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b)));
+        var opts = Array.from(new Set(values.filter(Boolean))).sort(function(a,b){return String(a).localeCompare(String(b));});
         host.innerHTML = '<select class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none"><option value="">'+label+'</option>' +
-            opts.map(v => '<option value="'+esc(v)+'">'+esc(v)+'</option>').join('') + '</select>';
+            opts.map(function(v) { return '<option value="'+esc(v)+'">'+esc(v)+'</option>'; }).join('') + '</select>';
     }
     function firstSelectValue(id) {
-        const host = document.getElementById(id);
+        var host = document.getElementById(id);
         return host && host.querySelector('select') ? host.querySelector('select').value : '';
+    }
+    function shortenRec(v) {
+        if (!v) return '';
+        return v.replace(/^Main Conference$/i, 'Main').replace(/^Borderline Findings$/i, 'Border. Findings')
+                .replace(/^Borderline Main Conference$/i, 'Border. Main').replace(/^Findings$/i, 'Findings');
+    }
+    function shortenPres(v) {
+        if (!v) return '';
+        return v.replace(/^Oral Presentation$/i, 'Oral');
+    }
+    function classifyAward(raw) {
+        if (!raw) return [];
+        var parts = raw.split(',').map(function(s){return s.trim().toLowerCase();}).filter(Boolean);
+        var cats = [];
+        parts.forEach(function(p) {
+            if (p.indexOf('do not consider') !== -1 || p === 'none') return;
+            if (p.indexOf('best paper') !== -1)     cats.push('best_paper');
+            if (p.indexOf('outstanding') !== -1)    cats.push('outstanding');
+            if (p.indexOf('highlight') !== -1 || p.indexOf('sac') !== -1) cats.push('sac_highlight');
+            if (p.indexOf('resource') !== -1)       cats.push('resource');
+            if (p.indexOf('social') !== -1 || p.indexOf('impact') !== -1) cats.push('social_impact');
+        });
+        return cats;
+    }
+    function awardIconHtml(award) {
+        if (!award) return '&#8211;';
+        var parts = award.split(',').map(function(s){return s.trim();}).filter(Boolean);
+        var real = parts.filter(function(a) { var l=a.toLowerCase(); return l.indexOf('do not consider')===-1 && l!=='none'; });
+        if (!real.length) return '&#8211;';
+        return real.map(function(a) {
+            var l = a.toLowerCase(), cls = 'award-other';
+            if (l.indexOf('best paper')!==-1) cls='award-best';
+            else if (l.indexOf('outstanding')!==-1) cls='award-outstanding';
+            else if (l.indexOf('highlight')!==-1||l.indexOf('sac')!==-1) cls='award-sac';
+            else if (l.indexOf('resource')!==-1) cls='award-resource';
+            else if (l.indexOf('social')!==-1||l.indexOf('impact')!==-1) cls='award-social';
+            return '<span class="award-icon '+cls+' tip" data-tip="'+esc(a)+'"><i class="fa-solid fa-trophy"></i></span>';
+        }).join('');
     }
     function scoreCell(displayValue, listValue) {
         if (!displayValue) return '&#8211;';
-        const tip = listValue ? ' data-tip="Individual scores:&#10;'+esc(listValue)+'"' : '';
+        var tip = listValue ? ' data-tip="Individual scores:&#10;'+esc(listValue)+'"' : '';
         return '<span class="tip"'+tip+'>'+esc(displayValue)+'</span>';
     }
     function titleCell(row) {
-        let html = '<div class="truncate" style="max-width:240px;">' +
-            '<span class="tip tip-left" data-tip="'+esc(row['Title'] || '')+'"><a href="'+esc(row['Submission Link'] || '#')+'" target="_blank" class="text-indigo-600 hover:text-indigo-900">'+esc(row['Title'] || '')+'</a></span>';
-        if (row['Linked Forum']) {
-            html += ' <a href="'+esc(row['Linked Forum'])+'" target="_blank" class="ml-1 text-gray-400 hover:text-gray-600 tip" data-tip="Open ARR submission">&#8599;</a>';
-        }
+        var html = '<div class="truncate" style="max-width:240px;">' +
+            '<span class="tip tip-left" data-tip="'+esc(row['Title']||'')+'"><a href="'+esc(row['Submission Link']||'#')+'" target="_blank" class="text-indigo-600 hover:text-indigo-900">'+esc(row['Title']||'')+'</a></span>';
+        if (row['Linked Forum']) html += ' <a href="'+esc(row['Linked Forum'])+'" target="_blank" class="ml-1 text-gray-400 hover:text-gray-600 tip" data-tip="Open ARR submission">&#8599;</a>';
         html += '</div>';
-        if (row['Resubmission']) {
-            html += '<div class="text-xs text-gray-400 mt-0.5 truncate"><a href="'+esc(row['Resubmission'])+'" target="_blank" class="hover:text-gray-600 tip" data-tip="Previous submission">&#8617; resubmission</a></div>';
-        }
+        if (row['Resubmission']) html += '<div class="text-xs text-gray-400 mt-0.5 truncate"><a href="'+esc(row['Resubmission'])+'" target="_blank" class="hover:text-gray-600 tip" data-tip="Previous submission">&#8617; resubmission</a></div>';
         return html;
     }
     function flagsCell(row) {
-        const parts = [];
-        if ((row['Is Anonymous'] || '').toLowerCase() === 'no') {
-            parts.push(badgeHtml('flag-nonanon', 'fa-link', 'Has public preprint'));
-        }
+        var parts = [];
+        if ((row['Is Anonymous']||'').toLowerCase()==='no') parts.push(badgeHtml('flag-nonanon','fa-link','Has public preprint'));
         if (boolish(row['Has Review Issue'])) {
-            const badge = badgeHtml('flag-issue', 'fa-triangle-exclamation', esc((row['Review Issue Count'] || 0) + ' review issue report(s)') + '&#10;Click to open on OpenReview');
-            parts.push(row['Review Issue Link'] ? '<a href="'+esc(row['Review Issue Link'])+'" target="_blank">'+badge+'</a>' : badge);
+            var b=badgeHtml('flag-issue','fa-triangle-exclamation',esc((row['Review Issue Count']||0)+' review issue(s)')+'&#10;Click to open');
+            parts.push(row['Review Issue Link']?'<a href="'+esc(row['Review Issue Link'])+'" target="_blank">'+b+'</a>':b);
         }
         if (boolish(row['Has Meta Review Issue'])) {
-            const badge = badgeHtml('flag-metaissue', 'fa-file-circle-exclamation', 'Meta-Review Issue Report&#10;Click to open on OpenReview');
-            parts.push(row['Meta Review Issue Link'] ? '<a href="'+esc(row['Meta Review Issue Link'])+'" target="_blank">'+badge+'</a>' : badge);
+            var b2=badgeHtml('flag-metaissue','fa-file-circle-exclamation','Meta-review issue report&#10;Click to open');
+            parts.push(row['Meta Review Issue Link']?'<a href="'+esc(row['Meta Review Issue Link'])+'" target="_blank">'+b2+'</a>':b2);
         }
         if (boolish(row['Has Emergency Declaration'])) {
-            const count = row['Emergency Declaration Count'] || 0;
-            const tip = 'Emergency declaration count: ' + esc(count);
-            const badge = badgeHtml('flag-emergency', 'fa-bolt', tip, count);
-            parts.push(row['Emergency Declaration Link'] ? '<a href="'+esc(row['Emergency Declaration Link'])+'" target="_blank">'+badge+'</a>' : badge);
+            var cnt=row['Emergency Declaration Count']||0;
+            var b3=badgeHtml('flag-emergency','fa-bolt','Emergency declarations: '+esc(cnt),cnt);
+            parts.push(row['Emergency Declaration Link']?'<a href="'+esc(row['Emergency Declaration Link'])+'" target="_blank">'+b3+'</a>':b3);
         }
-        if (boolish(row['Has Confidential'])) {
-            parts.push(badgeHtml('flag-info', 'fa-lock', 'Confidential comment present'));
-        }
-        if (boolish(row['Has Low Confidence'])) {
-            parts.push(badgeHtml('flag-warn', 'fa-circle-exclamation', 'Low confidence reviewer(s)&#10;' + esc(row['Low Confidence Reviewers'] || '')));
-        }
+        if (boolish(row['Has Confidential'])) parts.push(badgeHtml('flag-info','fa-lock','Confidential comment present'));
+        if (boolish(row['Has Low Confidence'])) parts.push(badgeHtml('flag-warn','fa-circle-exclamation','Low confidence reviewer(s)&#10;'+esc(row['Low Confidence Reviewers']||'')));
         if (!parts.length) return '<span class="text-gray-300">&#8211;</span>';
         return '<div class="flags-inline">'+parts.join('')+'</div>';
     }
+    function countFlags(row) {
+        return (boolish(row['Has Review Issue'])?1:0) + (boolish(row['Has Meta Review Issue'])?1:0) +
+               (boolish(row['Has Low Confidence'])?1:0) + (row['Ethics Flag']?1:0) +
+               (boolish(row['Has Confidential'])?1:0) + (boolish(row['Has Emergency Declaration'])?1:0) +
+               ((row['Is Anonymous']||'').toLowerCase()==='no'?1:0);
+    }
 
     function initCommitmentPapers() {
-        const raw = window.ReportCommon.parseJsonScript('papers-json') || [];
+        var raw = window.ReportCommon.parseJsonScript('papers-json') || [];
         if (!raw.length) return;
-        const rows = raw.map(row => ({
-            ...row,
-            __ready: row['Recommendation'] ? '1' : '0',
-            __preprint: ((row['Is Anonymous'] || '').toLowerCase() === 'no') ? '1' : '0',
-            __rev_issue: boolish(row['Has Review Issue']) ? '1' : '0',
-            __meta_issue: boolish(row['Has Meta Review Issue']) ? '1' : '0',
-            __low_conf: boolish(row['Has Low Confidence']) ? '1' : '0',
-            __has_confidential: boolish(row['Has Confidential']) ? '1' : '0',
-            __overall: parseAvg(row['Overall Assessment']),
-            __excitement: parseAvg(row['Excitement Score']),
-            __confidence: parseAvg(row['Reviewer Confidence'])
-        }));
+        var rows = raw.map(function(row) {
+            return Object.assign({}, row, {
+                __preprint: ((row['Is Anonymous']||'').toLowerCase()==='no')?'1':'0',
+                __rev_issue: boolish(row['Has Review Issue'])?'1':'0',
+                __meta_issue: boolish(row['Has Meta Review Issue'])?'1':'0',
+                __low_conf: boolish(row['Has Low Confidence'])?'1':'0',
+                __overall: parseAvg(row['Overall Assessment']),
+                __flag_count: countFlags(row),
+                __award_cats: classifyAward(row['Award'])
+            });
+        });
 
-        selectHtml('paper-type-filter', 'All Types', rows.map(r => r['Paper Type']));
-        selectHtml('recommendation-filter', 'All', rows.map(r => r['Recommendation']).filter(v => v && v !== '–'));
+        selectHtml('paper-type-filter', 'All Types', rows.map(function(r){return r['Paper Type'];}));
+        selectHtml('recommendation-filter', 'All', rows.map(function(r){return r['Recommendation'];}).filter(function(v){return v&&v!=='–';}));
+        selectHtml('presentation-filter', 'All', rows.map(function(r){return r['Presentation Mode'];}).filter(function(v){return v&&v!=='–';}));
+        /* Add "Missing rec." option */
+        (function(){
+            var s=document.querySelector('#recommendation-filter select');
+            if(s){var o=document.createElement('option');o.value='__missing__';o.textContent='Missing recommendation';s.insertBefore(o,s.options[1]);}
+        })();
 
         $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
             if (settings.nTable.id !== 'papers-table') return true;
-            const row = rows[dataIndex];
-            const ready       = $('#ready-filter').val();
-            const preprint    = $('#preprint-filter').val();
-            const revIssue    = $('#rev-issue-filter').val();
-            const metaIssue   = $('#meta-issue-filter').val();
-            const lconf       = $('#lowconf-filter').val();
-            const confComment = $('#conf-comment-filter').val();
-            const overallMin  = $('#overall-min-filter').val();
-            const overallMax  = $('#overall-max-filter').val();
-            const excMin      = $('#exc-min-filter').val();
-            const confMin     = $('#conf-min-filter').val();
-            const type        = firstSelectValue('paper-type-filter');
-            const rec         = firstSelectValue('recommendation-filter');
+            var row = rows[dataIndex];
+            var type=firstSelectValue('paper-type-filter'), rec=firstSelectValue('recommendation-filter'), pres=firstSelectValue('presentation-filter');
+            var revIssue=$('#rev-issue-filter').val(), metaIssue=$('#meta-issue-filter').val();
+            var lconf=$('#lowconf-filter').val(), oMin=$('#overall-min-filter').val(), oMax=$('#overall-max-filter').val();
+            var award=$('#award-filter').val();
 
-            if (type && row['Paper Type'] !== type) return false;
-            if (rec && row['Recommendation'] !== rec) return false;
-            if (ready && row.__ready !== ready) return false;
-            if (preprint && row.__preprint !== preprint) return false;
-            if (revIssue && row.__rev_issue !== revIssue) return false;
-            if (metaIssue && row.__meta_issue !== metaIssue) return false;
-            if (lconf && row.__low_conf !== lconf) return false;
-            if (confComment && row.__has_confidential !== confComment) return false;
-            if (overallMin && (row.__overall === null || row.__overall < parseFloat(overallMin))) return false;
-            if (overallMax && (row.__overall === null || row.__overall > parseFloat(overallMax))) return false;
-            if (excMin && (row.__excitement === null || row.__excitement < parseFloat(excMin))) return false;
-            if (confMin && (row.__confidence === null || row.__confidence < parseFloat(confMin))) return false;
+            if (type && row['Paper Type']!==type) return false;
+            if (rec==='__missing__' && row['Recommendation'] && row['Recommendation'].trim()) return false;
+            if (rec && rec!=='__missing__' && row['Recommendation']!==rec) return false;
+            if (pres && row['Presentation Mode']!==pres) return false;
+            if (award) {
+                var cats=row.__award_cats;
+                if (award==='none'&&cats.length>0) return false;
+                if (award==='any'&&cats.length===0) return false;
+                if (award!=='none'&&award!=='any'&&cats.indexOf(award)===-1) return false;
+            }
+            if (revIssue && row.__rev_issue!==revIssue) return false;
+            if (metaIssue && row.__meta_issue!==metaIssue) return false;
+            if (lconf && row.__low_conf!==lconf) return false;
+            if (oMin && (row.__overall===null||row.__overall<parseFloat(oMin))) return false;
+            if (oMax && (row.__overall===null||row.__overall>parseFloat(oMax))) return false;
             return true;
         });
 
-        const dt = $('#papers-table').DataTable({
-            data: rows,
-            deferRender: true,
-            pageLength: 100,
-            autoWidth: false,
+        var dt = $('#papers-table').DataTable({
+            data: rows, deferRender: true, pageLength: 100, autoWidth: false,
             order: [[0, 'asc']],
             layout: { topStart: null, topEnd: null, bottomStart: 'info', bottomEnd: 'paging' },
             columns: [
-                { title: '#', data: 'Paper #', className: 'whitespace-nowrap text-gray-500' },
-                { title: 'Title', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (row['Title'] || '') : titleCell(row); } },
-                { title: 'Type', data: 'Paper Type', className: 'whitespace-nowrap text-gray-500' },
-                { title: 'Flags', data: null, orderable: false, searchable: false, render: function(_, __, row) { return flagsCell(row); } },
-                { title: 'Reviews', data: null, render: function(_, __, row) { return (row['Completed Reviews'] || 0) + '/' + (row['Expected Reviews'] || 0); } },
-                { title: 'Ready', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? row.__ready : (row.__ready === '1' ? '<span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-medium bg-green-100 text-green-700">&#10003;</span>' : '<span class="text-gray-300">&#8211;</span>'); } },
-                { title: 'Confidence', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (row.__confidence ?? -1) : scoreCell(row['Reviewer Confidence'], row['Confidence List']); } },
-                { title: 'Soundness', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (parseAvg(row['Soundness Score']) ?? -1) : scoreCell(row['Soundness Score'], row['Soundness List']); } },
-                { title: 'Excitement', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (row.__excitement ?? -1) : scoreCell(row['Excitement Score'], row['Excitement List']); } },
-                { title: 'Overall', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (row.__overall ?? -1) : scoreCell(row['Overall Assessment'], row['Overall List']); } },
-                { title: 'Meta', data: null, render: function(_, type, row) { return (type === 'sort' || type === 'type') ? (parseAvg(row['Meta Review Score']) ?? -1) : (row['Meta Review Score'] ? esc(row['Meta Review Score']) : '&#8211;'); } },
-                { title: 'Ethics', data: null, render: function(_, type, row) { return type === 'sort' || type === 'type' ? (row['Ethics Flag'] || '') : (row['Ethics Flag'] ? '<span class="text-red-600">'+esc(row['Ethics Flag'])+'</span>' : '&#8211;'); } },
-                { title: 'Preprint', data: null, render: function(_, type, row) { return type === 'sort' || type === 'type' ? (row['Preprint Flag'] || '') : (row['Preprint Flag'] ? '<span class="text-amber-600">'+esc(row['Preprint Flag'])+'</span>' : '&#8211;'); } },
-                { title: 'Recommendation', data: null, render: function(_, type, row) { return type === 'sort' || type === 'type' ? (row['Recommendation'] || '') : (row['Recommendation'] ? esc(row['Recommendation']) : '&#8211;'); } },
-                { title: 'Presentation', data: null, render: function(_, type, row) { return type === 'sort' || type === 'type' ? (row['Presentation Mode'] || '') : esc(row['Presentation Mode'] || '–'); } },
-                { title: 'Award', data: null, render: function(_, type, row) { return type === 'sort' || type === 'type' ? (row['Award'] || '') : (row['Award'] ? '<span class="text-yellow-600 font-semibold">'+esc(row['Award'])+'</span>' : '&#8211;'); } }
+                { title:'#', data:'Paper #', className:'whitespace-nowrap text-gray-500' },
+                { title:'Title', data:null, render:function(_,type,row){ return (type==='sort'||type==='type')?(row['Title']||''):titleCell(row); }},
+                { title:'Type', data:'Paper Type', className:'whitespace-nowrap text-gray-500' },
+                { title:'Flags', data:null, searchable:false, render:function(_,type,row){
+                    if(type==='sort'||type==='type') return row.__flag_count; return flagsCell(row); }},
+                { title:'Rec.', data:null, className:'whitespace-nowrap', render:function(_,type,row){
+                    var full=row['Recommendation']||''; if(type==='sort'||type==='type') return full;
+                    if(!full) return '&#8211;';
+                    return '<span class="tip" data-tip="'+esc(full)+'" style="max-width:100px;display:inline-block;overflow:hidden;text-overflow:ellipsis;">'+esc(shortenRec(full))+'</span>';
+                }},
+                { title:'Pres.', data:null, className:'whitespace-nowrap', render:function(_,type,row){
+                    var full=row['Presentation Mode']||''; if(type==='sort'||type==='type') return full;
+                    if(!full) return '&#8211;';
+                    return '<span class="tip" data-tip="'+esc(full)+'">'+esc(shortenPres(full))+'</span>';
+                }},
+                { title:'Award', data:null, render:function(_,type,row){
+                    if(type==='sort'||type==='type') return row['Award']||''; return awardIconHtml(row['Award']); }},
+                { title:'Reviews', data:null, render:function(_,__,row){ return (row['Completed Reviews']||0)+'/'+(row['Expected Reviews']||0); }},
+                { title:'Confidence', data:null, render:function(_,type,row){ return (type==='sort'||type==='type')?(parseAvg(row['Reviewer Confidence'])??-1):scoreCell(row['Reviewer Confidence'],row['Confidence List']); }},
+                { title:'Soundness', data:null, render:function(_,type,row){ return (type==='sort'||type==='type')?(parseAvg(row['Soundness Score'])??-1):scoreCell(row['Soundness Score'],row['Soundness List']); }},
+                { title:'Excitement', data:null, render:function(_,type,row){ return (type==='sort'||type==='type')?(parseAvg(row['Excitement Score'])??-1):scoreCell(row['Excitement Score'],row['Excitement List']); }},
+                { title:'Overall', data:null, render:function(_,type,row){ return (type==='sort'||type==='type')?(row.__overall??-1):scoreCell(row['Overall Assessment'],row['Overall List']); }},
+                { title:'Meta', data:null, render:function(_,type,row){ return (type==='sort'||type==='type')?(parseAvg(row['Meta Review Score'])??-1):(row['Meta Review Score']?'<span class="font-semibold">'+esc(row['Meta Review Score'])+'</span>':'&#8211;'); }}
             ],
             createdRow: function(row) { row.classList.add('text-gray-500'); },
             columnDefs: [
-                { type: 'num', targets: [0] },
-                { className: 'overall-assessment', targets: [9] },
-                { className: 'meta-review', targets: [10] }
+                { type:'num', targets:[0,3] },
+                { className:'overall-assessment', targets:[11] },
+                { className:'meta-review', targets:[12] }
             ]
         });
 
-        const typeSel = $('#paper-type-filter select');
-        const recSel = $('#recommendation-filter select');
-        $('#papers-search-input').on('input', function() { dt.search(this.value).draw(); });
-        $('#papers-length-select').on('change', function() { dt.page.len(this.value).draw(); });
-        $('#ready-filter, #preprint-filter, #rev-issue-filter, #meta-issue-filter, #lowconf-filter, #conf-comment-filter, #overall-min-filter, #overall-max-filter, #exc-min-filter, #conf-min-filter').on('change', function() { dt.draw(); });
-        typeSel.on('change', function() { dt.draw(); });
-        recSel.on('change', function() { dt.draw(); });
+        $('#papers-search-input').on('input', function(){ dt.search(this.value).draw(); });
+        $('#papers-length-select').on('change', function(){ dt.page.len(this.value).draw(); });
+        $('#rev-issue-filter, #meta-issue-filter, #lowconf-filter, #overall-min-filter, #overall-max-filter, #award-filter').on('change', function(){ dt.draw(); });
+        $(document).on('change', '#paper-type-filter select, #recommendation-filter select, #presentation-filter select', function(){ dt.draw(); });
     }
 
     document.addEventListener('report:tabshown', function(event) {
