@@ -618,6 +618,7 @@ class PCReportGenerator(ARRReportGenerator):
             "title": self.report_title(),
             "generated_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "venue_id": self.venue_id,
+            **self._user_context(),
             "overview_stats": self.compute_overview_stats(),
             "papers": self.papers_data,
             "ac_meta": self.ac_meta_data,

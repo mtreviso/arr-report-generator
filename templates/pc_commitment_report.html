@@ -22,9 +22,18 @@
                 <img src="logo.png" alt="ARR logo" class="h-10 w-auto object-contain shrink-0" onerror="this.style.display='none'">
                 <h1 class="text-3xl font-bold text-white truncate">ARR PC Commitment Dashboard</h1>
             </div>
-            <div class="text-right">
-                <p class="text-white text-sm">{{ venue_id }}</p>
-                <p class="text-white text-sm opacity-80">Generated at {{ generated_date }}</p>
+            <div class="text-right text-sm leading-relaxed">
+                <p class="text-white">{{ venue_id }}</p>
+                {% if report_user %}
+                <p class="text-indigo-200">
+                    {% if report_impersonate_group %}
+                        <span title="Impersonating {{ report_impersonate_group }}{% if report_username %} (logged in as {{ report_username }}){% endif %}">
+                            <i class="fa-solid fa-mask fa-xs mr-1 text-amber-300"></i>{% else %}<i class="fa-solid fa-user fa-xs mr-1"></i>{% endif %}{{ report_user }}{% if report_role %} <span class="opacity-70">({{ report_role }})</span>
+                        </span>
+                    {% endif %}
+                </p>
+                {% endif %}
+                <p class="text-indigo-300 text-xs mt-0.5">{{ generated_date }}</p>
             </div>
         </div>
     </header>
@@ -83,7 +92,7 @@
             <div class="bg-white shadow overflow-hidden rounded-lg mb-6">
                 <div class="px-4 pt-5 sm:px-6">
                     <h2 class="text-xl font-semibold text-gray-800">Needs Attention</h2>
-                    <p class="mt-1 text-sm text-gray-500">Papers with review issues, meta-review issues, ethics flags, emergency activity, or incomplete review sets.</p>
+                    <p class="mt-1 text-sm text-gray-500">Papers with review issues, meta-review issues, ethics flags, public preprints, or missing recommendations.</p>
                 </div>
                 {% include 'components/pc_commitment_attention.html' %}
             </div>

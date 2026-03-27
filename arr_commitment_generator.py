@@ -52,6 +52,7 @@ class CommitmentReportGenerator(ARRReportGenerator):
         if impersonate_group:
             if not impersonate_group.strip() or impersonate_group == "__DEFAULT_PROGRAM_CHAIRS__":
                 impersonate_group = venue_id.rstrip('/') + '/Program_Chairs'
+            self.impersonate_group = impersonate_group
             self._apply_impersonation(impersonate_group)
 
         self.venue_group = self.client.get_group(venue_id)
@@ -554,6 +555,51 @@ class CommitmentReportGenerator(ARRReportGenerator):
                             count += 1
         print(f"Found {count} comments.")
 
+    # ------------------------------------------------------------------
+    # Commitment-phase attention: emergency declarations and missing
+    # reviews are review-phase concerns and should not appear here.
+    # Instead we flag: issues, ethics, public preprints, and missing
+    # recommendation / meta-review (the things that matter now).
+    # ------------------------------------------------------------------
+
+    def _derive_attention_paper(self, paper):
+        has_issue = bool(paper.get('Has Review Issue'))
+        has_meta_issue = bool(paper.get('Has Meta Review Issue'))
+        has_ethics = bool((paper.get('Ethics Flag') or '').strip())
+        is_non_anonymous = (str(paper.get('Is Anonymous') or '').strip().lower() == 'no')
+        missing_rec = not str(paper.get('Recommendation') or '').strip()
+        missing_meta = not str(paper.get('Meta Review Score') or '').strip()
+
+        if not (has_issue or has_meta_issue or has_ethics
+                or is_non_anonymous or missing_rec or missing_meta):
+            return None
+
+        enriched = dict(paper)
+        enriched['Has Missing Reviews'] = False
+        enriched['Missing Reviews'] = 0
+        enriched['Is Non Anonymous'] = is_non_anonymous
+        enriched['Missing Recommendation'] = missing_rec
+        enriched['Missing Meta Review'] = missing_meta
+        return enriched
+
+    def compute_attention_papers(self):
+        if not self.papers_data:
+            self.attention_papers = []
+            return
+        rows = []
+        for paper in self.papers_data:
+            enriched = self._derive_attention_paper(paper)
+            if enriched is not None:
+                rows.append(enriched)
+        rows.sort(key=lambda p: (
+            0 if p.get('Missing Recommendation') else 1,
+            0 if p.get('Has Review Issue') else 1,
+            0 if p.get('Has Meta Review Issue') else 1,
+            0 if p.get('Is Non Anonymous') else 1,
+            p.get('Paper #', 0),
+        ))
+        self.attention_papers = rows
+
     def process_data(self):
         try:
             self.process_papers_data()
@@ -646,6 +692,7 @@ class CommitmentReportGenerator(ARRReportGenerator):
             "generated_date":          datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "venue_id":                self.venue_id,
             "role":                    self.role,
+            **self._user_context(),
             "papers":                  self.papers_data,
             "attention_papers":        self.attention_papers,
             **self.attention_template_flags(),

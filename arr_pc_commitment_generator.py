@@ -341,28 +341,36 @@ class PCCommitmentGenerator(CommitmentReportGenerator):
         self.track_data = rows
 
     def compute_attention_papers(self):
+        """Commitment-phase attention: emergency declarations and missing
+        reviews are review-phase concerns.  Instead flag issues, ethics,
+        public preprints, and missing recommendation / meta-review."""
         if not self.papers_data:
             self.attention_papers = []
             return
         rows = []
         for paper in self.papers_data:
-            missing_reviews = max(0, int(paper.get('Expected Reviews', 0) or 0) - int(paper.get('Completed Reviews', 0) or 0))
             has_issue = bool(paper.get('Has Review Issue'))
             has_meta_issue = bool(paper.get('Has Meta Review Issue'))
             has_ethics = bool(paper.get('Ethics Flag'))
-            has_emergency = bool(paper.get('Has Emergency Declaration'))
-            if not (has_issue or has_meta_issue or has_ethics or has_emergency or missing_reviews > 0):
+            is_non_anonymous = (str(paper.get('Is Anonymous') or '').strip().lower() == 'no')
+            missing_rec = not str(paper.get('Recommendation') or '').strip()
+            missing_meta = not str(paper.get('Meta Review Score') or '').strip()
+
+            if not (has_issue or has_meta_issue or has_ethics
+                    or is_non_anonymous or missing_rec or missing_meta):
                 continue
             enriched = dict(paper)
-            enriched['Missing Reviews'] = missing_reviews
-            enriched['Has Missing Reviews'] = missing_reviews > 0
+            enriched['Missing Reviews'] = 0
+            enriched['Has Missing Reviews'] = False
+            enriched['Is Non Anonymous'] = is_non_anonymous
+            enriched['Missing Recommendation'] = missing_rec
+            enriched['Missing Meta Review'] = missing_meta
             rows.append(enriched)
         rows.sort(key=lambda p: (
+            0 if p.get('Missing Recommendation') else 1,
             0 if p.get('Has Review Issue') else 1,
             0 if p.get('Has Meta Review Issue') else 1,
-            0 if p.get('Missing Reviews', 0) else 1,
-            0 if p.get('Has Emergency Declaration') else 1,
-            -int(p.get('Missing Reviews', 0) or 0),
+            0 if p.get('Is Non Anonymous') else 1,
             p.get('Paper #', 0),
         ))
         self.attention_papers = rows
@@ -577,6 +585,7 @@ class PCCommitmentGenerator(CommitmentReportGenerator):
             'title': self.report_title(),
             'generated_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'venue_id': self.venue_id,
+            **self._user_context(),
             'overview_stats': self.compute_overview_stats(),
             'papers': self.papers_data,
             'ac_meta': self.ac_meta_data,

@@ -44,9 +44,9 @@
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Missing Reviews</label>
-                <select id="cmt-attn-missing" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
-                    <option value="">All</option><option value="1">Has missing</option><option value="0">Complete</option>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Preprint</label>
+                <select id="cmt-attn-preprint" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none">
+                    <option value="">All</option><option value="1">Has preprint</option><option value="0">No preprint</option>
                 </select>
             </div>
             <div>
@@ -86,8 +86,8 @@
                     <div class="flag-legend-item"><span class="flag-badge flag-issue"><i class="fa-solid fa-triangle-exclamation"></i></span><span>Review issue.</span></div>
                     <div class="flag-legend-item"><span class="flag-badge flag-metaissue"><i class="fa-solid fa-file-circle-exclamation"></i></span><span>Meta-review issue.</span></div>
                     <div class="flag-legend-item"><span class="flag-badge flag-ethics"><i class="fa-solid fa-scale-balanced"></i></span><span>Ethics concern.</span></div>
-                    <div class="flag-legend-item"><span class="flag-badge flag-emergency"><i class="fa-solid fa-bolt"></i><span class="flag-count">2</span></span><span>Emergency declarations.</span></div>
-                    <div class="flag-legend-item"><span class="flag-badge flag-missing"><i class="fa-solid fa-clock"></i><span class="flag-count">2</span></span><span>Missing reviews.</span></div>
+                    <div class="flag-legend-item"><span class="flag-badge flag-nonanon"><i class="fa-solid fa-link"></i></span><span>Preprinted paper.</span></div>
+                    <div class="flag-legend-item"><span class="flag-badge flag-warn"><i class="fa-solid fa-clipboard-question"></i></span><span>Missing recommendation or meta-review.</span></div>
                 </div>
             </div>
             <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mt-3 mb-2">Award legend</p>
@@ -122,7 +122,7 @@
                 {% for p in attention_papers %}
                 <tr data-has-issue="{{ 1 if p['Has Review Issue'] else 0 }}"
                     data-ethics="{{ 1 if p.get('Ethics Flag') else 0 }}"
-                    data-missing="{{ 1 if p.get('Has Missing Reviews', p['Completed Reviews'] < p['Expected Reviews']) else 0 }}"
+                    data-preprint="{{ 1 if p.get('Is Non Anonymous') else 0 }}"
                     data-rec="{{ p.get('Recommendation', '') | e }}"
                     data-pres="{{ p.get('Presentation Mode', '') | e }}"
                     data-award="{{ p.get('Award', '') | e }}">
@@ -142,8 +142,9 @@
                         {% if p['Has Review Issue'] %}<a href="{{ p['Review Issue Link'] }}" target="_blank"><span class="flag-badge flag-issue tip" data-tip="{{ p['Review Issue Count'] }} review issue(s)"><i class="fa-solid fa-triangle-exclamation"></i></span></a>{% endif %}
                         {% if p.get('Has Meta Review Issue') %}{% if p.get('Meta Review Issue Link') %}<a href="{{ p['Meta Review Issue Link'] }}" target="_blank">{% endif %}<span class="flag-badge flag-metaissue tip" data-tip="Meta-review issue"><i class="fa-solid fa-file-circle-exclamation"></i></span>{% if p.get('Meta Review Issue Link') %}</a>{% endif %}{% endif %}
                         {% if p.get('Ethics Flag') %}<span class="flag-badge flag-ethics tip" data-tip="Ethics: {{ p['Ethics Flag'] }}"><i class="fa-solid fa-scale-balanced"></i></span>{% endif %}
-                        {% if p.get('Has Emergency Declaration') %}{% if p.get('Emergency Declaration Link') %}<a href="{{ p['Emergency Declaration Link'] }}" target="_blank">{% endif %}<span class="flag-badge flag-emergency tip" data-tip="Emergency: {{ p.get('Emergency Declaration Count', 0) }}"><i class="fa-solid fa-bolt"></i><span class="flag-count">{{ p.get('Emergency Declaration Count', 0) }}</span></span>{% if p.get('Emergency Declaration Link') %}</a>{% endif %}{% endif %}
-                        {% if p.get('Missing Reviews', 0) > 0 %}<span class="flag-badge flag-missing tip" data-tip="{{ p.get('Missing Reviews') }} review(s) missing"><i class="fa-solid fa-clock"></i><span class="flag-count">{{ p.get('Missing Reviews') }}</span></span>{% endif %}
+                        {% if p.get('Is Non Anonymous') %}<span class="flag-badge flag-nonanon tip" data-tip="Preprinted paper – prefer anonymous in borderline cases"><i class="fa-solid fa-link"></i></span>{% endif %}
+                        {% if p.get('Missing Recommendation') %}<span class="flag-badge flag-warn tip" data-tip="Missing recommendation"><i class="fa-solid fa-clipboard-question"></i></span>{% endif %}
+                        {% if p.get('Missing Meta Review') and not p.get('Missing Recommendation') %}<span class="flag-badge flag-warn tip" data-tip="Missing meta-review score"><i class="fa-solid fa-clipboard-question"></i></span>{% endif %}
                         </div>
                     </td>
                     <td class="whitespace-nowrap text-gray-500">
@@ -215,13 +216,13 @@ $(document).ready(function() {
     $.fn.dataTable.ext.search.push(function(settings,data,dataIndex){
         if(settings.nTable.id!=='cmt-attention-table')return true;
         var row=$(settings.aoData[dataIndex].nTr);
-        var issues=$('#cmt-attn-issues').val(),ethics=$('#cmt-attn-ethics').val(),missing=$('#cmt-attn-missing').val();
+        var issues=$('#cmt-attn-issues').val(),ethics=$('#cmt-attn-ethics').val(),preprint=$('#cmt-attn-preprint').val();
         var rH=document.getElementById('cmt-attn-rec-filter');
         var rec=rH&&rH.querySelector('select')?rH.querySelector('select').value:'';
         var award=$('#cmt-attn-award').val();
         if(issues&&row.attr('data-has-issue')!==issues)return false;
         if(ethics&&row.attr('data-ethics')!==ethics)return false;
-        if(missing&&row.attr('data-missing')!==missing)return false;
+        if(preprint&&row.attr('data-preprint')!==preprint)return false;
         if(rec==='__missing__'&&(row.attr('data-rec')||'').trim())return false;
         if(rec&&rec!=='__missing__'&&row.attr('data-rec')!==rec)return false;
         if(award){var cats=classifyAward(row.attr('data-award')||'');
@@ -229,12 +230,12 @@ $(document).ready(function() {
             if(award!=='none'&&award!=='any'&&cats.indexOf(award)===-1)return false;}
         return true;
     });
-    $('#cmt-attn-issues,#cmt-attn-ethics,#cmt-attn-missing,#cmt-attn-award').on('change',function(){dt.draw();});
+    $('#cmt-attn-issues,#cmt-attn-ethics,#cmt-attn-preprint,#cmt-attn-award').on('change',function(){dt.draw();});
     $('#cmt-attn-rec-filter').on('change','select',function(){dt.draw();});
     $('#cmt-attn-search').on('input',function(){dt.search(this.value).draw();});
     $('#cmt-attn-length').on('change',function(){dt.page.len(this.value).draw();});
     $('#cmt-attn-reset').on('click',function(){
-        $('#cmt-attn-issues,#cmt-attn-ethics,#cmt-attn-missing,#cmt-attn-award').val('');
+        $('#cmt-attn-issues,#cmt-attn-ethics,#cmt-attn-preprint,#cmt-attn-award').val('');
         var s=document.querySelector('#cmt-attn-rec-filter select');if(s)s.value='';
         $('#cmt-attn-search').val('');$('#cmt-attn-length').val('25');
         dt.search('').page.len(25).draw();

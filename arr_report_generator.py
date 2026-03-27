@@ -22,6 +22,7 @@ class ARRReportGenerator:
         self.venue_id = venue_id
         self.me = me
         self.role = role
+        self.impersonate_group = None
         self.comments_level = (comments_level or 'basic').lower()
         if self.comments_level not in {'none', 'basic', 'full'}:
             raise ValueError(f"comments_level must be one of ('none', 'basic', 'full'), got {comments_level!r}")
@@ -73,6 +74,7 @@ class ARRReportGenerator:
             # Defaults to PC role if none group was provided
             if not impersonate_group.strip() or impersonate_group == "__DEFAULT_PROGRAM_CHAIRS__":
                 impersonate_group = venue_id.rstrip('/') + '/' + 'Program_Chairs'
+            self.impersonate_group = impersonate_group
             self._apply_impersonation(impersonate_group)
 
         self.venue_group = self.client.get_group(venue_id)
@@ -1553,6 +1555,15 @@ class ARRReportGenerator:
             'attention_has_ac': any(str(p.get('Area Chair') or '').strip() for p in self.attention_papers),
         }
 
+    def _user_context(self):
+        """Return template variables describing the current user and impersonation."""
+        return {
+            'report_user': self.me or '',
+            'report_role': (self.role or '').upper(),
+            'report_username': self.username or '',
+            'report_impersonate_group': self.impersonate_group or '',
+        }
+
     # -------------------------------------------------------------------------
     # Report generation
     # -------------------------------------------------------------------------
@@ -1590,6 +1601,7 @@ class ARRReportGenerator:
             "title":                 f"ARR Review Report: {self.venue_id}",
             "generated_date":        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "venue_id":              self.venue_id,
+            **self._user_context(),
             "papers":                self.papers_data,
             "ac_meta":               self.ac_meta_data,
             "attention_papers":      self.attention_papers,

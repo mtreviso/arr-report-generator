@@ -62,9 +62,9 @@
             <div class="text-xl font-bold text-yellow-600">{{ s.low_conf_papers }}</div>
             <div class="text-xs text-yellow-500 uppercase tracking-wide mt-1">Low Confidence</div>
         </div>
-        <div class="bg-lime-50 rounded-lg p-3 border border-lime-100 text-center" title="Papers with a detected or declared public preprint.">
+        <div class="bg-lime-50 rounded-lg p-3 border border-lime-100 text-center" title="Papers with a detected or declared public preprint (anonymous papers should be preferred in borderline cases).">
             <div class="text-xl font-bold text-lime-600">{{ s.sb_papers | default(0) }}</div>
-            <div class="text-xs text-lime-400 uppercase tracking-wide mt-1">Single-blind (SB)</div>
+            <div class="text-xs text-lime-400 uppercase tracking-wide mt-1">Preprinted Papers</div>
         </div>
         <div class="bg-blue-50 rounded-lg p-3 border border-blue-100 text-center" title="Papers with an emergency declaration.">
             <div class="text-xl font-bold text-blue-600">{{ s.emergency_declared | default(0) }}</div>

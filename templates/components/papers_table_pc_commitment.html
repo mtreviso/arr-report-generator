@@ -320,7 +320,7 @@
     function flagsCell(row) {
         var parts = [];
         if ((row['Is Anonymous'] || '').toLowerCase() === 'no')
-            parts.push(badgeHtml('flag-nonanon', 'fa-link', 'Has public preprint'));
+            parts.push(badgeHtml('flag-nonanon', 'fa-link', 'Preprinted paper – prefer anonymous in borderline cases'));
         if (boolish(row['Has Review Issue'])) {
             var b = badgeHtml('flag-issue', 'fa-triangle-exclamation', esc((row['Review Issue Count']||0)+' review issue report(s)')+'&#10;Click to open');
             parts.push(row['Review Issue Link'] ? '<a href="'+esc(row['Review Issue Link'])+'" target="_blank">'+b+'</a>' : b);

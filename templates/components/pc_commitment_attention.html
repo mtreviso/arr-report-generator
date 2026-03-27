@@ -43,9 +43,9 @@
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Missing Reviews</label>
-                <select id="pcc-attn-missing-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
-                    <option value="">All</option><option value="1">Has missing</option><option value="0">Complete</option>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Preprint</label>
+                <select id="pcc-attn-preprint-filter" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                    <option value="">All</option><option value="1">Has preprint</option><option value="0">No preprint</option>
                 </select>
             </div>
             <div>
@@ -94,8 +94,8 @@
                     <div class="flag-legend-item"><span class="flag-badge flag-issue"><i class="fa-solid fa-triangle-exclamation"></i></span><span>Review issue report.</span></div>
                     <div class="flag-legend-item"><span class="flag-badge flag-metaissue"><i class="fa-solid fa-file-circle-exclamation"></i></span><span>Meta-review issue report.</span></div>
                     <div class="flag-legend-item"><span class="flag-badge flag-ethics"><i class="fa-solid fa-scale-balanced"></i></span><span>Ethics concern.</span></div>
-                    <div class="flag-legend-item"><span class="flag-badge flag-emergency"><i class="fa-solid fa-bolt"></i><span class="flag-count">2</span></span><span>Emergency declaration count.</span></div>
-                    <div class="flag-legend-item"><span class="flag-badge flag-missing"><i class="fa-solid fa-clock"></i><span class="flag-count">2</span></span><span>Missing reviews.</span></div>
+                    <div class="flag-legend-item"><span class="flag-badge flag-nonanon"><i class="fa-solid fa-link"></i></span><span>Preprinted paper.</span></div>
+                    <div class="flag-legend-item"><span class="flag-badge flag-warn"><i class="fa-solid fa-clipboard-question"></i></span><span>Missing recommendation or meta-review.</span></div>
                 </div>
             </div>
             <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mt-3 mb-2">Award legend</p>
@@ -131,7 +131,7 @@
                 <tr
                     data-has-issue="{{ 1 if p['Has Review Issue'] else 0 }}"
                     data-ethics="{{ 1 if p.get('Ethics Flag') else 0 }}"
-                    data-missing="{{ 1 if p.get('Has Missing Reviews', p['Completed Reviews'] < p['Expected Reviews']) else 0 }}"
+                    data-preprint="{{ 1 if p.get('Is Non Anonymous') else 0 }}"
                     data-rec="{{ p.get('Recommendation', '') | e }}"
                     data-pres="{{ p.get('Presentation Mode', '') | e }}"
                     data-award="{{ p.get('Award', '') | e }}"
@@ -152,8 +152,9 @@
                         {% if p['Has Review Issue'] %}<a href="{{ p['Review Issue Link'] }}" target="_blank"><span class="flag-badge flag-issue tip" data-tip="{{ p['Review Issue Count'] }} review issue(s)"><i class="fa-solid fa-triangle-exclamation"></i></span></a>{% endif %}
                         {% if p.get('Has Meta Review Issue') %}{% if p.get('Meta Review Issue Link') %}<a href="{{ p['Meta Review Issue Link'] }}" target="_blank">{% endif %}<span class="flag-badge flag-metaissue tip" data-tip="{{ p.get('Meta Review Issue Count', 1) }} meta-review issue(s)"><i class="fa-solid fa-file-circle-exclamation"></i></span>{% if p.get('Meta Review Issue Link') %}</a>{% endif %}{% endif %}
                         {% if p.get('Ethics Flag') %}<span class="flag-badge flag-ethics tip" data-tip="Ethics: {{ p['Ethics Flag'] }}"><i class="fa-solid fa-scale-balanced"></i></span>{% endif %}
-                        {% if p.get('Has Emergency Declaration') %}{% if p.get('Emergency Declaration Link') %}<a href="{{ p['Emergency Declaration Link'] }}" target="_blank">{% endif %}<span class="flag-badge flag-emergency tip" data-tip="Emergency: {{ p.get('Emergency Declaration Count', 0) }}"><i class="fa-solid fa-bolt"></i><span class="flag-count">{{ p.get('Emergency Declaration Count', 0) }}</span></span>{% if p.get('Emergency Declaration Link') %}</a>{% endif %}{% endif %}
-                        {% if p.get('Missing Reviews', 0) > 0 %}<span class="flag-badge flag-missing tip" data-tip="{{ p.get('Missing Reviews') }} review(s) missing"><i class="fa-solid fa-clock"></i><span class="flag-count">{{ p.get('Missing Reviews') }}</span></span>{% endif %}
+                        {% if p.get('Is Non Anonymous') %}<span class="flag-badge flag-nonanon tip" data-tip="Preprinted paper – prefer anonymous in borderline cases"><i class="fa-solid fa-link"></i></span>{% endif %}
+                        {% if p.get('Missing Recommendation') %}<span class="flag-badge flag-warn tip" data-tip="Missing recommendation"><i class="fa-solid fa-clipboard-question"></i></span>{% endif %}
+                        {% if p.get('Missing Meta Review') and not p.get('Missing Recommendation') %}<span class="flag-badge flag-warn tip" data-tip="Missing meta-review score"><i class="fa-solid fa-clipboard-question"></i></span>{% endif %}
                         </div>
                     </td>
                     <td class="whitespace-nowrap text-gray-500">
@@ -247,7 +248,7 @@ $(document).ready(function() {
     $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
         if (settings.nTable.id !== 'pcc-attention-table') return true;
         var row = $(settings.aoData[dataIndex].nTr);
-        var issues=$('#pcc-attn-issues-filter').val(), ethics=$('#pcc-attn-ethics-filter').val(), missingF=$('#pcc-attn-missing-filter').val();
+        var issues=$('#pcc-attn-issues-filter').val(), ethics=$('#pcc-attn-ethics-filter').val(), preprint=$('#pcc-attn-preprint-filter').val();
         var recHost=document.getElementById('pcc-attn-rec-filter');
         var presHost=document.getElementById('pcc-attn-pres-filter');
         var rec=recHost&&recHost.querySelector('select')?recHost.querySelector('select').value:'';
@@ -256,7 +257,7 @@ $(document).ready(function() {
 
         if (issues && row.attr('data-has-issue')!==issues) return false;
         if (ethics && row.attr('data-ethics')!==ethics) return false;
-        if (missingF && row.attr('data-missing')!==missingF) return false;
+        if (preprint && row.attr('data-preprint')!==preprint) return false;
         /* Recommendation filter with __missing__ support */
         if (rec === '__missing__' && (row.attr('data-rec') || '').trim()) return false;
         if (rec && rec !== '__missing__' && row.attr('data-rec') !== rec) return false;
@@ -270,12 +271,12 @@ $(document).ready(function() {
         }
         return true;
     });
-    $('#pcc-attn-issues-filter, #pcc-attn-ethics-filter, #pcc-attn-missing-filter, #pcc-attn-award-filter').on('change', function(){attnDt.draw();});
+    $('#pcc-attn-issues-filter, #pcc-attn-ethics-filter, #pcc-attn-preprint-filter, #pcc-attn-award-filter').on('change', function(){attnDt.draw();});
     $('#pcc-attn-rec-filter, #pcc-attn-pres-filter').on('change','select',function(){attnDt.draw();});
     $('#pcc-attn-search').on('input', function(){attnDt.search(this.value).draw();});
     $('#pcc-attn-length').on('change', function(){attnDt.page.len(this.value).draw();});
     $('#pcc-attn-reset').on('click', function(){
-        $('#pcc-attn-issues-filter, #pcc-attn-ethics-filter, #pcc-attn-missing-filter, #pcc-attn-award-filter').val('');
+        $('#pcc-attn-issues-filter, #pcc-attn-ethics-filter, #pcc-attn-preprint-filter, #pcc-attn-award-filter').val('');
         ['pcc-attn-rec-filter','pcc-attn-pres-filter'].forEach(function(id){var s=document.querySelector('#'+id+' select');if(s)s.value='';});
         $('#pcc-attn-search').val(''); $('#pcc-attn-length').val('25');
         attnDt.search('').page.len(25).draw();

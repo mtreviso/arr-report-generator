@@ -170,15 +170,15 @@
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:220px;">Title</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:48px;width:48px;">Type</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;width:80px;" title="Flags (sortable by count)">Flags</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:100px;min-width:100px;">Rec.</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:60px;min-width:60px;">Pres.</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:44px;min-width:44px;">Award</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:60px;width:60px;">Reviews</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">Confidence</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">Soundness</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">Excitement</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;">Overall</th>
-                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:65px;width:65px;">AC Score</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:100px;min-width:100px;" title="Publication recommendation">Rec.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:60px;min-width:60px;" title="Preferred presentation format">Pres.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="width:44px;min-width:44px;" title="Award or nomination">Award</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:60px;width:60px;" title="Completed / expected reviews">Reviews</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:78px;" title="Average reviewer confidence">Conf.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:78px;" title="Average reviewer soundness">Sound.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:78px;" title="Average reviewer excitement">Excit.</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:78px;" title="Average reviewer overall assessment">Overall</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:65px;width:65px;" title="AC meta-review score">AC Score</th>
                 </tr>
             </thead>
         </table>
@@ -259,7 +259,7 @@
     }
     function flagsCell(row) {
         var parts = [];
-        if ((row['Is Anonymous']||'').toLowerCase()==='no') parts.push(badgeHtml('flag-nonanon','fa-link','Has public preprint'));
+        if ((row['Is Anonymous']||'').toLowerCase()==='no') parts.push(badgeHtml('flag-nonanon','fa-link','Preprinted paper – prefer anonymous in borderline cases'));
         if (boolish(row['Has Review Issue'])) {
             var b=badgeHtml('flag-issue','fa-triangle-exclamation',esc((row['Review Issue Count']||0)+' review issue(s)')+'&#10;Click to open');
             parts.push(row['Review Issue Link']?'<a href="'+esc(row['Review Issue Link'])+'" target="_blank">'+b+'</a>':b);
