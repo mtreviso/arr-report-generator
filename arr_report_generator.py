@@ -817,8 +817,13 @@ class ARRReportGenerator:
                 continue
 
             prefix = f'{self.venue_id}/{self.submission_name}{submission.number}'
-            # Process only submissions in your SAC batch (skip for PC role)
-            if self.role != 'pc' and not (set(submission.readers) & self.my_sac_groups):
+            # Process only submissions in your SAC batch (skip for PC role).
+            # Test membership via the per-submission Senior_Area_Chairs group,
+            # not submission.readers: readers often lists only broader groups
+            # (venue/track/Area_Chairs) and omits the per-submission SAC group,
+            # which silently dropped papers that are genuinely in this SAC's batch.
+            sac_group_id = f'{prefix}/Senior_Area_Chairs'
+            if self.role != 'pc' and sac_group_id not in self.my_sac_groups:
                 continue
 
             # Retrieve the assigned Area Chair (use cached groups first)
