@@ -220,7 +220,7 @@
         var parts = raw.split(',').map(function(s){return s.trim().toLowerCase();}).filter(Boolean);
         var cats = [];
         parts.forEach(function(p) {
-            if (p.indexOf('do not consider') !== -1 || p === 'none') return;
+            if (p.indexOf('do not consider') !== -1 || ['no','none','n/a','not applicable'].indexOf(p) !== -1) return;
             if (p.indexOf('best paper') !== -1)     cats.push('best_paper');
             if (p.indexOf('outstanding') !== -1)    cats.push('outstanding');
             if (p.indexOf('highlight') !== -1 || p.indexOf('sac') !== -1) cats.push('sac_highlight');
@@ -232,7 +232,7 @@
     function awardIconHtml(award) {
         if (!award) return '&#8211;';
         var parts = award.split(',').map(function(s){return s.trim();}).filter(Boolean);
-        var real = parts.filter(function(a) { var l=a.toLowerCase(); return l.indexOf('do not consider')===-1 && l!=='none'; });
+        var real = parts.filter(function(a) { var l=a.toLowerCase(); return l.indexOf('do not consider')===-1 && ['no','none','n/a','not applicable'].indexOf(l)===-1; });
         if (!real.length) return '&#8211;';
         return real.map(function(a) {
             var l = a.toLowerCase(), cls = 'award-other';

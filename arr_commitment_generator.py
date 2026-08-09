@@ -292,12 +292,52 @@ class CommitmentReportGenerator(ARRReportGenerator):
             if not self.is_meta_review(reply):
                 continue
             content = getattr(reply, 'content', None) or reply.get('content', {})
-            recommendation = content.get('recommendation', {}).get('value', '')
-            presentation_mode = content.get('presentation_mode', {}).get('value', '')
-            af = content.get('award', {}).get('value', [])
-            award = ", ".join(af) if isinstance(af, list) else af
+            recommendation = self._get_first_content_value(
+                content,
+                ('recommendation',),
+            )
+            presentation_mode = self._get_first_content_value(
+                content,
+                ('presentation_mode', 'presentation_form', 'presentation'),
+            )
+            award_value = self._get_first_content_value(
+                content,
+                ('award', 'best_paper_recommendation', 'best_paper_award'),
+            )
+            award = ", ".join(self._normalize_multi_value_field(award_value))
             break
         return recommendation, presentation_mode, award
+
+    def _get_first_content_value(self, content, aliases, default=""):
+        """Return the first non-empty OpenReview content value for known field aliases."""
+        if not isinstance(content, dict):
+            return default
+
+        normalized_content = {
+            str(key).strip().casefold().replace('-', '_').replace(' ', '_'): value
+            for key, value in content.items()
+        }
+        for alias in aliases:
+            normalized_alias = alias.strip().casefold().replace('-', '_').replace(' ', '_')
+            if normalized_alias not in normalized_content:
+                continue
+            value = normalized_content[normalized_alias]
+            if isinstance(value, dict) and 'value' in value:
+                value = value.get('value')
+            if value is None or value == "" or value == []:
+                continue
+            return value
+        return default
+
+    @staticmethod
+    def _is_positive_award_value(value):
+        """Exclude negative/empty award responses from award recommendation totals."""
+        normalized = str(value).strip().casefold()
+        return bool(
+            normalized
+            and normalized not in {'no', 'none', 'n/a', 'not applicable'}
+            and 'do not consider' not in normalized
+        )
 
     # -----------------------------------------------------------------------
     # Data processing
@@ -651,9 +691,7 @@ class CommitmentReportGenerator(ARRReportGenerator):
             raw_award = str(p.get('Award', '')).strip()
             if raw_award:
                 individual = [a.strip() for a in raw_award.split(',') if a.strip()]
-                real_awards = [a for a in individual
-                               if 'do not consider' not in a.lower()
-                               and 'none' not in a.lower()]
+                real_awards = [a for a in individual if self._is_positive_award_value(a)]
                 if real_awards:
                     has_award += 1
                 for a in real_awards:

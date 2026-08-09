@@ -173,7 +173,7 @@
                             {% for apart in award_parts %}
                                 {% set a = apart.strip() %}
                                 {% set al = a | lower %}
-                                {% if a and 'do not consider' not in al and al != 'none' %}
+                                {% if a and 'do not consider' not in al and al not in ['no', 'none', 'n/a', 'not applicable'] %}
                                     {% set ns.has_real = true %}
                                     {% if 'best paper' in al %}<span class="award-icon award-best tip" data-tip="{{ a }}"><i class="fa-solid fa-trophy"></i></span>
                                     {% elif 'outstanding' in al %}<span class="award-icon award-outstanding tip" data-tip="{{ a }}"><i class="fa-solid fa-trophy"></i></span>
@@ -211,7 +211,7 @@ $(document).ready(function() {
         var parts = raw.split(',').map(function(s){return s.trim().toLowerCase();}).filter(Boolean);
         var cats = [];
         parts.forEach(function(p) {
-            if (p.indexOf('do not consider') !== -1 || p === 'none') return;
+            if (p.indexOf('do not consider') !== -1 || ['no','none','n/a','not applicable'].indexOf(p) !== -1) return;
             if (p.indexOf('best paper') !== -1)     cats.push('best_paper');
             if (p.indexOf('outstanding') !== -1)    cats.push('outstanding');
             if (p.indexOf('highlight') !== -1 || p.indexOf('sac') !== -1) cats.push('sac_highlight');

@@ -409,7 +409,7 @@ class PCCommitmentGenerator(CommitmentReportGenerator):
         recommended = int((df['Recommendation'].astype(str).str.strip() != '').sum()) if 'Recommendation' in df.columns else 0
         has_presentation = int((df['Presentation Mode'].astype(str).str.strip() != '').sum()) if 'Presentation Mode' in df.columns else 0
 
-        # Award: split comma-separated values, exclude "do not consider"
+        # Award: split comma-separated values and exclude negative responses.
         has_award = 0
         award_breakdown = {}
         if 'Award' in df.columns:
@@ -418,9 +418,7 @@ class PCCommitmentGenerator(CommitmentReportGenerator):
                 if not raw:
                     continue
                 individual = [a.strip() for a in raw.split(',') if a.strip()]
-                real_awards = [a for a in individual
-                               if 'do not consider' not in a.lower()
-                               and 'none' not in a.lower()]
+                real_awards = [a for a in individual if self._is_positive_award_value(a)]
                 if real_awards:
                     has_award += 1
                 for a in real_awards:
