@@ -841,6 +841,8 @@ class ARRReportGenerator:
 
             paper_type = self._get_content_value(submission.content, "paper_type", "")
             contribution_types = self._extract_contribution_types(submission.content)
+            ac_checklists = self._get_content_value(submission.content, "number_of_action_editor_checklists", "-1")
+            ac_checklist_flag = ac_checklists > 0
 
             # --- Per-paper reply scan ---
             completed_reviews = 0
@@ -1020,6 +1022,7 @@ class ARRReportGenerator:
                 "Emergency Reviewer Count": emergency_reviewer_count,
                 "Has Emergency Assigned": bool(has_emergency_declaration and has_emergency_reviewer),
                 "Has Emergency Unmet": bool(has_emergency_declaration and not has_emergency_reviewer),
+                "Has AC Checklist":      ac_checklist_flag,
                 "Review Issue Count":    review_issue_count,
                 "Ethics Flag":           "",   # populated in PCReportGenerator; base always ""
                 # Single-blind / knows-authors
@@ -1058,6 +1061,7 @@ class ARRReportGenerator:
             return
         df = self._papers_df()
         meta_df = df.groupby("Area Chair").agg(
+            Checklists=("Has AC Checklist", "sum"), 
             Completed_Reviews=("Completed Reviews", "sum"),
             Expected_Reviews=("Expected Reviews", "sum"),
             Papers_Ready=("Completed Reviews", lambda x: (x >= 3).sum()),
