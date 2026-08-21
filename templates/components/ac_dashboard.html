@@ -84,6 +84,7 @@
                     {% endif %}
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:130px;">Area Chair</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:160px;">Affiliation</th>
+                    <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Number of papers with completed AC checklists">Checklists</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:100px;" title="Completed reviewer assignments divided by expected reviewer assignments across this AC's papers">Reviews</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:80px;" title="Percentage of expected reviews that have been completed across this AC's papers">Review %</th>
                     <th class="text-xs text-gray-500 uppercase tracking-wider" style="min-width:95px;" title="Meta-reviews completed by this AC, divided by total papers handled by this AC">Meta <br /> Reviews</th>
@@ -120,6 +121,7 @@
                         {% else %}<span {% if ac_affil %}title="{{ ac_affil }}"{% endif %}>{{ ac["Area Chair"] }}</span>{% endif %}
                     </td>
                     <td class="text-gray-400 affiliation-cell" style="font-size:0.7rem;"><div class="affiliation-cell-inner" title="{{ ac.get("Area Chair Affiliation", "") or "–" }}">{{ ac.get("Area Chair Affiliation", "") or "–" }}</div></td>
+                    <td class="whitespace-nowrap text-gray-500">{{ ac["Checklists"] }} of {{ ac["Num_Papers"] }}</td>
                     <td class="whitespace-nowrap text-gray-500">{{ ac["Completed_Reviews"] }} / {{ ac["Expected_Reviews"] }}</td>
                     {% set review_pct = (100.0 * ac["Completed_Reviews"] / ac["Expected_Reviews"]) if ac["Expected_Reviews"] else 100.0 %}
                     <td class="whitespace-nowrap">

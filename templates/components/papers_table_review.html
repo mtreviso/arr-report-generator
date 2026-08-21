@@ -227,6 +227,7 @@
                     </div>
                     <div class="flag-legend-row">
                         <div class="flag-legend-item"><span class="flag-badge flag-emergency"><i class="fa-solid fa-bolt"></i><span class="flag-count">2</span></span><span>Emergency declaration count on the paper.</span></div>
+                        <div class="flag-legend-item"><span class="flag-badge flag-warn"><i class="fa-solid fa-check"></i></span><span>Missing AC checklist</span></div>
                     </div>
                 </div>
             </div>
@@ -317,6 +318,10 @@
                 ? 'Suspicious: reviewer claims to know author(s) of anonymous paper'
                 : 'Single-blind: reviewer knows author(s) (preprinted paper)';
             parts.push('<span class="tip flag-badge ' + badgeClass + '" data-tip="' + tip + '">' + icon(isAnon ? 'fa-user-secret' : 'fa-eye') + '</span>');
+        }
+
+        if (!boolish(row['Has AC Checklist'])) {
+            parts.push(badgeHtml('flag-warn', 'fa-check', 'Missing AC checklist'));
         }
         if (!parts.length) return '<span class="text-gray-300">&#8211;</span>';
         return '<div class="flags-inline">'+parts.join('')+'</div>';
